@@ -12,6 +12,14 @@ import UIKit
 final class MontanaVPNTunnel: ObservableObject {
     static let shared = MontanaVPNTunnel()
     static let extensionBundleId = (Bundle.main.bundleIdentifier ?? "p2p.montana.app") + ".PacketTunnel"   // packet-tunnel extension target
+    /// THE TUNNEL STANDS WHERE ITS PLATFORM ADMITS IT (the author's word 21.10.2026 19:3x MSK: the Mac from the site goes without the VPN):
+    /// outside the App Store the Mac admits a tunnel only as a system extension, and the Catalyst app cannot ask for one
+    /// (OSSystemExtensionRequest is unavailable to iOS sources) -- the Mac product carries no tunnel and shows no VPN wall.
+    #if targetEnvironment(macCatalyst)
+    nonisolated static let carried = false
+    #else
+    nonisolated static let carried = true
+    #endif
 
     /// THE LIVING TUNNEL WAKES THE MINTING, HOWEVER IT IS FOUND (T3 05.10.2026 11:30Z): a tunnel standing at the app's launch is
     /// read by load(), not announced by the system, and the beat that pays its seconds (MTVPNWallMint) was woken only by the

@@ -239,7 +239,9 @@ final class MTTurnDrag: ObservableObject {
     /// whole as the chats, the calls and the contacts, turning sideways as they do»), the chats, the dynamic glyph's page --
     /// the music while the glyph is the music's, else the gallery (25.09) -- and THE NETWORK under the globe at the row's end
     /// (the author's word 25.09).
-    var turnOrder: [Pane] { [.contacts, .calls, .feed, .chats, mediaIsMusic ? .music : .gallery, .vpn] }
+    var turnOrder: [Pane] { [.contacts, .calls, .feed, .chats, mediaIsMusic ? .music : .gallery, Self.globeWall] }
+    /// The globe's page: the VPN wall where the device carries a tunnel, else the P2P wall -- the nodes of a desktop core.
+    static var globeWall: Pane { MontanaVPNTunnel.carried ? .vpn : .p2p }
     /// THE FOLDER CHOSEN ON THE CHATS PAGE, AND THE FOLDERS IN THEIR TABS' ORDER (the author's word 18.10.2026 10:2x MSK: «swipes
     /// right and left on the chats page turn between the tabs too, and from the outermost go on to the other pages»): the page names
     /// its folders here (ChatsListView), and the stroke reads them (turnStroke) -- All at every launch, as the reference.
@@ -1631,7 +1633,7 @@ struct MontanaSideDrawer: View {
     private var hasSeed: Bool { MontanaSeed.hasSeed }
     // The library and its sliding container read exactly the same width, including after rotation.
     static func width(of container: CGFloat) -> CGFloat { round(container * 0.78) }
-    private var apps: [MTApplication] { MTApplication.allCases.filter { $0 != .groups && $0 != .channels } }
+    private var apps: [MTApplication] { MTApplication.allCases.filter { $0 != .groups && $0 != .channels && ($0 != .vpnWall || MontanaVPNTunnel.carried) } }
     private var pins: Set<MTApplication> {
         Set(savedPins.split(separator: ",").compactMap { MTApplication(rawValue: String($0)) })
     }
@@ -1667,7 +1669,7 @@ struct MontanaSideDrawer: View {
             case .channels: ui.pane = .channels
             case .music: ui.askMusic()
             case .gallery: ui.askGallery()
-            case .vpnWall: MontanaVPNOpen.tap(); ui.pane = .vpn
+            case .vpnWall: if MontanaVPNTunnel.carried { MontanaVPNOpen.tap(); ui.pane = .vpn }
             case .meshWall: ui.pane = .mesh
             case .p2pWall: ui.pane = .p2p
             case .card: ui.overlayPage = .card

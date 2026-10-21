@@ -427,7 +427,11 @@ struct ChatsListView: View {
             // calls, the contacts and the feed»): a page of the finger's row, chosen as every glyph chooses its page, the puck
             // under the globe. The touch is stamped as before (22.09) when it changes the page: the page reports the milliseconds
             // from here to its opening; a tap on the globe of the standing page stamps nothing, there is no opening to measure.
-            barSlot(Self.globeSlot) { if ui.pane != .vpn { MontanaVPNOpen.tap() }; withAnimation(.easeInOut(duration: 0.2)) { ui.pane = .vpn } } label: {
+            barSlot(Self.globeSlot) {
+                let wall = UIState.globeWall
+                if ui.pane != wall, wall == .vpn { MontanaVPNOpen.tap() }
+                withAnimation(.easeInOut(duration: 0.2)) { ui.pane = wall }
+            } label: {
                 MTBarGlobe()
             }
         }
@@ -516,8 +520,8 @@ struct ChatsListView: View {
     private static func slot(of pane: UIState.Pane) -> Int? {
         switch pane {
         case .chats, .groups, .channels: return chatsSlot; case .contacts: return contactsSlot; case .calls: return callsSlot
-        case .music, .gallery: return mediaSlot; case .feed: return logoSlot; case .vpn: return globeSlot
-        case .mesh, .p2p: return nil
+        case .music, .gallery: return mediaSlot; case .feed: return logoSlot
+        case .vpn, .mesh, .p2p: return pane == UIState.globeWall ? globeSlot : nil
         }
     }
     /// One slot of the bar: the glyph, its action, and under it the puck when it is the chosen one.

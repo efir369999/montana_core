@@ -17,6 +17,7 @@ import Network
 import AVKit
 import MediaPlayer
 import AVFoundation
+import CoreAudio   // UnsafeMutableAudioBufferListPointer: AVFoundation re-exports it on iOS, not under Mac Catalyst
 import MediaToolbox
 import LocalAuthentication
 import UniformTypeIdentifiers
