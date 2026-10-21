@@ -117,7 +117,7 @@ enum MTBubbleStyle {
 // THE SYSTEM'S OWN BUBBLES (the author's word 29.09: «the chat's bubbles as the system's -- no gradient, the system blue with
 // white words, and the system grey with the same white»): mine the platform's blue, theirs the platform's grey, one flat colour
 // each -- no gradient, no glass under it, no rim over it -- as the platform's own messages draw theirs; the words stay THE
-// default's white (BT). The app is dark on every phone, so the grey resolves to its dark shade.
+// default's white (BT). The bubble wears the dark appearance on every ground (MessageBubble.body), so the grey resolves dark.
 private struct MTLetterPlate: View {
     let mine: Bool
     var body: some View {
@@ -561,7 +561,13 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
                             .padding(.horizontal, 6)
                     }
                 }
+                // THE BUBBLE IS A DARK SURFACE ON EVERY GROUND (the author's word 21.10.2026 21:4x MSK: «why for some the bubbles'
+                // colour goes white at the correspondent's -- fix it urgently»): the gold ground turns the app light
+                // (MTWallpaper.scheme), and the correspondent's plate -- the platform's grey -- resolved to its light shade under
+                // the default's white words. The bubble's colours are the dark platform's, so the bubble wears the dark appearance
+                // itself; the ground around it keeps its own ink.
                 bubbleColumn
+                    .environment(\.colorScheme, .dark)
                     .frame(maxWidth: bubbleCeiling, alignment: drawnMine ? .trailing : .leading)
                     .modifier(MTShareBeside(on: post != nil, action: onShare))
                 if let call = callInfoOf(message.text), !call.missed, let coins = call.coins {
