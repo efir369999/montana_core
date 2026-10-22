@@ -9,7 +9,8 @@ xcuserdata/
 
 # Swift Package Manager
 .swiftpm/
-Package.resolved
+# Package.resolved of the project is tracked: it pins the five packages swift-nio and swift-nio-ssh pull in, and a build
+# reproducible from public source cannot let them float (Constitution [I-14], 21.10.2026)
 
 # temporary
 build-sim/
