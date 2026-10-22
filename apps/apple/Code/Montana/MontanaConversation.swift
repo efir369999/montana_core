@@ -1615,6 +1615,7 @@ struct ChatConversationView: View {
         }
         .background(chatBackground.ignoresSafeArea())   // the ground reaches both edges of the screen
         .environment(\.mtWallpaperConv, chat.convId ?? chat.name)   // the edge washes draw this chat's ground (22.09)
+        .modifier(MTWallpaper.Ink(conv: chat.convId ?? chat.name))   // the words wear the ink of this chat's own ground
         .navigationBarTitleDisplayMode(.inline)
         .modifier(MTOpaqueChatBar())
         .mtBoxed()

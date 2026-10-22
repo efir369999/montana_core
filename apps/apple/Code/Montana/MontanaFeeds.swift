@@ -172,6 +172,20 @@ enum MTWallpaper {
     /// `birthChosen`: the person being made chose a ground on the first screen -- from then on the making wears it, before it
     /// the login page's burgundy (MontanaOnboardingView).
     final class Book: ObservableObject { static let shared = Book(); @Published var rev = 0; @Published var birthChosen = false }
+    /// The ink of a place's own ground (scheme(for:)) on its words, bars and materials; a ground chosen anew turns it at once.
+    struct Ink: ViewModifier {
+        let conv: String?
+        @ObservedObject private var book = Book.shared
+        @ViewBuilder func body(content: Content) -> some View {
+            let _ = book.rev
+            if let conv {
+                let s = MTWallpaper.scheme(for: conv)
+                content.environment(\.colorScheme, s).toolbarColorScheme(s, for: .navigationBar)
+            } else {
+                content
+            }
+        }
+    }
     private static func parse(_ s: String?) -> Choice {
         guard let s else { return .general }
         if s.hasPrefix("named:") { return .named(String(s.dropFirst(6))) }   // COMPAT-LOCAL: a stored choice, never on the wire
@@ -203,6 +217,21 @@ enum MTWallpaper {
         case .general: return .dark
         }
     }
+    /// THE INK OF THE GROUND UNDER IT, PLACE BY PLACE (the author's word 22.10 21:39: «adaptive colours by the ground -- the
+    /// fonts went crooked»): the root wears my page's ground's scheme, while a chat with a ground of its own and a
+    /// correspondent's page stand on another -- black words on a dark chat, white words on a light one. Such a place wears
+    /// the scheme of the ground MontanaChatBackdrop actually draws there, resolved by the same order.
+    static func worn(for conv: String) -> Choice {
+        if isPageKey(conv) { return choice(for: conv) }   // a page's own ground; none -- the page's black
+        let own = choice(for: conv)
+        if own != .general { return own }
+        let mine = choice(for: page)
+        if mine != .general { return mine }
+        let d = UserDefaults.standard
+        if d.string(forKey: "bubbleStyle") == "custom", d.bool(forKey: "cbBgOn") { return .general }   // the custom picture or gradient keeps the dark ink it wore
+        return .named(d.string(forKey: "chatBg") ?? "default")
+    }
+    static func scheme(for conv: String) -> ColorScheme { scheme(of: worn(for: conv)) }
     /// A picture is light when its mean luma (Rec. 709, over its 8x8 reduction) passes the middle grey; measured once per
     /// file -- a picture set anew is kept under a new name.
     private static var brightness: [String: Bool] = [:]

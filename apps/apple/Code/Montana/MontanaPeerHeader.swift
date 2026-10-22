@@ -407,6 +407,7 @@ struct MTFacePage<Content: View>: View {
             // chat's»): the chat's own ground view draws it, whole-window as its preview placed it, behind the whole page;
             // the posts and the rows stand on it as the chat's bubbles stand on its ground.
             .background { if let ground { MontanaChatBackdrop(conv: ground) } }   // the ground stays while the page is edited (25.09)
+            .modifier(MTWallpaper.Ink(conv: ground))   // a correspondent's page wears the ink of the ground they sent
             .toolbarBackground(shown ? .hidden : .automatic, for: .navigationBar)
             .animation(MTFaceDock.morph, value: face.dock)   // the face and the rows below it morph in ONE transaction
             // Full-screen avatar photo — through the ONE viewer (SSOT MontanaPhotoViewer). Only the header
