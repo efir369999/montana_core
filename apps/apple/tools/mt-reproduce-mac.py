@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Montana Core for Mac from this source and compare it with a published release, byte for byte."""
+"""Build Montana for the Mac or the phone from this source and compare it with a published release, byte for byte."""
 # Constitution [I-14]: «Every release build of an official Montana client is reproducible byte for byte from publicly published
 # source by any independent builder.» The author's words 21.10.2026 20:4x and 20:58 MSK: «there is no reproducible build of the
 # applications -- fix it», «while you wait for OZ 1, close OZ 2».
@@ -45,14 +45,26 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+# -no_adhoc_codesign (Agent 230, 22.10.2026): a release signs, so Xcode tells ld not to sign; the builder's archive may not sign,
+# so ld signed ad hoc itself -- a grown __LINKEDIT and another LC_UUID in Montana Core, NSE and Share (2278 against a clone).
+# Both roads link alike; Xcode 26 already passes -reproducible to every link
 SETTINGS = ['ARCHS=arm64', 'MONTANA_APP_ID=quest.montana.app', 'MTL_ENABLE_DEBUG_INFO=NO', 'COMPILER_INDEX_STORE_ENABLE=NO',
-            'DEVELOPMENT_TEAM=S8JCA5MBVD', 'OTHER_LDFLAGS=$(inherited) -Xlinker -no_deduplicate -Xlinker -objc_stubs_small']
+            'DEVELOPMENT_TEAM=S8JCA5MBVD', 'OTHER_LDFLAGS=$(inherited) -Xlinker -no_deduplicate -Xlinker -objc_stubs_small -Xlinker -no_adhoc_codesign']
 LEFT_OUT_DIRS = {'_CodeSignature'}
 LEFT_OUT_FILES = {'CodeResources', 'embedded.provisionprofile'}
 BUILDER_KEYS = ['BuildMachineOSBuild']
 FIXED = Path('/private/tmp/montana-apple')
+# One road for both apps (OZ 1, 22.10.2026): the phone archives the same project for generic iOS with the frameworks its own dependency
+# road prepares; its product is Montana.app, released inside an IPA under Payload/, the Mac's Montana Core.app inside a ZIP
+PLATFORMS = {
+    'mac': {'destination': 'generic/platform=macOS,variant=Mac Catalyst', 'app': 'Montana Core.app', 'archive': 'Montana-Core.xcarchive',
+            'manifest': 'reproduced.manifest'},
+    'phone': {'destination': 'generic/platform=iOS', 'app': 'Montana.app', 'archive': 'Montana.xcarchive',
+              'manifest': 'phone-reproduced.manifest'},
+}
 ICON_NAME = re.compile(rb'(AppIcon[^\x00/]*?)_[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}-[0-9]+-[0-9A-F]{16}(\.png)\x00')
 ELEMENT, PART, IDENTIFIER = 1, 2, 17
+LC_SEGMENT_64, LINKEDIT_PAGE = 0x19, 0x4000
 
 
 def run(args, **kwargs):
@@ -80,7 +92,7 @@ def framework_links(src, frameworks):
             (here / name).symlink_to(frameworks / name)
 
 
-def archive(path, frameworks, extra):
+def archive(path, frameworks, extra, platform):
     jobs = os.environ.get('MT_CORES') or str(os.cpu_count())
     src, linked, home = FIXED / 'src', FIXED / 'frameworks', FIXED / 'home'
     with open(str(FIXED) + '.lock', 'w') as lock:
@@ -102,10 +114,10 @@ def archive(path, frameworks, extra):
         framework_links(src, linked)
         # Xcode's own tools keep Swift dictionaries, whose order is seeded at random per process, so the hashing seed is fixed.
         run(['xcodebuild', '-project', src / 'Montana.xcodeproj', '-scheme', 'Montana', '-configuration', 'Release',
-             '-destination', 'generic/platform=macOS,variant=Mac Catalyst', '-jobs', jobs, '-derivedDataPath', home,
+             '-destination', PLATFORMS[platform]['destination'], '-jobs', jobs, '-derivedDataPath', home,
              '-archivePath', path, '-onlyUsePackageVersionsFromResolvedFile', 'archive', 'MONTANA_FRAMEWORKS_DIR=' + str(linked)]
             + SETTINGS + extra, env=dict(os.environ, SWIFT_DETERMINISTIC_HASHING='1'))
-        scrub(Path(path) / 'Products/Applications/Montana Core.app')
+        scrub(Path(path) / 'Products/Applications' / PLATFORMS[platform]['app'])
 
 
 def canonical_plist(path):
@@ -217,9 +229,32 @@ def macho(path):
         return f.read(4) in (bytes.fromhex('cffaedfe'), bytes.fromhex('cafebabe'))
 
 
+def canonical_linkedit(data):
+    # «codesign --remove-signature» cuts the signature out of __LINKEDIT and leaves its vmsize where the signer grew it: WebRTC in
+    # the 2278 release, signed for Developer ID, kept 0x98000 and 0x78000 where the unsigned framework of a clean clone says 0x74000
+    # and 0x6c000 (Agent 228, 22.10.2026) -- every slice gives __LINKEDIT back its own file size rounded up to the page
+    data = bytearray(data)
+    starts = [0]
+    if data[:4] == bytes.fromhex('cafebabe'):
+        count, = struct.unpack_from('!I', data, 4)
+        starts = [struct.unpack_from('!I', data, 16 + 20 * i)[0] for i in range(count)]
+    for start in starts:
+        if data[start:start + 4] != bytes.fromhex('cffaedfe'):
+            continue
+        commands, = struct.unpack_from('<I', data, start + 16)
+        at = start + 32
+        for _ in range(commands):
+            cmd, size = struct.unpack_from('<II', data, at)
+            if cmd == LC_SEGMENT_64 and data[at + 8:at + 24].rstrip(b'\x00') == b'__LINKEDIT':
+                filesize, = struct.unpack_from('<Q', data, at + 48)
+                struct.pack_into('<Q', data, at + 32, -(-filesize // LINKEDIT_PAGE) * LINKEDIT_PAGE)
+            at += size
+    return bytes(data)
+
+
 def manifest(app):
     with tempfile.TemporaryDirectory(prefix='mt-reproduce-') as work:
-        copy = os.path.join(work, 'Montana Core.app')
+        copy = os.path.join(work, os.path.basename(os.path.normpath(app)))
         run(['ditto', '--norsrc', '--noextattr', '--noqtn', '--noacl', app, copy])
         rows = []
         for d, dirs, files in os.walk(copy):
@@ -234,6 +269,10 @@ def manifest(app):
                     continue
                 if macho(p):
                     run(['codesign', '--remove-signature', p])
+                    with open(p, 'rb') as h:
+                        data = canonical_linkedit(h.read())
+                    with open(p, 'wb') as h:
+                        h.write(data)
                 rows.append((hashlib.sha256(open(p, 'rb').read()).hexdigest(), rel))
     rows.sort(key=lambda r: r[1])
     return ''.join(h + '  ' + rel + '\n' for h, rel in rows)
@@ -243,19 +282,31 @@ def digest(text):
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-def released_app(zip_path, work):
-    run(['ditto', '-x', '-k', zip_path, work])
-    return os.path.join(work, 'Montana Core.app')
+def released_app(package, work):
+    run(['ditto', '-x', '-k', package, work])
+    if package.endswith('.ipa'):
+        return os.path.join(work, 'Payload', PLATFORMS['phone']['app'])
+    return os.path.join(work, PLATFORMS['mac']['app'])
+
+
+def prepared(home, env, fresh, platform):
+    # The archive is born with its frameworks: a release home that names none prepares them here, never reads a path nobody wrote
+    # (22.10.2026, 2278: the release road died on build/mac-frameworks.path after the iOS build, which prepares no Catalyst frameworks)
+    named = home / (platform + '-frameworks.path')
+    if fresh or not named.exists() or not Path(named.read_text().strip()).is_dir():
+        run([sys.executable, ROOT / 'tools/mt-mac-dependencies.py', '--prepare', '--platform', platform, '--home', home], env=env)
+    return Path(named.read_text().strip())
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--platform', choices=sorted(PLATFORMS), default='mac')
     parser.add_argument('--core', help='the core source (core/Code of montana_core); default: the committed core beside this tree')
     parser.add_argument('--home', help='the build folder (default: build-reproduce/ of this tree)')
-    parser.add_argument('--compare', help='a published Montana-Core ZIP to compare the rebuilt app with')
+    parser.add_argument('--compare', help='a published Montana-Core ZIP (Mac) or Montana IPA (phone) to compare the rebuilt app with')
     parser.add_argument('--archive', help='archive here with the frameworks the build home names, then scrub (the release road)')
     parser.add_argument('--scrub', help='make every Info.plist and Assets.car of this app canonical')
-    parser.add_argument('--digest', help='print the reproducible digest of this app or ZIP')
+    parser.add_argument('--digest', help='print the reproducible digest of this app, ZIP or IPA')
     parser.add_argument('extra', nargs='*', help='after --: the release road\'s signing switches')
     args = parser.parse_args()
     if args.scrub:
@@ -263,25 +314,23 @@ def main():
         return
     if args.digest:
         with tempfile.TemporaryDirectory(prefix='mt-release-') as work:
-            app = released_app(args.digest, work) if args.digest.endswith('.zip') else args.digest
+            app = released_app(args.digest, work) if args.digest.endswith(('.zip', '.ipa')) else args.digest
             print(digest(manifest(app)))
         return
     home = Path(args.home).resolve() if args.home else ROOT / 'build-reproduce'
     home.mkdir(parents=True, exist_ok=True)
-    if args.archive:
-        frameworks = (home / 'mac-frameworks.path').read_text().strip()
-        archive(args.archive, Path(frameworks), args.extra)
-        return
     env = dict(os.environ)
     if args.core:
         env['MONTANA_CORE_SRC'] = str(Path(args.core).resolve())
-    run([sys.executable, ROOT / 'tools/mt-mac-dependencies.py', '--prepare', '--home', home], env=env)
-    frameworks = (home / 'mac-frameworks.path').read_text().strip()
-    path = home / 'Montana-Core.xcarchive'
-    archive(path, Path(frameworks), ['CODE_SIGNING_ALLOWED=NO'])
-    mine = manifest(path / 'Products/Applications/Montana Core.app')
-    (home / 'reproduced.manifest').write_text(mine)
-    print('rebuilt  ' + digest(mine) + '  (' + str(home / 'reproduced.manifest') + ')')
+    if args.archive:
+        archive(args.archive, prepared(home, env, False, args.platform), args.extra, args.platform)
+        return
+    road = PLATFORMS[args.platform]
+    path = home / road['archive']
+    archive(path, prepared(home, env, True, args.platform), ['CODE_SIGNING_ALLOWED=NO'], args.platform)
+    mine = manifest(path / 'Products/Applications' / road['app'])
+    (home / road['manifest']).write_text(mine)
+    print('rebuilt  ' + digest(mine) + '  (' + str(home / road['manifest']) + ')')
     if not args.compare:
         return
     with tempfile.TemporaryDirectory(prefix='mt-release-') as work:
