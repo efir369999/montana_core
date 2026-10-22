@@ -30,6 +30,7 @@ RUST = '1.92.0'
 RUSTUP = shutil.which('rustup') or str(Path.home() / '.cargo/bin/rustup')
 DEPLOYMENT = '17.2'
 WORDS = 'Montana wordlist.txt'
+CORE_LINE = 'publish/core-english'
 # openssl-src has no Catalyst target by name («don't know how to configure OpenSSL for aarch64-apple-ios-macabi», 2273's Mac road):
 # the Mac is configured as macOS arm64 with the Catalyst triple; the phone takes the configuration OpenSSL itself names for a 64-bit
 # iPhone (ios-common: no shared objects, no async)
@@ -56,9 +57,11 @@ def native_slice(framework, variant):
 
 
 def core_source(home, boundary):
-    # A core named by the caller (a clone of montana_core: its core/Code) is used as it stands; otherwise the committed HEAD of the
-    # core's repository beside this one is archived, so an uncommitted change can never reach a release. The protocol core the phone
-    # carries (Montana-Core) comes from the same commit, or from beside the named core.
+    # A core named by the caller (a clone of montana_core: its core/Code) is used as it stands; otherwise the head of the core's
+    # published line in the repository beside this one is archived, so an uncommitted change can never reach a release. The line, not
+    # the checkout's HEAD: 2280's Mac frameworks named ae36d1f9 of a checkout on another branch, a commit montana_core does not stage
+    # (stage.py pins the core to this line), and its release was refused (22.10.2026, Agent 240). The protocol core the phone carries
+    # (Montana-Core) comes from the same commit, or from beside the named core.
     named = os.environ.get('MONTANA_CORE_SRC')
     if named:
         code = Path(named).resolve()
@@ -66,7 +69,7 @@ def core_source(home, boundary):
         return code, other if boundary else None, {'repo': 'given', 'path': str(code.name)}
     common = Path(subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', '--path-format=absolute', '--git-common-dir'], text=True).strip())
     repo = common.parent.parent.parent / 'Montana-Protocol'
-    commit = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
+    commit = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', '--verify', CORE_LINE + '^{commit}'], text=True).strip()
     out = home / ('core-' + commit[:12])
     # The core reads its word list from beside Code/ (mt-mnemonic: include_str! of «../../../../Montana wordlist.txt»), and the public
     # core folder carries it there; measured 21.10.2026 21:37 MSK: an archive of Code/ alone could not compile mt-mnemonic.
