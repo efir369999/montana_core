@@ -19,14 +19,14 @@ Nothing in this repository claims more than those reports state.
 <!-- download -->
 ## Download
 
-Montana Core 1.0 (2282) for Mac, signed with a Developer ID and notarized by Apple.
+Montana Core 1.0 (2288) for Mac, signed with a Developer ID and notarized by Apple.
 
 |   |   |
 | --- | --- |
-| Release | [`v1.0-2282`](https://github.com/efir369999/montana_core/releases/tag/v1.0-2282) |
-| File | [`Montana-Core-1.0-2282.zip`](https://github.com/efir369999/montana_core/releases/download/v1.0-2282/Montana-Core-1.0-2282.zip), the same bytes as https://montana.quest/download/mac/Montana-Core.zip |
-| SHA-256 | `29338b1b08aa6282165f3c867e2ca3c070100afaba79234602f3098fbbc05b6c` |
-| Source | `apps/apple` at commit `e200b3169fd7` (folder tree `f14779092eea0efbc9cd6719c45f7ce163045a99`), staged from commit `51a2d7c9b023` of the application's repository |
+| Release | [`v1.0-2288`](https://github.com/efir369999/montana_core/releases/tag/v1.0-2288) |
+| File | [`Montana-Core-1.0-2288.dmg`](https://github.com/efir369999/montana_core/releases/download/v1.0-2288/Montana-Core-1.0-2288.dmg), the same bytes as https://montana.quest/download/mac/Montana-Core.dmg |
+| SHA-256 | `fe7648053a6e7c2a4e9dce33373748f856c563b3f36e366c4382a227ca653bab` |
+| Source | `apps/apple` at commit `e91ecf885426` (folder tree `062863609a3aec6bc4a586d0d7109b8400b018e4`), staged from commit `47080687a05c` of the application's repository |
 | Requires | A Mac with Apple silicon, macOS 14.2 or later |
 
 The Mac build carries no VPN: a packet tunnel distributed outside the Mac App Store must be a system extension, and a Mac
@@ -35,11 +35,12 @@ Catalyst application cannot activate one.
 ### Verify
 
 ```sh
-shasum -a 256 Montana-Core-1.0-2282.zip
-ditto -x -k Montana-Core-1.0-2282.zip .
-codesign --verify --deep --strict --verbose=2 "Montana Core.app"
-xcrun stapler validate "Montana Core.app"
-spctl --assess --type execute --verbose=2 "Montana Core.app"
+shasum -a 256 Montana-Core-1.0-2288.dmg
+xcrun stapler validate Montana-Core-1.0-2288.dmg
+spctl --assess --type open --context context:primary-signature --verbose=2 Montana-Core-1.0-2288.dmg
+hdiutil attach -readonly Montana-Core-1.0-2288.dmg
+codesign --verify --deep --strict --verbose=2 "/Volumes/Montana Core/Montana Core.app"
+spctl --assess --type execute --verbose=2 "/Volumes/Montana Core/Montana Core.app"
 ```
 
 The checksum must equal the one above, and Gatekeeper must answer `source=Notarized Developer ID`.
@@ -49,10 +50,10 @@ The checksum must equal the one above, and Gatekeeper must answer `source=Notari
 Anyone can rebuild this app from this repository and compare it with the release, file for file, signatures left out:
 
 ```sh
-git clone --branch v1.0-2282 https://github.com/efir369999/montana_core.git
+git clone --branch v1.0-2288 https://github.com/efir369999/montana_core.git
 cd montana_core/apps/apple
-curl -LO https://github.com/efir369999/montana_core/releases/download/v1.0-2282/Montana-Core-1.0-2282.zip
-python3 tools/mt-reproduce-mac.py --core ../../core/Code --compare Montana-Core-1.0-2282.zip
+curl -LO https://github.com/efir369999/montana_core/releases/download/v1.0-2288/Montana-Core-1.0-2288.dmg
+python3 tools/mt-reproduce-mac.py --core ../../core/Code --compare Montana-Core-1.0-2288.dmg
 ```
 
 The two digests it prints must be equal, and it must answer `REPRODUCED byte for byte`. It needs Xcode 26.2 (17C52), Rust 1.92.0 with the `aarch64-apple-ios-macabi` target, and the Go that `go.mod` names.
