@@ -591,6 +591,7 @@ final class MTBoard: ObservableObject {
     /// second apart. Three at a time with waits of 5–45 s (24.09) left a person with ten walls waiting four returns of the app.
     func sweep() {
         MTBoardGlobal.shared.laySoon()   // at the app's return: what the table holds of mine is set right (18.10)
+        MTBoardGlobal.shared.keepFiles()   // and the files it names lie on the stores (22.10)
         // A WALL WHOSE PAGE NEVER CAME FROM ITS OWNER IS A WALL NOT YET SEEN (the author's word 25.09: «from T3 I must see the
         // iPhone 15's wall when she shows it to everyone»): a post of mine on it made a page of one post here, and that page
         // stood for the wall for ever — no ask ever went, and an owner who carries nothing never sent the wall itself.
@@ -2602,6 +2603,7 @@ final class MTBoardGlobal: ObservableObject {
     static let perOwner = 1000
     static let tableWhole = 5000
     static let budget = 90 * 1024
+    static let haveWhole = 4096                                    // the most names a node's /blob-have answers at once
     @Published private(set) var posts: [(row: String, post: MTBoardSeen)] = []
     private var readAt = Date.distantPast
     private var reading = false
@@ -2678,6 +2680,38 @@ final class MTBoardGlobal: ObservableObject {
                 UserDefaults.standard.set(now, forKey: Self.sentKey)
                 MontanaTrace.mark("wall_global", "laid=\(settled.count) of=\(jobs.count) held=\(now.count)")
             }
+        }
+    }
+
+    // -- the owner keeps the files --
+    /// THE FILES OF THE TABLE ARE KEPT BY THEIR OWNER (T2 22.10, the author's word 18:19: «no music plays from the common wall --
+    /// everything must work»): a reader of the table answers nobody, so its «gone» went to a wall's reference no conversation holds,
+    /// and the pieces a node let go never came back. The owner, who alone holds the bytes and the key, asks every store at the app's
+    /// return whether the pieces of the posts it shows to everyone lie there, and lays again under the same key the ones they lack:
+    /// the same bytes sealed by the same key give the same names, so the post every reader already holds finds them again.
+    private var keptAt = Date.distantPast
+    func keepFiles() {
+        guard MTBoardRule.current(.see) == .everyone, 600 < Date().timeIntervalSince(keptAt) else { return }
+        keptAt = Date()
+        let board = MTBoard.shared
+        let own = board.mine.filter { q in q.author.isEmpty && q.from == nil && !q.media.isEmpty && board.outgoing[q.id] == nil }
+            .sorted { a, b in b.at < a.at }.prefix(Self.perOwner)
+        var posts: [(id: String, media: [MTBoardMedia], bids: [String])] = []
+        var asked = 0
+        for q in own {
+            let bids = q.media.flatMap { m in m.chunks.map { c in c.bid } }
+            guard asked + bids.count <= Self.haveWhole else { break }
+            asked += bids.count
+            posts.append((id: q.id, media: q.media, bids: bids))
+        }
+        guard !posts.isEmpty else { return }
+        let jobs = posts
+        Task {
+            // A silent store is «don't know» and lays nothing: only the stores' own word that a piece is missing moves the owner.
+            guard let have = await MontanaWakePush.blobsPresent(jobs.flatMap { j in j.bids }, everyStore: true) else { return }
+            let lost = jobs.filter { j in !j.bids.allSatisfy { b in have.contains(b) } }
+            for j in lost { await MTBoard.seedFiles(j.id, j.media) }
+            MontanaTrace.mark("wall_global", "kept posts=\(jobs.count) relaid=\(lost.count)")
         }
     }
 

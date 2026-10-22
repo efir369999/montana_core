@@ -28,7 +28,7 @@
 #   three different binaries): with deduplication off and the selector stubs branching to the one stub, no target holds two slots.
 #
 # Usage, from a clone of montana_core (apps/apple):
-#   python3 tools/mt-reproduce-mac.py --core ../../core/Code --compare Montana-Core-1.0-N.zip
+#   python3 tools/mt-reproduce-mac.py --core ../../core/Code --compare Montana-Core-1.0-N.dmg
 # prints the reproducible digest of the rebuilt app and of the release, and every file that differs. Needs the Xcode, Rust and
 # Go versions the release names (Xcode 26.2 17C52, Rust 1.92.0 with aarch64-apple-ios-macabi, Go from go.mod).
 import argparse
@@ -283,6 +283,16 @@ def digest(text):
 
 
 def released_app(package, work):
+    if package.endswith('.dmg'):
+        # the Mac release is a disk image (the author's word 22.10.2026 19:37 MSK: «isn't a native app's build a DMG?»): attached
+        # read-only and unseen by Finder, the app copied out whole, the image detached
+        mount = os.path.join(work, 'volume')
+        run(['hdiutil', 'attach', '-readonly', '-nobrowse', '-noautoopen', '-mountpoint', mount, package])
+        try:
+            run(['ditto', os.path.join(mount, PLATFORMS['mac']['app']), os.path.join(work, PLATFORMS['mac']['app'])])
+        finally:
+            run(['hdiutil', 'detach', mount])
+        return os.path.join(work, PLATFORMS['mac']['app'])
     run(['ditto', '-x', '-k', package, work])
     if package.endswith('.ipa'):
         return os.path.join(work, 'Payload', PLATFORMS['phone']['app'])
@@ -303,10 +313,10 @@ def main():
     parser.add_argument('--platform', choices=sorted(PLATFORMS), default='mac')
     parser.add_argument('--core', help='the core source (core/Code of montana_core); default: the committed core beside this tree')
     parser.add_argument('--home', help='the build folder (default: build-reproduce/ of this tree)')
-    parser.add_argument('--compare', help='a published Montana-Core ZIP (Mac) or Montana IPA (phone) to compare the rebuilt app with')
+    parser.add_argument('--compare', help='a published Montana-Core DMG or ZIP (Mac) or Montana IPA (phone) to compare the rebuilt app with')
     parser.add_argument('--archive', help='archive here with the frameworks the build home names, then scrub (the release road)')
     parser.add_argument('--scrub', help='make every Info.plist and Assets.car of this app canonical')
-    parser.add_argument('--digest', help='print the reproducible digest of this app, ZIP or IPA')
+    parser.add_argument('--digest', help='print the reproducible digest of this app, DMG, ZIP or IPA')
     parser.add_argument('extra', nargs='*', help='after --: the release road\'s signing switches')
     args = parser.parse_args()
     if args.scrub:
@@ -314,7 +324,7 @@ def main():
         return
     if args.digest:
         with tempfile.TemporaryDirectory(prefix='mt-release-') as work:
-            app = released_app(args.digest, work) if args.digest.endswith(('.zip', '.ipa')) else args.digest
+            app = released_app(args.digest, work) if args.digest.endswith(('.dmg', '.zip', '.ipa')) else args.digest
             print(digest(manifest(app)))
         return
     home = Path(args.home).resolve() if args.home else ROOT / 'build-reproduce'
