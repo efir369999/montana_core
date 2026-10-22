@@ -161,6 +161,7 @@ final class MontanaTests: XCTestCase {
         XCTAssertEqual(kept.faceBid, MontanaFirstContact.pipeFaceBid(secret))
         XCTAssertEqual(kept.faceKey, MontanaFirstContact.pipeFaceKey(secret))
         XCTAssertEqual(kept.pair, MTCoinTx.pairTag(secret: secret))
+        XCTAssertEqual(kept.ref, MTPipeBook.reference(of: secret))
         XCTAssertNotEqual(kept, MTPipeKept.of(Data(secret.reversed())))
     }
 

@@ -837,13 +837,14 @@ enum MontanaWakePush {
     static func mirrorSecrets() {
         var m: [String: Data] = [:]
         var alias: [String: String] = [:]
+        MTPipeBook.keepAll()
         for conv in MTPipeBook.all() {
             guard let sec = MTPipeBook.secret(for: conv) else { continue }
             m[conv] = sec
             // One pipe may lie under the address AND under a local name (ref) — the sides key
             // differently. The extension opens with EITHER, while the mirrors (name/avatar/
-            // mute/tap) live under the chat key. The mapping derives from the secret: ref -> chat key.
-            if let ref = MTPipeBook.reference(of: sec), ref != conv { alias[ref] = conv }
+            // mute/tap) live under the chat key. The mapping is the name kept at the pipe's birth: ref -> chat key.
+            if let ref = MTPipeBook.kept(for: conv)?.ref, ref != conv { alias[ref] = conv }
         }
         // First-meeting letter secrets: live cards hand the same keys to the extension so the
         // first letter opens from a push without a live channel (key «rdv:<invite>»).
@@ -5194,6 +5195,7 @@ struct MTClientRelease: Codable, Equatable {
     private var asking = false
     private var lastAsked = Date.distantPast
     private var channel: String?
+    private var said: [String: String] = [:]
     nonisolated static let cacheKey = "mt.release.cache"
     var updateURL: URL? {
         guard let r = latest, r.build > MontanaRelease.ownBuild else { return nil }
@@ -5233,47 +5235,71 @@ struct MTClientRelease: Codable, Equatable {
         guard Date().timeIntervalSince(lastAsked) >= 30, let client else { return }
         asking = true
         defer { asking = false }
-        guard let channel = await installedChannel() else { return }
+        guard let channel = await installedChannel() else { refuse("ask", "channel"); return }
         if latest == nil, let data = UserDefaults.standard.data(forKey: Self.cacheKey),
            let kept = MTClientRelease.read(data, bundle: bundle, channel: channel) { accept(kept) }
         // Public metadata only; the site's release document has no account or device identifiers.
         let site = "https://montana.xxx/updates/" + client + "-" + channel + ".json"
-        if await fetch(site, channel: channel) { lastAsked = Date(); return }
+        var misses: [String] = []
+        guard let siteMiss = await ask(site, channel: channel) else { lastAsked = Date(); return }
+        misses.append(siteMiss)
         if client == "messenger" {
             for base in MontanaWakePush.orderedBases(for: "release").prefix(3) {
-                if await fetch(base + "/release", channel: channel) { lastAsked = Date(); return }
+                guard let nodeMiss = await ask(base + "/release", channel: channel) else { lastAsked = Date(); return }
+                misses.append(nodeMiss)
             }
         }
+        refuse("ask", misses.joined(separator: " "))
     }
     func check(door: String) async {
         guard let channel = await installedChannel() else { return }
-        _ = await fetch(door + "/release", channel: channel)
+        _ = await ask(door + "/release", channel: channel)
     }
-    private func fetch(_ word: String, channel: String) async -> Bool {
-        guard let url = URL(string: word) else { return false }
+    // Answers nil once the release is accepted, otherwise the place and its refusal: a silent miss left T1 a whole day
+    // without «RELEASE told» (2278-2281) and no line said whether the channel, the network or the document refused.
+    private func ask(_ word: String, channel: String) async -> String? {
+        guard let url = URL(string: word) else { return "url" }
+        let place = url.host ?? "?"
         var request = URLRequest(url: url); request.timeoutInterval = 8
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 100_000,
-              let release = MTClientRelease.read(data, bundle: bundle, channel: channel) else { return false }
+        let data: Data, response: URLResponse
+        do { (data, response) = try await URLSession.shared.data(for: request) } catch {
+            return place + ":net" + String((error as? URLError)?.code.rawValue ?? 0)
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 else { return place + ":" + String(status) }
+        guard data.count <= 100_000, let release = MTClientRelease.read(data, bundle: bundle, channel: channel) else {
+            return place + ":document"
+        }
         accept(release)
-        return true
+        return nil
+    }
+    // Refresh repeats on every call while nothing answers: one line per new reason, not one per call.
+    private func refuse(_ step: String, _ why: String) {
+        guard said[step] != why else { return }
+        said[step] = why
+        MontanaLog.event("RELEASE \(step) refused \(why) own=\(MontanaRelease.ownBuild)")
     }
     private func accept(_ release: MTClientRelease) {
         guard release.build >= (latest?.build ?? 0) else { return }
         if latest != release {
             latest = release
             if let data = try? JSONEncoder().encode(release) { UserDefaults.standard.set(data, forKey: Self.cacheKey) }
+            MontanaLog.event("RELEASE seen build=\(release.build) least=\(release.least) own=\(MontanaRelease.ownBuild)")
         }
         deliver()
     }
     private func deliver() {
-        guard let release = latest, release.build >= MontanaRelease.ownBuild,
-              let store = MontanaDeliveryEngine.shared.store, store.historyLoaded else { return }
+        guard let release = latest, release.build >= MontanaRelease.ownBuild else { return }
+        guard let store = MontanaDeliveryEngine.shared.store, store.historyLoaded else {
+            refuse("tell", "build=\(release.build) history"); return
+        }
         // The row is the deduplication owner: a missing store or a restored identity must
         // not consume a device-global "already told" flag before anything was delivered.
         guard store.appendRelease(build: release.build, version: release.version, notes: release.notes,
-                                  l10n: release.l10n, url: release.url) else { return }
+                                  l10n: release.l10n, url: release.url) else {
+            refuse("tell", "build=\(release.build) kept"); return
+        }
         MontanaLog.event("RELEASE told build=\(release.build) own=\(MontanaRelease.ownBuild)")
         MontanaNotify.presentRelease(build: release.build, version: release.version)
     }

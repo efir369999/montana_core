@@ -257,13 +257,15 @@ struct MTPipeKept: Codable, Equatable {
     let faceBid: String     // MontanaFirstContact.pipeFaceBid
     let faceKey: Data       // MontanaFirstContact.pipeFaceKey
     let pair: Data          // MTCoinTx.pairTag(secret:)
+    let ref: String?        // MTPipeBook.reference(of:); absent from a record kept before it was born here
 
     static func of(_ secret: Data) -> MTPipeKept {
         MTPipeKept(root: MTNodeWire.convRoot(secret),
                    fingerprint: MTPipe.fingerprintMaterial(secret),
                    faceBid: MontanaFirstContact.pipeFaceBid(secret),
                    faceKey: MontanaFirstContact.pipeFaceKey(secret),
-                   pair: MTCoinTx.pairTag(secret: secret))
+                   pair: MTCoinTx.pairTag(secret: secret),
+                   ref: MTPipeBook.reference(of: secret))
     }
 }
 
@@ -377,11 +379,21 @@ enum MTPipeBook {
 
     static func kept(for conv: String) -> MTPipeKept? {
         let m = keptLoad()
-        if let k = m?[conv] { return k }
-        guard let s = secret(for: conv), s.count == 32 else { return nil }
+        if let k = m?[conv], k.ref != nil { return k }
+        guard let s = secret(for: conv), s.count == 32 else { return m?[conv] }
         let k = MTPipeKept.of(s)
         if var m, MontanaDeviceKey.key != nil { m[conv] = k; keptStore(m) }
         return k
+    }
+
+    /// Every held pipe's record in one writing: the first launch after the record grew its name fills them all at once,
+    /// not one sealed write per pipe on the thread that asks.
+    static func keepAll() {
+        guard var m = keptLoad(), MontanaDeviceKey.key != nil else { return }
+        let lacking = load().filter { conv, s in s.count == 32 && m[conv]?.ref == nil }
+        guard !lacking.isEmpty else { return }
+        for (conv, s) in lacking { m[conv] = MTPipeKept.of(s) }
+        keptStore(m)
     }
 
     private static func forgetKept(_ conv: String) {
