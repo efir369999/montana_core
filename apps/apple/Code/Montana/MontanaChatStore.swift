@@ -230,6 +230,7 @@ class ChatStore: ObservableObject {
     func reconcileListWithFeed(_ feed: [String: [Message]], keepDoorRecords: Bool) {
         guard historyLoaded else { return }   // a partial feed is no truth to mirror; the load's own pass follows
         var healed = listState; var changed = false
+        var order = orderSeq; var moved = 0
         for (chat, arr) in feed {
             if keepDoorRecords, let rec = healed[chat], Self.isDoorRecord(rec) { continue }
             guard let last = arr.max(by: ChatStore.before) else {
@@ -238,8 +239,14 @@ class ChatStore: ObservableObject {
             }
             let full = listRecord(chat, last: last)
             if healed[chat] != full { healed[chat] = full; changed = true }
+            // The row's place is rebuilt from the same letter as its record -- a moment of handling kept from an older build
+            // (bump) stood above the birth it now says, and the map never talks a moment down (noteOrder). A pin is the
+            // person's deed and keeps its own moment.
+            let born = Self.birthMs(last)
+            if !pinnedChats.contains(chat), order[chat] != born { order[chat] = born; moved += 1 }
         }
         if changed { listState = healed; persistListState() }
+        if moved > 0 { applyOrder(order); MontanaTrace.mark("list_order", "by birth moved=\(moved)") }
     }
     /// THE LAST LETTER OF A CHAT, ONE DEFINITION ([C-1], the author's law 19.09: what stands last
     /// in the chat stands in the list): the newest by the feed's own order — birth, then id — the
@@ -577,7 +584,7 @@ class ChatStore: ObservableObject {
     }
     func togglePinChat(_ name: String) {
         if pinnedChats.contains(name) { pinnedChats.remove(name) }
-        else if pinnedChats.count < 5 { pinnedChats.insert(name); bump(name) }   // maximum 5 pinned, the new one — to the very top
+        else if pinnedChats.count < 5 { pinnedChats.insert(name); noteOrder(name, at: Self.nowMs()) }   // maximum 5 pinned, the new one — to the very top: the person's deed, not a letter's birth
     }
     /// THE ROW'S MARK, BOTH WAYS (the author's word 23.09: «the number of unread for this chat, as on the icons,
     /// and in the menu the mark reset or assigned right»). Unread is the letters' own word (isRead, recalcBadge);
@@ -2901,8 +2908,13 @@ class ChatStore: ObservableObject {
         // history and rewritten by nothing: the only proof remains the peer's receipt.
     }
 
-    // bump the chat to the top (called on a new message)
-    func bump(_ chat: String) { noteOrder(chat, at: Self.nowMs()) }
+    /// A ROW STANDS WHERE ITS TIME SAYS: the moment of the chat's newest letter, the very one the row shows (the author's word
+    /// 22.10.2026 23:0x MSK, T1 at 23:01: «the chats sort crooked -- maybe not one owner of time»). The order was the moment
+    /// THIS PHONE handled a letter, the row's time the moment the letter was BORN -- two owners. T1 rose at 20:00:29Z after a
+    /// crash, the archive laid back letters missed for hours (archive_gap rows=1196 in 25 chats) and every one of them lifted
+    /// its chat to the top as «now» while the row still said 19:33; a late photo did the same. One owner now: the birth.
+    func bump(_ chat: String) { noteOrder(chat, at: Self.birthMs(lastLetter(chat))) }
+    static func birthMs(_ m: Message?) -> Int { m.map { Int($0.createdAt * 1000) } ?? nowMs() }
     /// The moment of a conversation's newest event, from whichever door saw it. Monotone by
     /// construction — a moment already known is never talked down — so applying the same landing
     /// twice, or the ordinary door repeating what the landing door already wrote, moves nothing.

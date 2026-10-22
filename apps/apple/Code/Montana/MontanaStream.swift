@@ -116,6 +116,9 @@ actor MTCargoLane {
         pump()
     }
 
+    /// A piece the person waits for is in the line: a picture on screen or a file playing, not a piece fetched ahead.
+    var wanted: Bool { asks.values.contains { $0.need != .ahead } }
+
     private func run(_ bid: String) async {
         let answer = await MontanaWakePush.bringChunk(bid)
         settle(bid, answer)

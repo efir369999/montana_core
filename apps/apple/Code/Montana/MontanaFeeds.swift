@@ -207,7 +207,11 @@ enum MTWallpaper {
     /// the burgundy: black words on a dark ground. Now each ground answers for itself -- the gold and the light gradients
     /// light, every other named ground dark, a picture by its measured brightness -- and the first screen asks the ground it
     /// actually wears (birthScheme).
-    static let lightGrounds = [gold, "sky", "water"]
+    /// THE GOLD WEARS THE DARK INK (the author's word 22.10 22:47: «what you made grey on the gold ground must be black, and
+    /// what is black now must be white on the gold ground»): under the light appearance the gold showed grey materials and
+    /// black words; the platform's dark appearance gives it black materials and white words, so the gold is no light ground
+    /// any more -- the light gradients alone are.
+    static let lightGrounds = ["sky", "water"]
     static var scheme: ColorScheme { scheme(of: choice(for: page)) }
     static var birthScheme: ColorScheme { Book.shared.birthChosen ? scheme : scheme(of: .named(burgundy)) }
     static func scheme(of c: Choice) -> ColorScheme {

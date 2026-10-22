@@ -1889,6 +1889,25 @@ enum MontanaWakePush {
         return !Task.isCancelled
     }
 
+    /// THE KEEPING'S CARGO IS QUIET (the author's word 22.10.2026 23:0x MSK: on T1 at 23:01 the media loaded long). T1 rose
+    /// at 20:00:29Z after a crash and laid its daily light copy first -- 126 MB in pieces of half a megabyte, 471 puts and 918
+    /// copies to the second machine in three and a half minutes -- on the very doors and roads the person's photos came in by.
+    /// A copy waits a minute and loses nothing; a picture on screen waits in front of the person. Quiet cargo is the keeping's
+    /// own (MTKeeping.lay), said once around the whole lay, and it stands aside while a piece the person waits for is in line.
+    @TaskLocal static var quietCargo = false
+    private static func yieldToMedia(_ work: String) async -> Bool {
+        var held = false
+        while await MTCargoLane.shared.wanted {
+            if !held {
+                held = true
+                MontanaTrace.markFolded("bulk_lane", "held=media work=\(work)", window: 30, key: "media")
+            }
+            if Task.isCancelled { return false }
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+        return !Task.isCancelled
+    }
+
     static func putBlob(_ bid: String, data: Data, over: Bool = false,
                         cargo: String? = nil, last: Bool = false, assumeAbsent: Bool = false,
                         bulk: Bool = false) async -> Bool {
@@ -1899,6 +1918,8 @@ enum MontanaWakePush {
         // node lacks them. A chunk walk (uploadChunks) has already asked for its whole batch.
         if bulk {
             guard await enterBulkLane("put") else { return false }
+            // Before the put takes a place among the few in flight (MTBulkPuts): a copy held there would hold the person's own sends.
+            if quietCargo, !(await yieldToMedia("put")) { return false }
         }
         if !over, !assumeAbsent, let have = await blobsPresent([bid]), have.contains(bid) {
             MontanaTrace.markFolded("blob_put", "already on the node id=\(String(bid.prefix(8))) — not sent again", window: 30)

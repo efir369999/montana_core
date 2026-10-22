@@ -669,7 +669,11 @@ enum MTKeepDerive {
     // ── the cargo road of a part ──
     /// A PART ON THE CARGO ROAD: sealed in pieces under a fresh key and put on the nodes, and its list of pieces sealed as one
     /// more piece -- the word that names a part carries that piece's name and key, never the list (a list outgrows a letter).
+    /// The keeping's cargo is quiet (MontanaWakePush.quietCargo): the person's media coming in goes first, the copy after it.
     nonisolated static func lay(_ url: URL) async -> [String: Any]? {
+        await MontanaWakePush.$quietCargo.withValue(true) { await layPieces(url) }
+    }
+    nonisolated private static func layPieces(_ url: URL) async -> [String: Any]? {
         let size = ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int) ?? 0
         guard size > 0, let up = await MontanaMedia.sealAndUpload(source: .file(url), progress: { _ in }) else { return nil }
         guard await MontanaWakePush.uploadChunks(["chunks": up.manifest]) else { return nil }
