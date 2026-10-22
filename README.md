@@ -16,8 +16,34 @@ Protocol closure is open. The 13 acceptance criteria of the protocol and their c
 kept in the audit of the Montana repository: [montana_messenger/Audit](https://github.com/efir369999/montana_messenger/tree/main/Audit).
 Nothing in this repository claims more than those reports state.
 
-No signed Mac build has been published yet. Distribution outside the App Store requires a Developer ID signature and Apple
-notarization; until both exist, this repository holds sources only.
+<!-- download -->
+## Download
+
+Montana Core 1.0 (2281) for Mac, signed with a Developer ID and notarized by Apple.
+
+|   |   |
+| --- | --- |
+| Release | [`v1.0-2281`](https://github.com/efir369999/montana_core/releases/tag/v1.0-2281) |
+| File | [`Montana-Core-1.0-2281.zip`](https://github.com/efir369999/montana_core/releases/download/v1.0-2281/Montana-Core-1.0-2281.zip), the same bytes as https://montana.quest/download/mac/Montana-Core.zip |
+| SHA-256 | `1bb589d011f5b20ae9edc819e61e08c837dc0ac404c7714ee832d733aa6847cb` |
+| Source | `apps/apple` at commit `6c09e325938d` (folder tree `497103957be8428a23abbb07044baa3f3077c0e4`), staged from commit `13041e634423` of the application's repository |
+| Requires | A Mac with Apple silicon, macOS 14.2 or later |
+
+The Mac build carries no VPN: a packet tunnel distributed outside the Mac App Store must be a system extension, and a Mac
+Catalyst application cannot activate one.
+
+### Verify
+
+```sh
+shasum -a 256 Montana-Core-1.0-2281.zip
+ditto -x -k Montana-Core-1.0-2281.zip .
+codesign --verify --deep --strict --verbose=2 "Montana Core.app"
+xcrun stapler validate "Montana Core.app"
+spctl --assess --type execute --verbose=2 "Montana Core.app"
+```
+
+The checksum must equal the one above, and Gatekeeper must answer `source=Notarized Developer ID`.
+<!-- /download -->
 
 ## What this repository holds
 
