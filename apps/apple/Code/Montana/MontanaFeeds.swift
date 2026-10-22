@@ -169,7 +169,9 @@ enum MTWallpaper {
     }
     static func isPageKey(_ k: String?) -> Bool { k == page || (k?.hasPrefix(page + ".") ?? false) }
     /// The one bit the screens observe: a change of any wallpaper.
-    final class Book: ObservableObject { static let shared = Book(); @Published var rev = 0 }
+    /// `birthChosen`: the person being made chose a ground on the first screen -- from then on the making wears it, before it
+    /// the login page's burgundy (MontanaOnboardingView).
+    final class Book: ObservableObject { static let shared = Book(); @Published var rev = 0; @Published var birthChosen = false }
     private static func parse(_ s: String?) -> Choice {
         guard let s else { return .general }
         if s.hasPrefix("named:") { return .named(String(s.dropFirst(6))) }   // COMPAT-LOCAL: a stored choice, never on the wire
@@ -185,11 +187,44 @@ enum MTWallpaper {
     /// THE GROUND DECIDES THE INK (the author's word 20.10 21:4x: the gold ground, the font by default black in the whole
     /// app, so that everything reads). The gold is a light ground; white words on it do not read. The platform's own answer
     /// to a light ground is its light appearance: every primary word, bar and material turns to the platform's dark ink.
-    /// So the scheme of the whole app is decided here, from the ground my page wears, and nowhere else ([C-1]).
-    static let lightGrounds = [gold]
-    static var scheme: ColorScheme {
-        if case .named(let n) = choice(for: page), lightGrounds.contains(n) { return .light }
-        return .dark
+    /// So the scheme of the whole app is decided here, and nowhere else ([C-1]).
+    /// THE INK FOLLOWS THE GROUND UNDER IT (the author's word 22.10 18:21: «everything adaptive as in iOS -- white on the dark,
+    /// black on the light»). The scheme was read from my page's ground alone, gold by default, while the login page stood on
+    /// the burgundy: black words on a dark ground. Now each ground answers for itself -- the gold and the light gradients
+    /// light, every other named ground dark, a picture by its measured brightness -- and the first screen asks the ground it
+    /// actually wears (birthScheme).
+    static let lightGrounds = [gold, "sky", "water"]
+    static var scheme: ColorScheme { scheme(of: choice(for: page)) }
+    static var birthScheme: ColorScheme { Book.shared.birthChosen ? scheme : scheme(of: .named(burgundy)) }
+    static func scheme(of c: Choice) -> ColorScheme {
+        switch c {
+        case .named(let n): return lightGrounds.contains(n) ? .light : .dark
+        case .photo(let f): return bright(f) ? .light : .dark
+        case .general: return .dark
+        }
+    }
+    /// A picture is light when its mean luma (Rec. 709, over its 8x8 reduction) passes the middle grey; measured once per
+    /// file -- a picture set anew is kept under a new name.
+    private static var brightness: [String: Bool] = [:]
+    static func bright(_ file: String) -> Bool {
+        if let b = brightness[file] { return b }
+        guard let cg = UIImage(contentsOfFile: folder().appendingPathComponent(file).path)?.cgImage else { return false }
+        let side = 8
+        var px = [UInt8](repeating: 0, count: side * side * 4)
+        let drawn: Bool = px.withUnsafeMutableBytes { buf in
+            guard let ctx = CGContext(data: buf.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return false }
+            ctx.interpolationQuality = .medium
+            ctx.draw(cg, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        guard drawn else { return false }
+        var sum = 0
+        for i in stride(from: 0, to: px.count, by: 4) { sum += 2126 * Int(px[i]) + 7152 * Int(px[i + 1]) + 722 * Int(px[i + 2]) }
+        let b = sum * 2 > side * side * 10_000 * 255
+        brightness[file] = b
+        return b
     }
     static func choice(for conv: String) -> Choice {
         let s = UserDefaults.standard.string(forKey: "chatWall." + conv)

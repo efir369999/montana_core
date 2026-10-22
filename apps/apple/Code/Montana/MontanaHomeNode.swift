@@ -428,7 +428,10 @@ struct HomeNodeView: View {
                 }
                 .disabled(!holds || node.fetching != nil || node.restoring != nil)
             } footer: {
-                if !open { Text("Opens at level \(eight). Your level is \(level).") }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Once a day, while Montana is open and on Wi-Fi only, a sealed copy of the whole app goes to your node. Off, nothing is sent and nothing is removed from the node.")
+                    if !open { Text("Opens at level \(eight). Your level is \(level).") }
+                }
             }
             .listRowBackground(MTGlassRowPlate())
             // THE FILES ON YOUR NODE (18.10): every attachment in sealed pieces, the node's word on what it holds, this phone's

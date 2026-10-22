@@ -30364,6 +30364,213 @@
           }
         }
       }
+    },
+    "Max takes the camera's sharpest picture at the highest bitrate, Min makes the lightest file. A camera that cannot keep up steps down by itself.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Max takes the camera's sharpest picture at the highest bitrate, Min makes the lightest file. A camera that cannot keep up steps down by itself."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«Макс» берёт самую чёткую картинку камеры с самым высоким битрейтом, «Мин» даёт самый лёгкий файл. Камера, которая не успевает, сама снижает качество."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“最高”使用摄像头最清晰的画面和最高码率，“最低”生成最小的文件。摄像头跟不上时会自动降低画质。"
+          }
+        }
+      }
+    },
+    "How the keyboard looks while you write a message or search: as the system, always dark or always light.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How the keyboard looks while you write a message or search: as the system, always dark or always light."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Как выглядит клавиатура, когда вы пишете сообщение или ищете: как в системе, всегда тёмная или всегда светлая."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撰写消息或搜索时键盘的外观：跟随系统、始终深色或始终浅色。"
+          }
+        }
+      }
+    },
+    "Montana: yours in the system blue, others' in grey. Classic: yours in your bubble colour, others' in dark grey. Custom: the colours you set below.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Montana: yours in the system blue, others' in grey. Classic: yours in your bubble colour, others' in dark grey. Custom: the colours you set below."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«Монтана»: ваши — системным синим, чужие — серым. «Классический»: ваши — цветом вашего пузыря, чужие — тёмно-серым. «Свой»: цвета, которые вы зададите ниже."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“蒙大拿”：你的消息为系统蓝色，他人的为灰色。“经典”：你的消息为你的气泡颜色，他人的为深灰色。“自定义”：使用你在下方设置的颜色。"
+          }
+        }
+      }
+    },
+    "A photo, video or file your node holds leaves this phone when nobody has opened it for this long. It comes back from your node when you open it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A photo, video or file your node holds leaves this phone when nobody has opened it for this long. It comes back from your node when you open it."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фото, видео или файл, которые хранит ваш узел, уходят с этого телефона, если их не открывали столько времени. Когда вы их откроете, они вернутся с узла."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您的节点保存的照片、视频或文件，若在这段时间内无人打开，将从此手机移除。打开时会从您的节点取回。"
+          }
+        }
+      }
+    },
+    "Past this size the files opened longest ago leave this phone first, only those your node holds.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Past this size the files opened longest ago leave this phone first, only those your node holds."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сверх этого размера первыми уходят с телефона файлы, которые открывали давнее всего, — только те, что хранит ваш узел."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超过此大小时，最久未打开的文件会先从此手机移除，仅限您的节点保存的文件。"
+          }
+        }
+      }
+    },
+    "Applications show as a list, or as a grid of icons.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applications show as a list, or as a grid of icons."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приложения показываются лентой или сеткой иконок."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用以列表或图标网格显示。"
+          }
+        }
+      }
+    },
+    "How a voice message looks in the chat: a liquid orb, or bars like a music track.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How a voice message looks in the chat: a liquid orb, or bars like a music track."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Как голосовое сообщение выглядит в чате: жидкий шар или полосы, как у музыкального трека."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音消息在聊天中的外观：液态球体，或像音乐曲目那样的柱状条。"
+          }
+        }
+      }
+    },
+    "On, the orb plays in its own colours. Off, it wears the one colour you pick below.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On, the orb plays in its own colours. Off, it wears the one colour you pick below."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включено: шар переливается своими цветами. Выключено: он носит один цвет, выбранный ниже."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启时，球体呈现自身的色彩。关闭时，它使用您在下方选择的单一颜色。"
+          }
+        }
+      }
+    },
+    "Once a day, while Montana is open and on Wi-Fi only, a sealed copy of the whole app goes to your node. Off, nothing is sent and nothing is removed from the node.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once a day, while Montana is open and on Wi-Fi only, a sealed copy of the whole app goes to your node. Off, nothing is sent and nothing is removed from the node."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Раз в сутки, пока Montana открыта и только по Wi-Fi, запечатанная копия всего приложения уходит на ваш узел. Выключено: ничего не отправляется и ничего не удаляется с узла."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每天一次，在 Montana 打开且仅通过 Wi-Fi 时，整个应用的密封备份会发送到您的节点。关闭时，不发送任何内容，也不会从节点删除任何内容。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

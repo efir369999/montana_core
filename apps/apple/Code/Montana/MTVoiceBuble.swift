@@ -691,6 +691,9 @@ struct MontanaVoiceOrbStyleView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16).padding(.top, 12)
+            Text("How a voice message looks in the chat: a liquid orb, or bars like a music track.")
+                .font(.caption).foregroundColor(.gray).multilineTextAlignment(.center)
+                .padding(.horizontal, 24).padding(.top, 8)
             if style.histogram {
                 Text("The histogram wears the colours of the text bubble.")
                     .font(.caption).foregroundColor(.gray).multilineTextAlignment(.center)
@@ -706,7 +709,11 @@ struct MontanaVoiceOrbStyleView: View {
             List {
                 if !style.histogram {
                 Section(editingMine ? "Your voice" : "Their voice") {
-                    Toggle("Own colours", isOn: ownColours).foregroundColor(.white)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Toggle("Own colours", isOn: ownColours).foregroundColor(.white)
+                        Text("On, the orb plays in its own colours. Off, it wears the one colour you pick below.")
+                            .font(.caption).foregroundColor(.gray)
+                    }
                     if side.wrappedValue.hue >= 0 {
                         ColorPicker("Colour", selection: hueBinding, supportsOpacity: false).foregroundColor(.white)
                     }

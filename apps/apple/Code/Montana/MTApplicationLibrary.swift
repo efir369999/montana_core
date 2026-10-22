@@ -191,13 +191,17 @@ struct MTLibraryIconStyleView: View {
         List {
             // THE DRAWER'S VIEW (the author's word 29.09): the list as it stood on 1949 by default; the icons' grid by choice,
             // chosen here, where the icons' style is chosen -- the drawer itself carries no heading and no search any more.
-            Section("View") {
+            Section {
                 Picker("View", selection: $icons) {
                     Label("List", systemImage: "list.bullet").tag(false)
                     Label("Icons", systemImage: "square.grid.2x2").tag(true)
                 }
                 .pickerStyle(.inline)
                 .labelsHidden()
+            } header: {
+                Text("View")
+            } footer: {
+                Text("Applications show as a list, or as a grid of icons.")
             }.listRowBackground(MTGlassRowPlate())
             ForEach(MTLibraryIconStyle.allCases) { style in
                 Section {

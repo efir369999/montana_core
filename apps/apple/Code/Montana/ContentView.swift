@@ -471,7 +471,7 @@ struct RootView: View {
                 MainTabView().id(skin + "|seat:" + (seats.activeId ?? "unseated"))
             }
         }
-        .preferredColorScheme(MTWallpaper.scheme)   // the ground decides the ink: black on the light gold, white on every dark ground
+        .preferredColorScheme(hasSeed ? MTWallpaper.scheme : MTWallpaper.birthScheme)   // the ground under the words decides their ink
         .onAppear {
             MontanaCallWiring.setup()
         }

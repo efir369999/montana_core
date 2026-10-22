@@ -1207,22 +1207,26 @@ struct AppearanceView: View {
             }.listRowBackground(MTGlassRowPlate())
             // The note's picture quality (the author's word 18.09): three steps, the platform's own
             // segmented picker — the source's height and the encoder's rate (MontanaNoteQuality).
-            Section("Video note quality") {
+            Section {
                 Picker("Video note quality", selection: $noteQuality) {
                     Text("Min").tag(MontanaNoteQuality.low.rawValue)
                     Text("Medium").tag(MontanaNoteQuality.medium.rawValue)
                     Text("Max").tag(MontanaNoteQuality.high.rawValue)
                 }.pickerStyle(.segmented).labelsHidden()
+            } header: { Text("Video note quality") } footer: {
+                Text("Max takes the camera's sharpest picture at the highest bitrate, Min makes the lightest file. A camera that cannot keep up steps down by itself.")
             }.listRowBackground(MTGlassRowPlate())
             // THE KEYS' LOOK (the author's word 21.09): the keys are drawn by the platform in its own
             // window and take no colour of ours — only their three looks. The panel around the field has
             // no ground to colour (the reference's clear panel).
-            Section("Keyboard") {
+            Section {
                 Picker("Keys", selection: $keyboardLook) {
                     Text("System").tag("system")
                     Text("Dark").tag("dark")
                     Text("Light").tag("light")
                 }.pickerStyle(.segmented)
+            } header: { Text("Keyboard") } footer: {
+                Text("How the keyboard looks while you write a message or search: as the system, always dark or always light.")
             }.listRowBackground(MTGlassRowPlate())
             Section {
                 VStack(alignment: .leading) {
@@ -1242,12 +1246,14 @@ struct AppearanceView: View {
             } header: { Text("Feed motion") } footer: {
                 Text("Adjusts scrolling, new messages and the return after a reply swipe. Reduce Motion takes priority.")
             }.listRowBackground(MTGlassRowPlate())
-            Section("Message style") {
+            Section {
                 Picker("Message style", selection: $bubbleStyle) {
                     Text("Montana (default)").tag("montana")
                     Text("Classic").tag("classic")
                     Text("Custom").tag("custom")
                 }.pickerStyle(.inline).labelsHidden()
+            } header: { Text("Message style") } footer: {
+                Text("Montana: yours in the system blue, others' in grey. Classic: yours in your bubble colour, others' in dark grey. Custom: the colours you set below.")
             }.listRowBackground(MTGlassRowPlate())
             // The voice orb's own screen (the author's word 14.09): colours of both sides, the motion.
             Section("Voice message style") {
@@ -1440,22 +1446,30 @@ struct DataStorageView: View {
                 .disabled(!MTHomeShelf.bringing || homeKeep.clearing)
                 // AS THE REFERENCE KEEPS ITS CACHE: a term for what nobody opened, a ceiling for the whole -- what leaves is what
                 // the node holds, asked anew.
-                Picker(selection: $keepDays) {
-                    Text("3 days").tag(3)
-                    Text("1 week").tag(7)
-                    Text("1 month").tag(30)
-                    Text("Forever").tag(0)
-                } label: { settingsToggleLabel("Keep media", "clock.arrow.circlepath", .blue) }
-                .disabled(!MTHomeShelf.bringing)
-                .onChange(of: keepDays) { _, _ in homeKeep.trim() }
-                Picker(selection: $cacheLimit) {
-                    ForEach([5, 16, 32], id: \.self) { g in
-                        Text(verbatim: mtSize(g * 1_073_741_824)).tag(g)   // USER-DATA: a size in the platform's own units
-                    }
-                    Text("No limit").tag(0)
-                } label: { settingsToggleLabel("Maximum cache size", "internaldrive.fill", .gray) }
-                .disabled(!MTHomeShelf.bringing)
-                .onChange(of: cacheLimit) { _, _ in homeKeep.trim() }
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker(selection: $keepDays) {
+                        Text("3 days").tag(3)
+                        Text("1 week").tag(7)
+                        Text("1 month").tag(30)
+                        Text("Forever").tag(0)
+                    } label: { settingsToggleLabel("Keep media", "clock.arrow.circlepath", .blue) }
+                    .disabled(!MTHomeShelf.bringing)
+                    .onChange(of: keepDays) { _, _ in homeKeep.trim() }
+                    Text("A photo, video or file your node holds leaves this phone when nobody has opened it for this long. It comes back from your node when you open it.")
+                        .font(.caption).foregroundColor(.gray)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker(selection: $cacheLimit) {
+                        ForEach([5, 16, 32], id: \.self) { g in
+                            Text(verbatim: mtSize(g * 1_073_741_824)).tag(g)   // USER-DATA: a size in the platform's own units
+                        }
+                        Text("No limit").tag(0)
+                    } label: { settingsToggleLabel("Maximum cache size", "internaldrive.fill", .gray) }
+                    .disabled(!MTHomeShelf.bringing)
+                    .onChange(of: cacheLimit) { _, _ in homeKeep.trim() }
+                    Text("Past this size the files opened longest ago leave this phone first, only those your node holds.")
+                        .font(.caption).foregroundColor(.gray)
+                }
             } header: {
                 Text("CACHE")
             } footer: {
@@ -2431,13 +2445,13 @@ struct MontanaOnboardingView: View {
     @ObservedObject private var keep = MTKeeping.shared           // the parts coming back from the people one wrote to (08.10)
     @State private var barSince = Date()                          // when the bar first stood on the page: the time left is measured from it
     @ObservedObject private var seats = MTSeats.shared            // a person being added: the page stands on the Montana road (06.10)
-    @State private var groundChosen = false                       // the new person chose a ground: the pages wear it from then on
+    @ObservedObject private var grounds = MTWallpaper.Book.shared // birthChosen: the new person chose a ground, the pages wear it from then on
 
     var body: some View {
         ZStack {
             // THE LOGIN PAGE IS BURGUNDY BY DEFAULT (the author's word 06.10.2026 15:1x MSK: «by default the login page has the burgundy
             // ground»): the author's file as it came, until the person being made chooses a ground of their own (ground).
-            if groundChosen {
+            if grounds.birthChosen {
                 Color.clear.montanaPageGround().allowsHitTesting(false)   // the login pages wear the one ground of every page
             } else {
                 MTWallpaper.paint(MTWallpaper.burgundy).ignoresSafeArea().allowsHitTesting(false)
@@ -2468,7 +2482,11 @@ struct MontanaOnboardingView: View {
                 }
             }
         }
+        .environment(\.colorScheme, MTWallpaper.birthScheme)   // the words wear the ink of the ground the page stands on
         .interactiveDismissDisabled()
+        // A making that ends leaves the next one on the login page's own ground; the ground's cover, which hides this screen for
+        // a moment, comes back after its checkmark has set the choice.
+        .onDisappear { if MontanaSeed.hasSeed { grounds.birthChosen = false } }
         .onAppear {   // opened to make a second person: the Montana road beside the seated one
             if MTSeats.shared.takeMontanaRoad() { montanaRoad = true }
         }
@@ -2476,7 +2494,7 @@ struct MontanaOnboardingView: View {
         // identity's ground, then that ground on every page of the making, up to the chats»): the very page of my page's ground,
         // over everything -- the root's way back stands over this screen -- and its checkmark makes the person.
         .fullScreenCover(isPresented: $ground) {
-            MTWallpaperPicker(task: .page, onDone: { groundChosen = true; createSeed() }).environment(\.montanaClose, nil)
+            MTWallpaperPicker(task: .page, onDone: { grounds.birthChosen = true; createSeed() }).environment(\.montanaClose, nil)
         }
         .alert("The identity could not be stored on this device", isPresented: $birthFailed) {
             Button("Got it", role: .cancel) {}
