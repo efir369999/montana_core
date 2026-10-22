@@ -1,5 +1,53 @@
 # Montana Reference Implementation — Audit Package
 
+> **Current review, 2026-10-14:** the readiness and zero-open-blocker claims below
+> are historical. Adversarial review reopened snapshot authentication and found
+> duplicate-weight, window/context and root-validation gaps in the node runtime.
+> The candidate repairs are tracked in `docs/SPEC_DEVIATIONS.md`, DEV-015,
+> DEV-044 and DEV-054. Local passing tests do not establish a deployed quorum or
+> an independent operator's verification. No claim of network readiness follows
+> from this document.
+
+The same review found seven ratchet-state and boundary defects in
+`mt-messenger-e2e/src/session.rs`: noncanonical stored flags, trailing state
+bytes, an excessive skipped-key count, send and receive counter overflow, a
+failed KEM step that changes state, and refusal of the largest accepted message.
+Each counterexample fails on the earlier source. The candidate validates the
+complete stored tail before allocation, stages an outgoing transition before
+committing it, checks both counters and includes the padding delimiter in the
+receive bound. Six adversarial state tests and six ordinary/boundary exchange
+tests pass; the two existing AEAD tests also pass. The wire encoding is unchanged.
+
+For this candidate, the whole workspace passes formatting, clippy with warnings
+denied and a release build. The selected node/genesis/lottery run passed 199
+tests. This is not a completed workspace-wide test sweep, a deployed client
+upgrade, or closure of the protocol gaps listed above and in SPEC_DEVIATIONS.
+
+The review also adds passive `legacy_cement_progress` observations to the
+networked node. They expose the local head, both accumulated confirmation weights
+and their active-set threshold, including a stationary head despite repeated
+messages. Missing envelopes and inconsistent accumulators remain explicit.
+Six memory-only observation tests and the eight existing cement checks pass;
+whole-workspace clippy and the release build pass. The diagnostic age never
+enters proposal acceptance. This addresses local
+visibility requested in the correspondence; deployment and external monitoring
+remain unverified, and the newer Core still lacks canonical proposal finality.
+
+The legacy settlement review (DEV-055) found that the header's combined root was
+computed before candidate expiry and selection. A shared preparation now computes
+and checks all signed state commitments after the complete table transition;
+the parent is immutable during that work. Four settlement tests, eight cement
+tests, whole-workspace clippy and release pass. Corrected roots require a
+coordinated cohort transition. Crash-atomic persistence and complete lottery
+verification remain open.
+
+The lottery path (DEV-056) now requires the complete cemented reveal set before
+both proposing and accepting a winner, verifies its endpoint as well as its
+identifier, and defers incomplete input within a count and byte budget. Five
+lottery checks, one queue-budget check, four settlement checks and eight cement
+checks pass; whole-workspace clippy and release pass. Historical cutoff/target
+validation and the legacy bootstrap remain separate open findings.
+
 **Spec target:** Montana Protocol v35.26.2 + Montana Network v1.4.0 + Montana App v3.12.0 — see [VERSION.md](VERSION.md)
 **Last verified:** 2026-06-18 (external re-audit GPT-5 Codex 02 fully closed — REAUDIT-01 monetary closed-form (× W), REAUDIT-02 dependency hygiene (cargo audit green), REAUDIT-03 FastSync exact-anchor (Network v1.4.0), REAUDIT-04 release-doc reconciliation, REAUDIT-05 legacy Noise XK deprecated, REAUDIT-06 conformance-gate expanded; spec at Protocol v35.26.2 + Network v1.4.0; conformance-gate GREEN 39/39)
 **Audit-ready status:** **M1 + M2 + M3 + M4 + M5 + M6 + M7 + M9 layers + M8 consensus path — release-blocking findings closed.** The GPT-5 Codex 01 release-blockers (Genesis Decree consensus-binding, quorum/active determinism, FastSync anchor) are closed by construction; genesis active-set is hash-bound (no runtime injection), quorum is the deterministic 2τ₂ set (no wall-clock), FastSync persists the observed anchor root.
@@ -10,12 +58,12 @@
 
 | Layer | Ready? | Crates | LOC | Tests + invariants | Open findings |
 |-------|--------|--------|-----|---------------------|---------------|
-| **M1 foundational** (cryptography + identity recovery) | ✅ **READY** | mt-codec, mt-crypto, mt-crypto-native, mt-mnemonic | ~2000 | 100+ unit + 13 security + 51 NIST KAT byte-exact | 0 (12/12 closed) |
+| **M1 foundational** (cryptography + identity recovery) | ✅ **READY** | mt-codec, mt-crypto, mt-crypto-native, mt-mnemonic | ~2000 | 100+ unit + 13 security + 75 NIST ACVP cases byte-exact | 0 (12/12 closed) |
 | **M2 state foundation** (consensus state primitives) | ✅ **READY** | mt-merkle, mt-genesis, mt-state, mt-timechain | 1821 | 95+ unit + 60 determinism invariants | 0 (4/4 closed) |
-| **M3 apply_proposal layer** (account operations + emission + state transition) | ✅ **READY** | mt-account | 2556 | 89 unit + 29 determinism invariants | 0 (3/3 internal closed: M3-1/M3-2/M3-3 + 10/10 external #3+VERIFIED closed: M3-A-1..M3-A-5 / F-5 / M3-A-3 / AUDIT-sync / P-C-1 F-19 reopen / P-C-2 history; M2-3/M2-13 superseded by v34 monetary refactor) |
-| **M4 consensus mechanics** (lottery + proposal acceptance + node admission) | ✅ **READY** | mt-lottery, mt-consensus, mt-entry | 3858 | 187 unit + 85 determinism invariants | 0 (1/1 internal closed: M4-1; 7/7 external #4 closed: M4-MED-1/2 + M4-LOW-3..7 + M4-INFO-10) |
-| **M5 persistence** (filesystem state + proposal archive + crash recovery) | ✅ **READY** | mt-store | 955 | 27 unit + 17 determinism invariants | 0 (manual scan clean; v34 monetary refactor removed MonetaryState persistence) |
-| **Cross-implementation conformance** | ✅ **READY** | Domain registry sync (spec ↔ code, see VERSION.md) | — | NIST ACVP 66 byte-exact (KeyGen 50 + SigGen 15 + ctx-equivalence 1) + Recovery flow | 0 (F-1 spec patch closed) |
+| **M3 apply_proposal layer** (account operations + emission + state transition) | ✅ **READY** | mt-account | 2470 | 84 unit + 29 determinism invariants | 0 (3/3 internal closed: M3-1/M3-2/M3-3 + 10/10 external #3+VERIFIED closed: M3-A-1..M3-A-5 / F-5 / M3-A-3 / AUDIT-sync / P-C-1 F-19 reopen / P-C-2 history; M2-3/M2-13 superseded by v34 monetary refactor) |
+| **M4 consensus mechanics** (lottery + proposal acceptance + node admission) | ✅ **READY** | mt-lottery, mt-consensus, mt-entry | 4093 | 195 unit + 84 determinism invariants | 0 (1/1 internal closed: M4-1; 7/7 external #4 closed: M4-MED-1/2 + M4-LOW-3..7 + M4-INFO-10) |
+| **M5 persistence** (filesystem state + proposal archive + crash recovery) | ✅ **READY** | mt-store | 1014 | 25 unit + 17 determinism invariants | 0 (manual scan clean; v34 monetary refactor removed MonetaryState persistence) |
+| **Cross-implementation conformance** | ✅ **READY** | Domain registry sync (spec ↔ code, see VERSION.md) | — | 75 NIST ACVP cases byte-exact (KeyGen 50 + SigGen 15 + Decapsulation 10) + ctx-equivalence 1 + Recovery flow | 0 (F-1 spec patch closed) |
 | **M6 network layer** (wire format + transport + IBT + Dandelion + mesh + SF) | ✅ **READY** | mt-net, mt-net-transport | ~3300 | 127 tests: mt-net 112 + mt-net-transport 15 (including 3 e2e two-node) | 0 (P-C1..P-C8 + MONT-002 nonce replay closure) |
 | **M9 conformance suite** | ✅ **READY** | mt-conformance | ~150 | 2 unit byte-exact verify | 0 (envelope A1-A3 + PoW F1-F2 + IBT B1) |
 | **M7 Fast Sync** | ✅ implemented | mt-sync, montana-node | — | snapshot request + chunk reassembly + anchor-root integrity verify | 0 (EXT-SYNC-01 anchor self-block closed) |
@@ -61,20 +109,20 @@ Hybrid Rust + C architecture for cryptography (M1). Pure Rust for state foundati
 
 | Crate | Path | Lines (exact) | Scope |
 |-------|------|---------------|-------|
-| `mt-codec` | [crates/mt-codec/src/lib.rs](crates/mt-codec/src/lib.rs) | ~290 | Canonical encoding traits + Domain separators registry (32 domains, byte-exact sync with current spec target per VERSION.md). All consensus hash compositions through explicit domain separator + NUL byte (`SHA-256(domain ‖ 0x00 ‖ parts)` self-delimiting per P1 external finding). |
-| `mt-crypto` | [crates/mt-crypto/src/lib.rs](crates/mt-crypto/src/lib.rs) | **662** | Public API: `PublicKey`, `SecretKey`, `Signature`, `Mlkem*`, `keypair_from_seed`, `keypair_from_seed_mlkem`, `sign`, `verify`, `hash`, `sha256_raw`. `CryptoError` enum + `Result<_, CryptoError>` API. **Heap-allocated SK via `Box<[u8; N]>` + `mlock` against swap-out + `Drop+zeroize`** for secret types. All **7** `unsafe` blocks have `// SAFETY:` comments: 4 FFI sites (`keypair_from_seed`, `sign`, `verify`, `keypair_from_seed_mlkem`) + 3 mlock/munlock (`Drop for SecretKey`, `alloc_locked_secret_box`, `Drop for MlkemSecretKey`). Test-only `keypair()` via OS CSPRNG (`getrandom`). |
-| `mt-crypto-native` (Rust binding) | [crates/mt-crypto-native/src/lib.rs](crates/mt-crypto-native/src/lib.rs) | 49 | `extern "C"` FFI declarations to Layer 2. Only `pub const` constants and FFI signatures, no logic. Includes `mt_sign_mldsa_ctx` for FIPS context support. |
+| `mt-codec` | [crates/mt-codec/src/lib.rs](crates/mt-codec/src/lib.rs) | ~290 | Canonical encoding traits + Domain separators registry (58 domains, byte-exact sync with current spec target per VERSION.md). All consensus hash compositions through explicit domain separator + NUL byte (`SHA-256(domain ‖ 0x00 ‖ parts)` self-delimiting per P1 external finding). |
+| `mt-crypto` | [crates/mt-crypto/src/lib.rs](crates/mt-crypto/src/lib.rs) | **817** | Public API: `PublicKey`, `SecretKey`, `Signature`, `Mlkem*`, `keypair_from_seed`, `keypair_from_seed_mlkem`, `sign`, `verify`, `hash`, `sha256_raw`. `CryptoError` enum + `Result<_, CryptoError>` API. **Heap-allocated SK via `Box<[u8; N]>` + `mlock` against swap-out + `Drop+zeroize`** for secret types. All **9** `unsafe` blocks have `// SAFETY:` comments: 6 FFI sites (`keypair_from_seed`, `sign`, `verify`, `keypair_from_seed_mlkem`, `mlkem_encapsulate`, `mlkem_decapsulate`) + 3 mlock/munlock (`Drop for SecretKey`, `alloc_locked_secret_box`, `Drop for MlkemSecretKey`). Test-only `keypair()` via OS CSPRNG (`getrandom`). |
+| `mt-crypto-native` (Rust binding) | [crates/mt-crypto-native/src/lib.rs](crates/mt-crypto-native/src/lib.rs) | 66 | `extern "C"` FFI declarations to Layer 2. Only `pub const` constants and FFI signatures, no logic. Includes `mt_sign_mldsa_ctx` for FIPS context support and `mt_mlkem_encapsulate` / `mt_mlkem_decapsulate`. |
 | `mt-mnemonic` | [crates/mt-mnemonic/src](crates/mt-mnemonic/src) | 937 | 24-word mnemonic recovery flow: PBKDF2-HMAC-SHA-256 (iter=2²⁰), HKDF-Expand per-role derivation, ML-DSA seed (32B) + ML-KEM seed (64B) generation. Wordlist binding SHA-256 verified. |
 
 #### Layer 2 — Own thin C wrapper (own audit responsibility)
 
 | File | Lines (exact) | Scope |
 |------|---------------|-------|
-| [crates/mt-crypto-native/csrc/mt_crypto.c](crates/mt-crypto-native/csrc/mt_crypto.c) | 457 | Wrapping OpenSSL EVP_PKEY API: `mt_keypair_from_seed_mldsa`, `mt_keypair_from_seed_mlkem`, `mt_sign_mldsa`, `mt_sign_mldsa_ctx` (FIPS context support), `mt_verify_mldsa`, `mt_self_test`. Uses `OSSL_PKEY_PARAM_ML_DSA_SEED` (FIPS 204 §3.1 ξ ∈ B³²) and `OSSL_PKEY_PARAM_ML_KEM_SEED` (FIPS 203 §6.1 d ‖ z, 64B) for deterministic KeyGen. `OSSL_SIGNATURE_PARAM_DETERMINISTIC=1` for FIPS 204 Algorithm 2 deterministic Sign. |
-| [crates/mt-crypto-native/csrc/mt_crypto.h](crates/mt-crypto-native/csrc/mt_crypto.h) | 67 | C API declarations + primitive sizes + 13 status codes (1 success + 12 errors). |
-| [crates/mt-crypto-native/build.rs](crates/mt-crypto-native/build.rs) | 45 | Vendored OpenSSL build via `openssl-src`, `cc::Build` with `-Wall -Wextra -Wpedantic -Werror`, cross-compile correctness via `CARGO_CFG_TARGET_OS`. |
+| [crates/mt-crypto-native/csrc/mt_crypto.c](crates/mt-crypto-native/csrc/mt_crypto.c) | 638 | Wrapping OpenSSL EVP_PKEY API: `mt_keypair_from_seed_mldsa`, `mt_keypair_from_seed_mlkem`, `mt_sign_mldsa`, `mt_sign_mldsa_ctx` (FIPS context support), `mt_verify_mldsa`, `mt_mlkem_encapsulate`, `mt_mlkem_decapsulate` (FIPS 203 §6.2 / §6.3), `mt_self_test`. Uses `OSSL_PKEY_PARAM_ML_DSA_SEED` (FIPS 204 §3.1 ξ ∈ B³²) and `OSSL_PKEY_PARAM_ML_KEM_SEED` (FIPS 203 §6.1 d ‖ z, 64B) for deterministic KeyGen. `OSSL_SIGNATURE_PARAM_DETERMINISTIC=1` for FIPS 204 Algorithm 2 deterministic Sign. |
+| [crates/mt-crypto-native/csrc/mt_crypto.h](crates/mt-crypto-native/csrc/mt_crypto.h) | 91 | C API declarations + primitive sizes + 13 status codes (1 success + 12 errors). |
+| [crates/mt-crypto-native/build.rs](crates/mt-crypto-native/build.rs) | 61 | Vendored OpenSSL build via `openssl-src`, `cc::Build` with `-Wall -Wextra -Wpedantic -Werror`, cross-compile correctness via `CARGO_CFG_TARGET_OS`. |
 
-**Total own audit surface (Layer 1 + Layer 2): 1280 lines** (662 Rust shim + 49 FFI bindings + 457 C wrapper + 67 C header + 45 build script). Verify counts:
+**Total own audit surface (Layer 1 + Layer 2): 1673 lines** (817 Rust shim + 66 FFI bindings + 638 C wrapper + 91 C header + 61 build script). Verify counts:
 ```
 cd "<repo-root>" && wc -l crates/mt-crypto/src/lib.rs crates/mt-crypto-native/src/lib.rs crates/mt-crypto-native/csrc/mt_crypto.c crates/mt-crypto-native/csrc/mt_crypto.h crates/mt-crypto-native/build.rs
 ```
@@ -102,27 +150,27 @@ cd "<repo-root>" && wc -l crates/mt-crypto/src/lib.rs crates/mt-crypto-native/sr
 
 | Crate | Path | Lines | Scope | Audit findings |
 |-------|------|-------|-------|----------------|
-| `mt-account` | [crates/mt-account/src/lib.rs](crates/mt-account/src/lib.rs) | **2556** | 4 user opcodes (`Transfer 0x02` / `ChangeKey 0x03` / `Anchor 0x04` / `TransferActivation 0x0A`) with byte-exact canonical encoding (TRANSFER_SIZE / CHANGE_KEY_SIZE / ANCHOR_SIZE / TRANSFER_ACTIVATION_SIZE). `validate_*` for each opcode (full validation per spec table). `apply_*` with **checked arithmetic** (`checked_sub` / `checked_add` + descriptive panic for protocol-invariant breach). `op_hash` via R2 SHA-256(`mt-op` ‖ signed_scope), signature excluded. `settle_window(cemented_ops)` sorts by `op_hash` lex asc. `apply_proposal` orchestrates Steps 2 / 3.5 / 3.6 / 4 (steps 1, 3a, 3b stubbed → M4 mt-entry). `apply_emission` credits `EMISSION_moneta` (const) to the winner node's operator. `reward_moneta(params) = params.emission_moneta`, `supply_moneta(W) = emission × W` closed-form. `build_genesis_state` + `genesis_state_root` for bootstrap. **0 unsafe. 0 panic! without `protocol invariant` justification. 0 HashMap. 0 f64. 0 SystemTime.** | Pass 1-12 clean; automated determinism invariants |
+| `mt-account` | [crates/mt-account/src/lib.rs](crates/mt-account/src/lib.rs) | **2470** | 4 user opcodes (`Transfer 0x02` / `ChangeKey 0x03` / `Anchor 0x04` / `TransferActivation 0x0A`) with byte-exact canonical encoding (TRANSFER_SIZE / CHANGE_KEY_SIZE / ANCHOR_SIZE / TRANSFER_ACTIVATION_SIZE). `validate_*` for each opcode (full validation per spec table). `apply_*` with **checked arithmetic** (`checked_sub` / `checked_add` + descriptive panic for protocol-invariant breach). `op_hash` via R2 SHA-256(`mt-op` ‖ signed_scope), signature excluded. `settle_window(cemented_ops)` sorts by `op_hash` lex asc. `apply_proposal` orchestrates Steps 2 / 3.5 / 3.6 / 4 (steps 1, 3a, 3b stubbed → M4 mt-entry). `apply_emission` credits `EMISSION_moneta` (const) to the winner node's operator. `reward_moneta(params) = params.emission_moneta`, `supply_moneta(W) = emission × W` closed-form. `build_genesis_state` + `genesis_state_root` for bootstrap. **0 unsafe. 0 panic! without `protocol invariant` justification. 0 HashMap. 0 f64. 0 SystemTime.** | Pass 1-12 clean; automated determinism invariants |
 
-**Total M3 audit surface:** 2556 lines code + 29 automated determinism invariants.
+**Total M3 audit surface:** 2470 lines code + 29 automated determinism invariants.
 
 ### M4 — Consensus mechanics (audit-ready 2026-04-27)
 
 | Crate | Path | Lines | Scope | Audit findings |
 |-------|------|-------|-------|----------------|
-| `mt-lottery` | [crates/mt-lottery/src/lib.rs](crates/mt-lottery/src/lib.rs) | **1715** | BundledConfirmation R1 / R2 (signed_scope + bundle_hash via `mt-bundle` domain), SshaReveal R1 / R2 (`mt-ssha-reveal` domain), `compute_endpoint` lottery formula (`mt-lottery` domain) with [I-8] cemented_bundle_aggregate(W-2) binding, validate_bundle / validate_reveal with full structural + signature verification, `log2_q64` (Q64.64 fixed-point integer log with degree-3 Remez minimax polynomial, max error 2^-10.62, binding coefficients B0..B3), `ln_q64`, `weighted_ticket_node` u128 integer division, `determine_winner` argmin canonical rule (ticket asc, class asc, id lex asc), `quorum` 67% ceiling integer formula `(67×X+99)/100`, `is_cemented`. **0 unsafe. 0 panic!. 2 controlled `expect()` (try_into on a slice of length 16 — protocol invariant). 0 HashMap. 0 f64. 0 SystemTime.** | M4-1 closure (Vec.len() as u16 silent truncation → BundleError::TooManyOps/TooManyReveals + validate cap + debug_assert defense-in-depth); 34 automated determinism invariants |
-| `mt-consensus` | [crates/mt-consensus/src/lib.rs](crates/mt-consensus/src/lib.rs) | **1089** | ProposalHeader R1 / R2 (3722 B fixed-size, 17 fields, signed_scope without signature, `mt-proposal` domain), validate_header (a-f structural rules: fallback_depth ≥ 1, window_index = prev+1, protocol_version monotone + ≤ local_max, proposer registered + Mldsa65 suite, signature verify), canonical_proposer / fallback_proposer (Lookback Leadership: proposer_W = winner_{W-2}; genesis bootstrap; cascade by depth), compute_control_set (filter cemented_window > prev AND ≤ W, sort by (window asc, op_hash lex asc)), validate_proposer_is_canonical / validate_bundles_threshold / validate_included_reveals / validate_winner (Canonical acceptance), finalization_status (Cemented/Rejected per is_cemented), leader_penalty_excluded_node. **0 unsafe. 0 panic. 0 prod unwrap/expect. 0 HashMap. 0 f64. 0 SystemTime.** | Pass 1-12 clean (manual scan); 27 automated determinism invariants |
-| `mt-entry` | [crates/mt-entry/src/lib.rs](crates/mt-entry/src/lib.rs) | **1054** | NodeRegistration R1 / R2 (5344 B, opcode 0x11, `mt-nodereg` domain), validate_noderegistration (3 structural rules: suite supported, signature verify, node_id unique in Node Table + Candidate Pool, operator account exists + not is_node_operator), `candidate_ssha_init` per [I-8] (`mt-candidate-ssha-init` domain composing T_r + cba(W-2) + node_id), `compute_expiry_window` 3τ₂, `apply_candidate_expiry` (apply_proposal Step 3a), selection_slots (1% cap via ADMISSION_DIVISOR=130), `selection_sort_key` (`mt-selection` domain), rank_candidates_for_selection (canonical sort), `apply_selection_event` (apply_proposal Step 3b: insert into Node Table + mark operator + remove from Candidate Pool), `required_ssha_length` (Adaptive SSHA integer permille per [I-9]), `nr_sort_key` (`mt-nodereg-sort` domain), `apply_noderegistrations_batch` (apply_proposal Step 1: incremental sort + apply with pending growth). **0 unsafe. 0 panic. 0 prod unwrap/expect. 0 HashMap. 0 f64.** | Pass 1-12 clean; 24 automated determinism invariants |
+| `mt-lottery` | [crates/mt-lottery/src/lib.rs](crates/mt-lottery/src/lib.rs) | **1996** | BundledConfirmation R1 / R2 (signed_scope + bundle_hash via `mt-bundle` domain), SshaReveal R1 / R2 (`mt-ssha-reveal` domain), `compute_endpoint` lottery formula (`mt-lottery` domain) with [I-8] cemented_bundle_aggregate(W-2) binding, validate_bundle / validate_reveal with full structural + signature verification, `log2_q64` (Q64.64 fixed-point integer log with degree-3 Remez minimax polynomial, max error 2^-10.62, binding coefficients B0..B3), `ln_q64`, `weighted_ticket_node` u128 integer division, `determine_winner` argmin canonical rule (ticket asc, class asc, id lex asc), `quorum` 67% ceiling integer formula `(67×X+99)/100`, `is_cemented`. **0 unsafe. 0 panic!. 2 controlled `expect()` (try_into on a slice of length 16 — protocol invariant). 0 HashMap. 0 f64. 0 SystemTime.** | M4-1 closure (Vec.len() as u16 silent truncation → BundleError::TooManyOps/TooManyReveals + validate cap + debug_assert defense-in-depth); 34 automated determinism invariants |
+| `mt-consensus` | [crates/mt-consensus/src/lib.rs](crates/mt-consensus/src/lib.rs) | **1036** | ProposalHeader R1 / R2 (3722 B fixed-size, 17 fields, signed_scope without signature, `mt-proposal` domain), validate_header (a-f structural rules: fallback_depth ≥ 1, window_index = prev+1, protocol_version monotone + ≤ local_max, proposer registered + Mldsa65 suite, signature verify), canonical_proposer / fallback_proposer (Lookback Leadership: proposer_W = winner_{W-2}; genesis bootstrap; cascade by depth), compute_control_set (filter cemented_window > prev AND ≤ W, sort by (window asc, op_hash lex asc)), validate_proposer_is_canonical / validate_bundles_threshold / validate_included_reveals / validate_winner (Canonical acceptance), finalization_status (Cemented/Rejected per is_cemented), leader_penalty_excluded_node. **0 unsafe. 0 panic. 0 prod unwrap/expect. 0 HashMap. 0 f64. 0 SystemTime.** | Pass 1-12 clean (manual scan); 26 automated determinism invariants |
+| `mt-entry` | [crates/mt-entry/src/lib.rs](crates/mt-entry/src/lib.rs) | **1061** | NodeRegistration R1 / R2 (5344 B, opcode 0x11, `mt-nodereg` domain), validate_noderegistration (3 structural rules: suite supported, signature verify, node_id unique in Node Table + Candidate Pool, operator account exists + not is_node_operator), `candidate_ssha_init` per [I-8] (`mt-candidate-ssha-init` domain composing T_r + cba(W-2) + node_id), `compute_expiry_window` 3τ₂, `apply_candidate_expiry` (apply_proposal Step 3a), selection_slots (1% cap via ADMISSION_DIVISOR=130), `selection_sort_key` (`mt-selection` domain), rank_candidates_for_selection (canonical sort), `apply_selection_event` (apply_proposal Step 3b: insert into Node Table + mark operator + remove from Candidate Pool), `required_ssha_length` (Adaptive SSHA integer permille per [I-9]), `nr_sort_key` (`mt-nodereg-sort` domain), `apply_noderegistrations_batch` (apply_proposal Step 1: incremental sort + apply with pending growth). **0 unsafe. 0 panic. 0 prod unwrap/expect. 0 HashMap. 0 f64.** | Pass 1-12 clean; 24 automated determinism invariants |
 
-**Total M4 audit surface:** 3858 lines of code + 85 automated determinism invariants. Domain separators: `mt-bundle`, `mt-ssha-reveal`, `mt-lottery`, `mt-proposal`, `mt-nodereg`, `mt-candidate-ssha-init`, `mt-selection`, `mt-nodereg-sort` — all consensus-critical hash compositions go through canonical domains (per [I-8] + [I-10] SSOT).
+**Total M4 audit surface:** 4093 lines of code + 84 automated determinism invariants. Domain separators: `mt-bundle`, `mt-ssha-reveal`, `mt-lottery`, `mt-proposal`, `mt-nodereg`, `mt-candidate-ssha-init`, `mt-selection`, `mt-nodereg-sort` — all consensus-critical hash compositions go through canonical domains (per [I-8] + [I-10] SSOT).
 
 ### M5 — Persistence (audit-ready 2026-04-27)
 
 | Crate | Path | Lines | Scope | Audit findings |
 |-------|------|-------|-------|----------------|
-| `mt-store` | [crates/mt-store/src/lib.rs](crates/mt-store/src/lib.rs) | **955** | Filesystem-backed state persistence (pure std::fs, no RocksDB / sled — minimum deps): `FsStore::open` (creates the `proposals/` subdirectory), save / load AccountTable / NodeTable / CandidatePool via canonical_encode / decode pair (round-trip byte-exact verified), Proposal archive (`proposals/{window:020}.bin`, `archive_proposal` + `get_proposal_by_window` byte-exact decode), Crash recovery (`meta_last_cemented.bin` u64 LE; `verify_consistency` checks that the meta-pointed proposal exists in the archive — otherwise StoreError::NotFound), Pruning (`prune_proposals_before` deletes files with window < threshold). All decode_X functions check `bytes.len() != EXPECTED_SIZE` before reading (StoreError::CorruptedLength). **0 unsafe. 0 panic. 0 prod unwrap/expect. 0 HashMap. 0 f64.** | Pass 1-12 clean; automated determinism invariants |
+| `mt-store` | [crates/mt-store/src/lib.rs](crates/mt-store/src/lib.rs) | **1014** | Filesystem-backed state persistence (pure std::fs, no RocksDB / sled — minimum deps): `FsStore::open` (creates the `proposals/` subdirectory), save / load AccountTable / NodeTable / CandidatePool via canonical_encode / decode pair (round-trip byte-exact verified), Proposal archive (`proposals/{window:020}.bin`, `archive_proposal` + `get_proposal_by_window` byte-exact decode), Crash recovery (`meta_last_cemented.bin` u64 LE; `verify_consistency` checks that the meta-pointed proposal exists in the archive — otherwise StoreError::NotFound), Pruning (`prune_proposals_before` deletes files with window < threshold). All decode_X functions check `bytes.len() != EXPECTED_SIZE` before reading (StoreError::CorruptedLength). **0 unsafe. 0 panic. 0 prod unwrap/expect. 0 HashMap. 0 f64.** | Pass 1-12 clean; automated determinism invariants |
 
-**Total M5 audit surface:** 955 lines code + 17 automated determinism invariants.
+**Total M5 audit surface:** 1014 lines code + 17 automated determinism invariants.
 
 **M3 + M4 + M5 orchestration ordering** (important for the caller):
 1. M3: `settle_window(account_table, cemented_user_ops, window_w)` — apply cemented user ops to state
@@ -144,13 +192,14 @@ Settle is separated from apply_proposal by design — the orchestration-ordering
 
 ### NIST FIPS 204/203 byte-exact conformance (M1)
 
-**66 differential test cases** vs NIST CAVP ACVP-Server published vectors:
+**75 NIST ACVP cases** byte-exact vs NIST CAVP ACVP-Server published vectors, plus one own equivalence check:
 
 | Test | Source | Cases | Status |
 |------|--------|-------|--------|
 | ML-DSA-65 KeyGen byte-exact | [NIST ACVP-Server](https://github.com/usnistgov/ACVP-Server) `gen-val/json-files/ML-DSA-keyGen-FIPS204` | 25 | ✅ PASS |
 | ML-KEM-768 KeyGen byte-exact | [NIST ACVP-Server](https://github.com/usnistgov/ACVP-Server) `gen-val/json-files/ML-KEM-keyGen-FIPS203` | 25 | ✅ PASS |
 | ML-DSA-65 SigGen deterministic external pure (1 empty + 14 non-empty context, 0..255B) | [NIST ACVP-Server](https://github.com/usnistgov/ACVP-Server) `gen-val/json-files/ML-DSA-sigGen-FIPS204` tgId=3 | **15** | ✅ PASS |
+| ML-KEM-768 Decapsulation byte-exact | [NIST ACVP-Server](https://github.com/usnistgov/ACVP-Server) `gen-val/json-files/ML-KEM-encapDecap-FIPS203` tgId=5 | 10 | ✅ PASS |
 | `mt_sign_mldsa` ≡ `mt_sign_mldsa_ctx` (empty ctx) equivalence | own correctness check | 1 | ✅ PASS |
 
 **Reproduction:**
@@ -232,7 +281,7 @@ Verified per critic audit (commit `9387900`):
 | ProtocolParams size | 198B (empty window 0; no baked bootstrap operator / N_SEED / PoW) | `PARAMS_ENCODED_SIZE = 198` | ✅ |
 | Sparse Merkle Tree depth | 256 | `TREE_DEPTH = 256` | ✅ |
 | Emission pin | 13 Ɉ const per window | `emission_moneta = 13_000_000_000` | ✅ |
-| Domain registry sync (32 domains) | spec list | code mt-codec const list | ✅ |
+| Domain registry sync (58 domains) | spec list | code mt-codec const list | ✅ |
 
 ### Security Cards per crypto primitive (M1)
 
@@ -254,7 +303,7 @@ Each primitive with secret material has a detailed Security Card in [docs/securi
 ### In scope — what the auditor should review
 
 **M1 — cryptography + identity:**
-1. **FFI memory safety** — Layer 1 `unsafe` blocks (4 sites), buffer sizes, pointer validity
+1. **FFI memory safety** — Layer 1 `unsafe` blocks (6 FFI sites + 3 mlock/munlock), buffer sizes, pointer validity
 2. **OpenSSL EVP API misuse** — EVP_PKEY_CTX_set_params parameters, error handling, EVP_DigestSignInit determinism flag
 3. **Secret hygiene** — `Drop + zeroize` for `SecretKey` / `MlkemSecretKey`, no `Clone` / `Copy` on secret types, no leakage in logs / dumps, **heap-allocated bytes (Box) with mlock** against swap-out, **stack hygiene** — FFI writes directly into a heap-allocated locked Box, with no stack temporary buffers holding secret bytes (see [docs/security-cards.md](docs/security-cards.md) Cards 1-6)
 4. **Result API correctness** — `sign` / `keypair_from_seed` corruption resistance: malformed SK via `from_array(arbitrary_bytes)` → `Err(CryptoError::InvalidSecretKey)`, not a panic
@@ -295,11 +344,11 @@ Each primitive with secret material has a detailed Security Card in [docs/securi
 
    **Closure path:** Genesis ceremony plan — a separate milestone in `ROADMAP.md` before mainnet.
 
-1. **Sign with non-empty context** — the current `mt_sign_mldsa` API does not accept a context parameter and uses an empty context (matches Montana's usage pattern but not the full FIPS 204 API surface). NIST ACVP cases with context bytes (14 / 15 in the external-pure deterministic group) are not exercised. Closure path: extend the FFI signature when FIPS context support is needed (M6+).
+1. **Sign with non-empty context** — closed: `mt_sign_mldsa_ctx` takes the FIPS 204 context, and all 15 cases of the external-pure deterministic group (14 of them with context bytes) run byte-exact in `nist_acvp_kat.rs`. Montana itself signs with the empty context through `mt_sign_mldsa`, and `siggen_empty_ctx_equivalence` holds the two entries equal.
 
 2. **Verify NIST KAT** — a dedicated test set for FIPS 204 SigVer has not been added in this session (sign-baseline + sign-NIST KAT byte-exact match indirectly confirms Verify correctness via round-trip, but a direct Verify NIST KAT remains as an enhancement).
 
-3. **ML-KEM-768 Encapsulate/Decapsulate NIST KAT** — the current M1-F scope covers KeyGen only (Encapsulate/Decapsulate will be needed in M6+ application-layer encryption). NIST KAT for encapDecap is already present in the fixtures dir; tests are added when needed.
+3. **ML-KEM-768 Encapsulate NIST KAT** — Decapsulation runs 10 NIST cases byte-exact (encapDecap tgId=5). Encapsulate has none: `mt_mlkem_encapsulate` draws its randomness inside OpenSSL and takes no seed `m`, so the NIST expected ciphertext cannot be reproduced; a seeded entry is added when a deterministic encapsulation is needed.
 
 ---
 
@@ -431,7 +480,7 @@ Before starting an external audit — see [docs/audit-checklist.md](docs/audit-c
 - [x] **Total: 16/16 findings closed, 0 open blockers**
 
 **Conformance:**
-- [x] NIST ACVP differential testing PASS (51/51 KAT byte-exact)
+- [x] NIST ACVP differential testing PASS (75 NIST ACVP cases byte-exact)
 - [x] Spec ↔ code byte-exact alignment verified (16 key constants / sizes table)
 - [x] Domain registry sync (current spec target ↔ mt-codec, see VERSION.md)
 

@@ -91,10 +91,28 @@ fn three_machines_close_a_window_and_each_takes_one_share() {
             one[0].living, 3,
             "a cement of fewer than three closed a window the quorum asks three for"
         );
-        assert_eq!(one[0].right.share, mint / 3);
+        assert_eq!(
+            one[0]
+                .right
+                .as_ref()
+                .expect("every part entered the cement")
+                .share,
+            mint / 3
+        );
     }
+    // One decision, one name: every machine closed the window under the identifier of one proposal,
+    // whichever runner's bytes it took.
+    assert!(
+        lived
+            .iter()
+            .all(|one| one[0].proposal == lived[0][0].proposal),
+        "three machines closing one window on one beacon took more than one proposal"
+    );
     // Three machines, three rights, three nullifiers.
-    let mut nullifiers: Vec<[u8; 32]> = lived.iter().map(|one| one[0].right.nullifier).collect();
+    let mut nullifiers: Vec<[u8; 32]> = lived
+        .iter()
+        .filter_map(|one| one[0].right.as_ref().map(|right| right.nullifier))
+        .collect();
     nullifiers.sort_unstable();
     nullifiers.dedup();
     assert_eq!(nullifiers.len(), 3, "two machines took one right");

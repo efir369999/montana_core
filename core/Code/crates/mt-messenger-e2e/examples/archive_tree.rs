@@ -6,7 +6,7 @@ use mt_messenger_e2e::archive::{history_key, media_key, ArchiveStore, DIR_IN, DI
 fn main() {
     let base = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "/tmp/Монтана".into());
+        .unwrap_or_else(|| "/tmp/Montana".into());
     let st = ArchiveStore::open(&base).unwrap();
     let hk = history_key(&[0x55u8; 32]);
     let mk = media_key(&[0x55u8; 32]);
@@ -15,14 +15,14 @@ fn main() {
 
     for (chat, conv, msgs) in [
         (
-            "Алиса",
+            "Alice",
             [0x22u8; 32],
-            vec![(DIR_OUT, "привет"), (DIR_IN, "привет, как ты")],
+            vec![(DIR_OUT, "hello"), (DIR_IN, "hello, how are you")],
         ),
         (
-            "Боб",
+            "Bob",
             [0x44u8; 32],
-            vec![(DIR_OUT, "фото ниже"), (DIR_IN, "ок")],
+            vec![(DIR_OUT, "photo below"), (DIR_IN, "ok")],
         ),
     ] {
         for (i, (dir, text)) in msgs.iter().enumerate() {

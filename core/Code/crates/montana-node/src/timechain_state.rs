@@ -47,9 +47,10 @@ pub fn load_or_init_timechain(data_dir: &Path) -> Result<TimeChainState, NodeErr
         });
     }
     let bytes = fs::read(&path)?;
-    if &bytes[0..4] != TIMECHAIN_MAGIC.as_slice() {
-        return Err(NodeError::InvalidMagic);
-    }
+    decode_timechain(&bytes)
+}
+
+fn decode_timechain(bytes: &[u8]) -> Result<TimeChainState, NodeError> {
     // v1 (without lottery fields) is read with the genesis field values —
     // compatibility with the old file; writes are always v2.
     let (want, ver) = match bytes.get(4) {
@@ -68,6 +69,9 @@ pub fn load_or_init_timechain(data_dir: &Path) -> Result<TimeChainState, NodeErr
             expected: want,
             actual: bytes.len(),
         });
+    }
+    if &bytes[0..4] != TIMECHAIN_MAGIC.as_slice() {
+        return Err(NodeError::InvalidMagic);
     }
     let mut t_r = [0u8; 32];
     t_r.copy_from_slice(&bytes[8..40]);
@@ -105,4 +109,28 @@ pub fn save_timechain(data_dir: &Path, state: &TimeChainState) -> Result<(), Nod
     fs::write(&tmp, &buf)?;
     fs::rename(&tmp, &path)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_truncated_state_is_an_error_instead_of_a_panic() {
+        for (version, size) in [(1, TIMECHAIN_SIZE_V1), (2, TIMECHAIN_SIZE)] {
+            let mut bytes = vec![0u8; size];
+            bytes[..4].copy_from_slice(TIMECHAIN_MAGIC);
+            bytes[4] = version;
+            for length in 0..size {
+                assert!(
+                    decode_timechain(&bytes[..length]).is_err(),
+                    "length {length}"
+                );
+            }
+            assert!(
+                decode_timechain(&bytes).is_ok(),
+                "complete version {version}"
+            );
+        }
+    }
 }

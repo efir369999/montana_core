@@ -93,18 +93,33 @@ fn two_machines_live_a_window_from_end_to_end_and_each_takes_one_share() {
         theirs[0].living, 2,
         "the cement of the answerer does not name both machines"
     );
+    // One decision, one name: both closed the window under the identifier of one proposal,
+    // whichever runner's bytes each took.
+    assert_eq!(
+        mine[0].proposal, theirs[0].proposal,
+        "two machines closing one window on one beacon took two proposals"
+    );
 
     // And each takes one share of that window and no more: two machines, two rights, two
     // nullifiers, and the shares plus what does not divide are the mint of the window exactly.
     let mint = montana_node::attest::mint_of(WINDOW).expect("the Decree names the schedule");
-    assert_eq!(mine[0].right.share, mint / 2);
-    assert_eq!(theirs[0].right.share, mint / 2);
+    // Both parts entered the cement, so both machines lived the window and both took a right.
+    let mine = mine[0]
+        .right
+        .as_ref()
+        .expect("this machine's part entered the cement");
+    let theirs = theirs[0]
+        .right
+        .as_ref()
+        .expect("the other's part entered the cement");
+    assert_eq!(mine.share, mint / 2);
+    assert_eq!(theirs.share, mint / 2);
     assert_ne!(
-        mine[0].right.nullifier, theirs[0].right.nullifier,
+        mine.nullifier, theirs.nullifier,
         "two machines took one right"
     );
     assert_eq!(
-        mine[0].right.share + theirs[0].right.share + mine[0].right.carried_forward,
+        mine.share + theirs.share + mine.carried_forward,
         mint,
         "the shares of the living and what does not divide are not the mint of the window"
     );

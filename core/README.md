@@ -1,8 +1,12 @@
 # Montana core: the protocol, its specification and its cryptography
 
-This folder is the protocol core of the Montana Time ecosystem. Every application in this repository links it, and
-everything that is normative about Montana is written here: the specification set, the reference implementation of
-that set, and the client core the iPhone, iPad, Mac and Android applications are built on.
+This folder contains Montana's specification set, its reference implementation and the client-core source family used
+by the iPhone, iPad, Mac and Android applications. The exact core linked by an application build must be checked against
+that build's provenance; this folder alone does not establish a byte-for-byte match with a released binary.
+
+The current candidate remains under audit. Presence and quorum regressions are covered by local tests, while canonical
+window finalization, admission continuity and authenticated bootstrap remain open. Running two processes or displaying
+a local window counter does not demonstrate a live quorum. See [Montana-Core/AUDIT.md](Montana-Core/AUDIT.md).
 
 ## What is here
 

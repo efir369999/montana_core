@@ -5,8 +5,8 @@
 // checks byte-exact equality on every build -- drift = failing build.
 
 use mt_crypto::{
-    KEYPAIR_SEED_SIZE, MLKEM_PUBLIC_KEY_SIZE, MLKEM_SECRET_KEY_SIZE, MLKEM_SEED_SIZE,
-    PUBLIC_KEY_SIZE, SECRET_KEY_SIZE, SIGNATURE_SIZE,
+    KEYPAIR_SEED_SIZE, MLKEM_CIPHERTEXT_SIZE, MLKEM_PUBLIC_KEY_SIZE, MLKEM_SECRET_KEY_SIZE,
+    MLKEM_SEED_SIZE, MLKEM_SHARED_SECRET_SIZE, PUBLIC_KEY_SIZE, SECRET_KEY_SIZE, SIGNATURE_SIZE,
 };
 
 #[test]
@@ -45,5 +45,16 @@ fn mt_crypto_native_consts_match_mt_crypto() {
         mt_crypto_native::MLKEM768_SEED_SIZE,
         MLKEM_SEED_SIZE,
         "FFI MLKEM768_SEED_SIZE drift vs mt_crypto::MLKEM_SEED_SIZE"
+    );
+    // The two buffers mlkem_encapsulate and mlkem_decapsulate hand across the FFI.
+    assert_eq!(
+        mt_crypto_native::MLKEM768_CIPHERTEXT_SIZE,
+        MLKEM_CIPHERTEXT_SIZE,
+        "FFI MLKEM768_CIPHERTEXT_SIZE drift vs mt_crypto::MLKEM_CIPHERTEXT_SIZE"
+    );
+    assert_eq!(
+        mt_crypto_native::MLKEM768_SS_SIZE,
+        MLKEM_SHARED_SECRET_SIZE,
+        "FFI MLKEM768_SS_SIZE drift vs mt_crypto::MLKEM_SHARED_SECRET_SIZE"
     );
 }

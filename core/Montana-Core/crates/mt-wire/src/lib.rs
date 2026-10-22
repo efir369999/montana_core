@@ -73,8 +73,6 @@ pub const NAMES: &[&str] = &[
     "wake_handle",
     "head_query",
     "head_answer",
-    "proof_query",
-    "proof_answer",
     "state_query",
     "state_answer",
     "slot_query",

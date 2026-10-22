@@ -13,6 +13,6 @@ commit in full. The column Folder tree is the git tree of the folder in the comm
 <!-- sources:start -->
 | Folder | Build | Source commit | Folder tree | Staged |
 |---|---|---|---|---|
-| `apps/apple` | 1.0 (2281) | `13041e634423` | `497103957be8428a23abbb07044baa3f3077c0e4` | 2026-10-22 13:58 UTC |
-| `core` | core line | `3848245e308b` | `4ce3d6705224c8c99db0db1710a70bbde3d04361` | 2026-10-21 15:20 UTC |
+| `apps/apple` | 1.0 (2281) | `13041e634423` | `497103957be8428a23abbb07044baa3f3077c0e4` | 2026-10-22 14:13 UTC |
+| `core` | 1.0 (2281) | `32a9a4749847` | `3372ae236765cbe272cbcad9acf5d9e32951af33` | 2026-10-22 14:13 UTC |
 <!-- sources:end -->

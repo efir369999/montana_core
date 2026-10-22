@@ -1,6 +1,6 @@
 # Montana — Value
 
-**Version:** 3.6.0
+**Version:** 4.0.0
 
 Value holds what money is in Montana and how it moves: the note, its commitment, its
 nullifier, the trees they live in, the fixed shape of a spend, what the proof asserts, how a
@@ -155,6 +155,11 @@ published, so a first payment of a window is indistinguishable from a fourth, an
 proven over many windows from one proven in its own. And for each
 spend, that it is either a correct transfer or filler, without saying which.
 
+The selected branch is one witness for the whole redemption. Every membership check, domain,
+nullifier derivation, window check and value contribution is constrained to that same branch.
+Choosing filler at one seam does not waive a check of a nonzero note or right elsewhere.
+A filler contributes zero, enforced by the constraints rather than only by the trace writer.
+
 The proof is of fixed length. Its branch is never disclosed.
 
 **Invariants of a frame:**
@@ -174,7 +179,7 @@ bearer proves entitlement and consumes the right **in a nullifier position like 
 nothing about the payment says that a right was what it consumed. The moment of extinguishing is
 computed from the machine's secret and the window rather than chosen, and the landing stands
 while the stride holding that moment stands as the horizon of proving: nothing lands before its
-moment, the late is bounded by the standing period, and the slack is the proving time of a
+moment, the late is bounded by the standing period, and the margin is the proving time of a
 device — which nothing published carries — so there is still no handwriting to read.
 
 Nothing becomes public — not even that a right was what was consumed. The bound holds without

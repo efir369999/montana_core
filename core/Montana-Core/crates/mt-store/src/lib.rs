@@ -24,7 +24,7 @@
 #![deny(clippy::all)]
 
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use zeroize::Zeroizing;
 
@@ -48,6 +48,19 @@ pub enum StoreError {
         at: String,
         said: String,
     },
+    // Publication happened, but the directory durability barrier failed. The caller must not
+    // report a definite rollback: readers already see the complete new value.
+    CommitUncertain {
+        at: String,
+        said: String,
+    },
+    // A persisted directory is not silently relabelled after a change of protocol parameters.
+    UnboundNetwork,
+    WrongNetwork {
+        expected: [u8; 32],
+        found: [u8; 32],
+    },
+    UnpublishedNetwork,
     // A file of a width its value does not have. Refused before it is read, like every object of
     // this protocol.
     WrongLength {
@@ -57,6 +70,11 @@ pub enum StoreError {
     },
     // A machine that already drew its secret, asked to draw a second.
     SecretStands,
+    ConflictingPredecessor {
+        window: u64,
+        held: [u8; 32],
+        requested: [u8; 32],
+    },
     // A head naming a window whose proposal is not stored. The order of writing makes this the one
     // arrangement a crash cannot produce, so a store holding it was edited by something other than
     // this crate.
@@ -82,45 +100,89 @@ fn said(at: &Path, e: std::io::Error) -> StoreError {
 // leave a window in which the secret of a machine stands readable to everyone on that machine,
 // and a window of that kind is not smaller for being brief: a reader waiting for it reads it.
 fn write_whole(at: &Path, bytes: &[u8]) -> Result<(), StoreError> {
+    write_complete(at, bytes, false)
+}
+
+fn write_complete(at: &Path, bytes: &[u8], only_once: bool) -> Result<(), StoreError> {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static SERIAL: AtomicU64 = AtomicU64::new(0);
     let directory = at.parent().unwrap_or(Path::new("."));
-    let beside = at.with_extension("writing");
+    let tick = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| said(at, std::io::Error::other(e)))?
+        .as_nanos();
+    let beside = at.with_extension(format!(
+        "writing-{}-{tick}-{}",
+        std::process::id(),
+        SERIAL.fetch_add(1, Ordering::Relaxed)
+    ));
     {
         let mut file = create_closed(&beside)?;
         file.write_all(bytes).map_err(|e| said(&beside, e))?;
         file.sync_all().map_err(|e| said(&beside, e))?;
     }
-    fs::rename(&beside, at).map_err(|e| said(at, e))?;
-    // The rename itself is what a crash may lose, so the directory holding it is flushed too: on
-    // the systems this runs on a renamed entry is not durable until its directory is.
-    if let Ok(handle) = fs::File::open(directory) {
-        let _ = handle.sync_all();
+    if only_once {
+        // Linking a fully flushed file publishes it only if the destination does not exist.
+        // The private temporary is retained; no racing writer can replace the winning identity.
+        fs::hard_link(&beside, at).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::AlreadyExists {
+                StoreError::SecretStands
+            } else {
+                said(at, e)
+            }
+        })?;
+    } else {
+        fs::rename(&beside, at).map_err(|e| said(at, e))?;
     }
+    let uncertain = |e: std::io::Error| StoreError::CommitUncertain {
+        at: at.display().to_string(),
+        said: e.to_string(),
+    };
+    fs::File::open(directory)
+        .map_err(uncertain)?
+        .sync_all()
+        .map_err(uncertain)?;
     Ok(())
 }
 
-// A file opened for writing and closed to everyone but its owner at the moment it is created. On a
-// system holding the permissions of a Unix file the mode is given to the open itself, and given
-// again to the path, so a temporary left behind by an earlier run cannot carry wider permissions
-// into this one.
+// Exclusive creation refuses stale files and symlinks. Permissions are set on the creation
+// itself, so no earlier file's bytes or permissions can be inherited by this write.
 #[cfg(unix)]
 fn create_closed(at: &Path) -> Result<fs::File, StoreError> {
-    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-    let file = fs::OpenOptions::new()
+    use std::os::unix::fs::OpenOptionsExt;
+    fs::OpenOptions::new()
         .write(true)
-        .create(true)
-        .truncate(true)
+        .create_new(true)
         .mode(SECRET_MODE)
         .open(at)
-        .map_err(|e| said(at, e))?;
-    fs::set_permissions(at, fs::Permissions::from_mode(SECRET_MODE)).map_err(|e| said(at, e))?;
-    Ok(file)
+        .map_err(|e| said(at, e))
 }
 
-// A system without the permissions of a Unix file leaves the file at whatever it grants by
-// default, and this crate says so rather than implying a protection it did not apply.
 #[cfg(not(unix))]
 fn create_closed(at: &Path) -> Result<fs::File, StoreError> {
-    fs::File::create(at).map_err(|e| said(at, e))
+    fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(at)
+        .map_err(|e| said(at, e))
+}
+
+// Fixed-size reading bounds network markers and signing locks before any allocation.
+fn read_digest(at: &Path) -> Result<Option<[u8; 32]>, StoreError> {
+    let mut file = match fs::File::open(at) {
+        Ok(file) => file,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(said(at, e)),
+    };
+    let mut bytes = Vec::new();
+    Read::by_ref(&mut file)
+        .take(33)
+        .read_to_end(&mut bytes)
+        .map_err(|e| said(at, e))?;
+    let bytes = of_width(at, bytes, 32)?;
+    let mut value = [0; 32];
+    value.copy_from_slice(&bytes);
+    Ok(Some(value))
 }
 
 // What a secret is read through. The bytes of a file land in one allocation and that allocation is
@@ -165,12 +227,56 @@ impl Store {
         let proposals = root.join("proposals");
         fs::create_dir_all(&proposals).map_err(|e| said(&proposals, e))?;
         let store = Self { root };
+        store.check_network()?;
         if let Some(window) = store.head()? {
             if store.proposal(window)?.is_none() {
                 return Err(StoreError::HeadWithoutItsProposal { window });
             }
         }
         Ok(store)
+    }
+
+    fn check_network(&self) -> Result<(), StoreError> {
+        let expected =
+            mt_state::tables::genesis_state_hash().ok_or(StoreError::UnpublishedNetwork)?;
+        let at = self.root.join("genesis");
+        if let Some(found) = read_digest(&at)? {
+            return if found == expected {
+                Ok(())
+            } else {
+                Err(StoreError::WrongNetwork { expected, found })
+            };
+        }
+        // An empty directory may be initialized. An old value plane, identity, wallet or proposal
+        // must go through an authenticated migration, which this interface does not invent.
+        for entry in fs::read_dir(&self.root).map_err(|e| said(&self.root, e))? {
+            let entry = entry.map_err(|e| said(&self.root, e))?;
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            let harmless = name.starts_with("genesis.writing-")
+                || (name == "proposals"
+                    && fs::read_dir(entry.path())
+                        .map_err(|e| said(&entry.path(), e))?
+                        .next()
+                        .is_none());
+            if !harmless {
+                // Another opener may have published the binding after our first read.
+                return match read_digest(&at)? {
+                    Some(found) if found == expected => Ok(()),
+                    Some(found) => Err(StoreError::WrongNetwork { expected, found }),
+                    None => Err(StoreError::UnboundNetwork),
+                };
+            }
+        }
+        match write_complete(&at, &expected, true) {
+            Ok(()) => Ok(()),
+            Err(StoreError::SecretStands) => match read_digest(&at)? {
+                Some(found) if found == expected => Ok(()),
+                Some(found) => Err(StoreError::WrongNetwork { expected, found }),
+                None => Err(StoreError::UnboundNetwork),
+            },
+            Err(error) => Err(error),
+        }
     }
 
     fn secret_at(&self) -> PathBuf {
@@ -209,12 +315,44 @@ impl Store {
     // the first secret is what every acquaintance, every link and every point of this machine
     // stands on, and a second would make all of them unreachable in silence.
     pub fn bear_secret(&self, secret: &[u8; SECRET_BYTES]) -> Result<(), StoreError> {
-        if self.secret_at().exists() {
-            return Err(StoreError::SecretStands);
-        }
         let at = self.secret_at();
-        write_whole(&at, secret)?;
+        write_complete(&at, secret, true)?;
         self.close_the_file_to_others(&at)
+    }
+
+    // Every heavy or light answer of this window also endorses its predecessor.
+    // Publish that choice durably before a signing key can be used. Concurrent
+    // processes share the same exclusive publication; a restart cannot clear it.
+    pub fn lock_predecessor(&self, window: u64, proposal: &[u8; 32]) -> Result<(), StoreError> {
+        let at = self.root.join(format!("signed-parent-{window:020}"));
+        if read_digest(&at)?.is_none() {
+            match write_complete(&at, proposal, true) {
+                Ok(()) => return Ok(()),
+                Err(StoreError::SecretStands) => {} // a concurrent choice won
+                Err(error) => return Err(error),
+            }
+        }
+        let held = read_digest(&at)?.ok_or_else(|| {
+            said(
+                &at,
+                std::io::Error::other("a published signing lock disappeared"),
+            )
+        })?;
+        if held != *proposal {
+            return Err(StoreError::ConflictingPredecessor {
+                window,
+                held,
+                requested: *proposal,
+            });
+        }
+        // Retry the durability barrier even for an identical choice: the first
+        // writer may have returned CommitUncertain after publishing the file.
+        fs::File::open(&self.root)
+            .and_then(|directory| directory.sync_all())
+            .map_err(|e| StoreError::CommitUncertain {
+                at: at.display().to_string(),
+                said: e.to_string(),
+            })
     }
 
     #[cfg(unix)]
@@ -259,6 +397,25 @@ impl Store {
 
     fn value_at(&self) -> PathBuf {
         self.root.join("value")
+    }
+
+    fn standing_at(&self) -> PathBuf {
+        self.root.join("standing")
+    }
+
+    // **What a machine holds of its own standing**: the census windows it lived and the branch its
+    // part walks in each of their cements. It is a secret of the machine exactly as its notes are a
+    // secret of a person — the set publishes no standing, and a file readable to others would be
+    // the one place a machine's weight stood in the open — so it goes through the same door and is
+    // closed to everyone but its owner.
+    pub fn standing(&self) -> Result<Zeroizing<Vec<u8>>, StoreError> {
+        Ok(read_secret(&self.standing_at())?.unwrap_or_else(|| Zeroizing::new(Vec::new())))
+    }
+
+    pub fn put_standing(&self, bytes: &[u8]) -> Result<(), StoreError> {
+        let at = self.standing_at();
+        write_whole(&at, bytes)?;
+        self.close_the_file_to_others(&at)
     }
 
     // **What a machine holds of the value plane, kept across a stop.** A note taken in one run is
@@ -314,9 +471,13 @@ mod tests {
 
     impl Scratch {
         fn named(what: &str) -> Self {
-            let at = std::env::temp_dir().join(format!("mt-store-{what}"));
-            let _ = fs::remove_dir_all(&at);
-            fs::create_dir_all(&at).expect("a scratch directory is writable");
+            let unique = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("a test timestamp")
+                .as_nanos();
+            let at = std::env::temp_dir()
+                .join(format!("mt-store-{what}-{}-{unique}", std::process::id()));
+            fs::create_dir(&at).expect("a fresh scratch directory is writable");
             Self(at)
         }
 
@@ -325,9 +486,152 @@ mod tests {
         }
     }
 
-    impl Drop for Scratch {
-        fn drop(&mut self) {
-            let _ = fs::remove_dir_all(&self.0);
+    // Scratch artifacts are retained for inspection; tests never remove existing files.
+
+    #[test]
+    fn a_signing_lock_survives_reopening_and_does_not_follow_rounds() {
+        let scratch = Scratch::named("signing-lock-restart");
+        let first = [0x31; 32];
+        let other = [0x32; 32];
+        {
+            let store = Store::open(scratch.path()).unwrap();
+            store.lock_predecessor(12, &first).unwrap();
+        }
+        let restarted = Store::open(scratch.path()).unwrap();
+        restarted.lock_predecessor(12, &first).unwrap();
+        assert_eq!(
+            restarted.lock_predecessor(12, &other),
+            Err(StoreError::ConflictingPredecessor {
+                window: 12,
+                held: first,
+                requested: other
+            })
+        );
+        restarted.lock_predecessor(13, &other).unwrap();
+        // Refusal neither replaces nor clears the prior choice.
+        restarted.lock_predecessor(12, &first).unwrap();
+        let path = scratch.path().join("signed-parent-00000000000000000012");
+        assert_eq!(fs::read(&path).unwrap(), first);
+        fs::write(&path, [0x31; 31]).unwrap();
+        assert!(matches!(
+            restarted.lock_predecessor(12, &first),
+            Err(StoreError::WrongLength { .. })
+        ));
+    }
+
+    #[test]
+    fn concurrent_conflicting_signing_choices_have_one_winner() {
+        let scratch = Scratch::named("signing-lock-race");
+        Store::open(scratch.path()).unwrap();
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
+        let handles: Vec<_> = [0x51, 0x52]
+            .into_iter()
+            .map(|byte| {
+                let path = scratch.0.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    let store = Store::open(path).unwrap();
+                    barrier.wait();
+                    ([byte; 32], store.lock_predecessor(12, &[byte; 32]))
+                })
+            })
+            .collect();
+        let results: Vec<_> = handles
+            .into_iter()
+            .map(|thread| thread.join().unwrap())
+            .collect();
+        assert_eq!(
+            results.iter().filter(|(_, result)| result.is_ok()).count(),
+            1
+        );
+        assert_eq!(
+            results
+                .iter()
+                .filter(|(_, result)| matches!(
+                    result,
+                    Err(StoreError::ConflictingPredecessor { .. })
+                ))
+                .count(),
+            1
+        );
+        let winner = results.iter().find(|(_, result)| result.is_ok()).unwrap().0;
+        assert_eq!(
+            read_digest(&scratch.path().join("signed-parent-00000000000000000012")).unwrap(),
+            Some(winner)
+        );
+    }
+
+    #[test]
+    fn an_unbound_old_directory_is_not_automatically_a_new_network() {
+        let scratch = Scratch::named("unbound-old-network");
+        let old = [0x55; SECRET_BYTES];
+        fs::write(scratch.path().join("identity"), old).unwrap();
+        assert_eq!(
+            Store::open(scratch.path()).err(),
+            Some(StoreError::UnboundNetwork)
+        );
+        assert_eq!(fs::read(scratch.path().join("identity")).unwrap(), old);
+        assert!(!scratch.path().join("genesis").exists());
+    }
+
+    #[test]
+    fn a_persisted_directory_is_bound_to_its_exact_genesis() {
+        let scratch = Scratch::named("another-network");
+        Store::open(scratch.path()).unwrap();
+        let expected = mt_state::tables::genesis_state_hash().unwrap();
+        assert_eq!(fs::read(scratch.path().join("genesis")).unwrap(), expected);
+        let mut found = expected;
+        found[0] ^= 1;
+        fs::write(scratch.path().join("genesis"), found).unwrap();
+        assert_eq!(
+            Store::open(scratch.path()).err(),
+            Some(StoreError::WrongNetwork { expected, found })
+        );
+    }
+
+    #[test]
+    fn concurrent_secret_creation_has_exactly_one_winner() {
+        let scratch = Scratch::named("secret-race");
+        let at = &scratch.0;
+        let barrier = std::sync::Barrier::new(2);
+        let results = std::thread::scope(|scope| {
+            let a = scope.spawn(|| {
+                let s = Store::open(at).unwrap();
+                barrier.wait();
+                s.bear_secret(&[0x11; SECRET_BYTES])
+            });
+            let b = scope.spawn(|| {
+                let s = Store::open(at).unwrap();
+                barrier.wait();
+                s.bear_secret(&[0x22; SECRET_BYTES])
+            });
+            [a.join().unwrap(), b.join().unwrap()]
+        });
+        assert_eq!(results.iter().filter(|r| r.is_ok()).count(), 1);
+        assert_eq!(
+            results
+                .iter()
+                .filter(|r| **r == Err(StoreError::SecretStands))
+                .count(),
+            1
+        );
+        let secret = Store::open(at).unwrap().secret().unwrap().unwrap();
+        assert!(*secret == [0x11; SECRET_BYTES] || *secret == [0x22; SECRET_BYTES]);
+    }
+
+    #[test]
+    fn a_stale_temporary_symlink_is_never_followed() {
+        #[cfg(unix)]
+        {
+            let scratch = Scratch::named("temporary-symlink");
+            let victim = scratch.path().join("untouched");
+            fs::write(&victim, b"keep").unwrap();
+            let stale = scratch.path().join("value.writing");
+            std::os::unix::fs::symlink(&victim, &stale).unwrap();
+            write_whole(&scratch.path().join("value"), b"new").unwrap();
+            assert_eq!(fs::read(&victim).unwrap(), b"keep");
+            assert_eq!(fs::read(scratch.path().join("value")).unwrap(), b"new");
+            assert!(create_closed(&stale).is_err());
         }
     }
 
@@ -401,19 +705,12 @@ mod tests {
             SECRET_MODE,
             "the temporary is readable by others"
         );
-        // And a temporary left behind by an earlier run with wider permissions is closed rather
-        // than inherited.
+        // A stale file is refused rather than reopened or truncated.
         fs::set_permissions(&temporary, fs::Permissions::from_mode(0o644)).expect("widened");
-        let file = create_closed(&temporary).expect("a file opens");
-        drop(file);
-        let mode = fs::metadata(&temporary)
-            .expect("the temporary stands")
-            .permissions()
-            .mode();
+        assert!(create_closed(&temporary).is_err());
         assert_eq!(
-            mode & 0o777,
-            SECRET_MODE,
-            "a stale temporary carried its permissions"
+            fs::metadata(&temporary).unwrap().permissions().mode() & 0o777,
+            0o644
         );
     }
 
@@ -450,15 +747,9 @@ mod tests {
     #[test]
     fn a_store_whose_head_lost_its_proposal_refuses_to_open() {
         let scratch = Scratch::named("head-orphaned");
-        {
-            let store = Store::open(scratch.path()).expect("a store opens");
-            store.put_proposal(5, b"a proposal").expect("stored");
-            store.set_head(5).expect("the head follows");
-        }
-        // Something other than this crate took the proposal away. Opening says so rather than
-        // starting a machine that claims a window it cannot show.
-        fs::remove_file(scratch.path().join("proposals").join(format!("{:020}", 5)))
-            .expect("the file is removable");
+        let store = Store::open(scratch.path()).expect("a store opens");
+        // Construct a crashed/orphaned directory directly, without deleting a proposal.
+        fs::write(store.head_at(), 5u64.to_le_bytes()).expect("an orphaned head fixture");
         assert_eq!(
             Store::open(scratch.path()).err(),
             Some(StoreError::HeadWithoutItsProposal { window: 5 })

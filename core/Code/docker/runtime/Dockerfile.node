@@ -12,9 +12,9 @@
 #
 # Build:
 #   docker build -t montana-node:local -f Code/docker/runtime/Dockerfile.node .
-# Run (standalone bootstrap genesis):
+# Run (explicit isolated chain):
 #   docker run -d --name montana-node --network host --restart unless-stopped \
-#     -v montana-data:/var/lib/montana montana-node:local
+#     -e MONTANA_MODE=isolated -v montana-data:/var/lib/montana montana-node:local
 # Run (join canonical network — manifest mounted from host):
 #   docker run -d --name montana-node --network host --restart unless-stopped \
 #     -v montana-data:/var/lib/montana \

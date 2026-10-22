@@ -1,6 +1,10 @@
+mod cement;
 pub mod fastsync;
 pub mod init;
 pub mod inspect;
+mod lottery;
+mod progress;
+mod settlement;
 pub mod start;
 pub mod status;
 pub mod time;

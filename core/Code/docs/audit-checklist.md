@@ -8,17 +8,18 @@ Completed by the architect before every external audit engagement. Every item mu
 
 - [x] **NIST FIPS 204 ML-DSA-65 KeyGen byte-exact** vs ACVP-Server published vectors (25 cases)
 - [x] **NIST FIPS 203 ML-KEM-768 KeyGen byte-exact** vs ACVP-Server published vectors (25 cases)
-- [x] **NIST FIPS 204 ML-DSA-65 SigGen deterministic byte-exact** for empty context (1 case)
+- [x] **NIST FIPS 204 ML-DSA-65 SigGen deterministic byte-exact** external pure (15 cases: 1 empty context + 14 with context)
 - [x] **NIST FIPS 180-4 SHA-256** vector "abc" → ba7816bf...15ad
 - [ ] **NIST FIPS 204 ML-DSA-65 SigVer** (deferred — confirmed indirectly through round-trip; a direct NIST KAT was not added in M1-F)
-- [ ] **NIST FIPS 203 ML-KEM-768 Encapsulate/Decapsulate** (deferred — the Montana M1-F scope is KeyGen only, encapDecap is needed in M6+)
+- [x] **NIST FIPS 203 ML-KEM-768 Decapsulate byte-exact** vs ACVP-Server published vectors (10 cases, encapDecap tgId=5)
+- [ ] **NIST FIPS 203 ML-KEM-768 Encapsulate** (no NIST KAT — `mt_mlkem_encapsulate` takes no seed `m`, OpenSSL draws the randomness)
 
 ## B. Code surface
 
-- [x] **Layer 1 Rust shim** **662 lines** (`crates/mt-crypto/src/lib.rs`), all **7** `unsafe` blocks carry `// SAFETY:` comments: 4 FFI sites (`fn keypair_from_seed`, `fn sign`, `fn verify`, `fn keypair_from_seed_mlkem`) + 3 mlock/munlock (`impl Drop for SecretKey`, `fn alloc_locked_secret_box`, `impl Drop for MlkemSecretKey`). Check exact lines via `grep -n "unsafe " crates/mt-crypto/src/lib.rs` (line refs are not fixed — they drift as the code grows).
-- [x] **Layer 2 own C wrapper** **457 lines** (`mt_crypto.c`) + **67 lines** (`mt_crypto.h`), focused EVP API wrapping, `-Wall -Wextra -Wpedantic -Werror`
+- [x] **Layer 1 Rust shim** **817 lines** (`crates/mt-crypto/src/lib.rs`), all **9** `unsafe` blocks carry `// SAFETY:` comments: 6 FFI sites (`fn keypair_from_seed`, `fn sign`, `fn verify`, `fn keypair_from_seed_mlkem`, `fn mlkem_encapsulate`, `fn mlkem_decapsulate`) + 3 mlock/munlock (`impl Drop for SecretKey`, `fn alloc_locked_secret_box`, `impl Drop for MlkemSecretKey`). Check exact lines via `grep -n "unsafe " crates/mt-crypto/src/lib.rs` (line refs are not fixed — they drift as the code grows).
+- [x] **Layer 2 own C wrapper** **638 lines** (`mt_crypto.c`) + **91 lines** (`mt_crypto.h`), focused EVP API wrapping, `-Wall -Wextra -Wpedantic -Werror`
 - [x] **Layer 3 vendored OpenSSL 3.5.5 LTS** via `openssl-src = "=300.5.5+3.5.5"` byte-pinned
-- [x] Total own audit surface (Layer 1 + Layer 2) **1280 lines** (662 Rust shim + 49 FFI bindings + 457 C wrapper + 67 C header + 45 build script) — small enough for thorough review. Exact numbers: `wc -l crates/mt-crypto/src/lib.rs crates/mt-crypto-native/src/lib.rs crates/mt-crypto-native/csrc/mt_crypto.{c,h} crates/mt-crypto-native/build.rs`.
+- [x] Total own audit surface (Layer 1 + Layer 2) **1673 lines** (817 Rust shim + 66 FFI bindings + 638 C wrapper + 91 C header + 61 build script) — small enough for thorough review. Exact numbers: `wc -l crates/mt-crypto/src/lib.rs crates/mt-crypto-native/src/lib.rs crates/mt-crypto-native/csrc/mt_crypto.{c,h} crates/mt-crypto-native/build.rs`.
 - [x] No `serde` auto-derive in consensus-critical types (custom `CanonicalEncode` trait)
 
 ## C. Memory safety + secret hygiene (Pass 17 enforcement)

@@ -20,6 +20,12 @@ pub enum ObjectError {
     Attested,
     // The name field is not a lawful normalized name padded with zeros to its width.
     Name,
+    // A record claims segments outside the maximum continuity period.
+    RecordContinuity,
+    // The total byte length can be right while nested spending runs have wrong lengths.
+    FrameShape,
+    // A ballot casting no vote, or more votes than a standing holds units.
+    Votes,
 }
 
 // The witness that the length of an input has been compared. Its one field is private, so the
@@ -427,12 +433,10 @@ macro_rules! nested {
 // fails with it. A count would pass a tree that lost one as readily as one that kept it.
 pub const NAMES: &[(&str, &str)] = &[
     ("proposal", "proposal"),
-    ("proof of a window", "window_proof"),
     ("frame", "frame"),
     ("confirmation", "confirmation"),
     ("light attestation", "light_attestation"),
     ("candidacy", "candidacy"),
-    ("node of the fold", "fold_node"),
     ("beacon", "beacon"),
     ("notice", "notice"),
     ("commitment over a slot", "name_commit"),
@@ -443,25 +447,50 @@ pub const NAMES: &[(&str, &str)] = &[
     ("committed record of a person", "record"),
     ("opening", "opening"),
     ("action", "action"),
+    ("ballot", "ballot"),
 ];
 
 // ── The proposal that closes a window ──────────────────────────────────────────────────────────
+
+nested! {
+    /// One census window of the standing a proposal carries: the root of the tree of its cement and
+    /// how many parts that cement names.
+    Census, {
+        root: [u8; 32],
+        count: u64,
+    }
+}
 
 layout! {
     Proposal, "proposal", {
         window: u64,
         protocol_version: u32,
         previous: [u8; 32],
-        final_beacon: [u8; 32],
         note_root: [u8; 32],
         nullifier_root: [u8; 32],
         record_root: [u8; 32],
         machine_root: [u8; 32],
         admitted_root: [u8; 32],
         operations_root: [u8; 32],
+        /// The machines the tree of admitted machines holds, recomputed with its root: the count the
+        /// electorate of the window two on is read against.
+        admitted_count: u64,
+        /// The aggregate and the count of the cement that made the proposal before this one final:
+        /// the state the final beacon carried, recomputed by every verifier from the heavy
+        /// attestations it holds.
+        cement_aggregate: [u8; 32],
+        cement_count: u64,
+        /// The census windows the standing of the electorate is counted over, newest first: the
+        /// standing of the window two on is the sum of their counts, and a ballot walks their roots.
+        census: run(Census; count_of("standing_censuses")),
         suite_id: u16,
+        /// The beacon the runner closed the window on, carrying the cement above: the evidence a
+        /// device behind reads the cement off, and outside the name, because two branches of the
+        /// versions of a round carrying one cement are one decision.
+        final_beacon: [u8; 32],
         runner_pubkey: bytes(size::SIGNING_PUBLIC_KEY),
-        ticket_proof: bytes(super::PROOF_LEN),
+        /// Under the description of the ticket, at the height of the presence and of its length.
+        ticket_proof: bytes(super::PRESENCE_PROOF_LEN),
     } and a signature
 }
 
@@ -469,11 +498,11 @@ layout! {
 // refuses a proposal whose major exceeds the one it implements, and one whose value stands below
 // its predecessor's, so rules never roll back inside one chain.
 impl Proposal {
-    // The identifier of a proposal, over its deterministic fields alone, under the proposal
-    // domain. `docs/Montana Canon.md`, "The proposal that closes a window".
+    // The identifier of a proposal, over the fields the window decided, under the proposal domain.
+    // `docs/Montana Canon.md`, "The proposal that closes a window".
     pub fn id(&self) -> Result<[u8; 32], ObjectError> {
         let mut bytes = self.encode();
-        bytes.truncate(super::PROPOSAL_DETERMINISTIC_LEN);
+        bytes.truncate(super::PROPOSAL_DECIDED_LEN);
         Ok(super::identifier(mt_codec::domain::MT_PROPOSAL, &bytes))
     }
 
@@ -519,10 +548,23 @@ layout! {
 
 layout! {
     /// A frame carries no signature: its whole is its scope.
-    Frame, "frame", {
+    Frame, "frame", checked by frame_shape, {
         spends: run(Spend; count_of("spends_per_frame")),
         proof: bytes(super::PROOF_LEN),
     }
+}
+
+fn frame_shape(frame: &Frame) -> Result<(), ObjectError> {
+    if frame.spends.len() != count_of("spends_per_frame")
+        || frame.proof.len() != super::PROOF_LEN
+        || frame.spends.iter().any(|spend| {
+            spend.nullifiers.len() != count_of("spend_inputs")
+                || spend.commitments.len() != count_of("spend_outputs")
+        })
+    {
+        return Err(ObjectError::FrameShape);
+    }
+    Ok(())
 }
 
 impl Frame {
@@ -589,7 +631,6 @@ layout! {
         attested: count16([u8; 32]; ATTESTED_COUNT),
         part_nullifier: [u8; 32],
         round_nullifier: [u8; 32],
-        weight_commit: bytes(super::WEIGHT_COMMIT_BYTES),
         suite_id: u16,
         answering_key: bytes(size::SIGNING_PUBLIC_KEY),
         proof: bytes(super::PRESENCE_PROOF_LEN),
@@ -607,26 +648,6 @@ layout! {
     } and a signature
 }
 
-layout! {
-    /// The proof of a window, carried apart. It carries no signature and no key: a proof is judged
-    /// by verifying, and its whole is its scope. `docs/Montana Canon.md`, "The proof of a window,
-    /// carried apart".
-    WindowProof, "proof of a window", {
-        window: u64,
-        proposal: [u8; 32],
-        proof: bytes(super::PROOF_LEN),
-    }
-}
-
-impl WindowProof {
-    pub fn id(&self) -> Result<[u8; 32], ObjectError> {
-        Ok(super::identifier(
-            mt_codec::domain::MT_WINDOW_PROOF,
-            &self.signed_scope()?,
-        ))
-    }
-}
-
 // ── The candidacy of a machine ─────────────────────────────────────────────────────────────────
 
 layout! {
@@ -637,17 +658,6 @@ layout! {
         node_commit: [u8; 32],
         operator_nullifier: [u8; 32],
         suite_id: u16,
-        proof: bytes(super::PROOF_LEN),
-    }
-}
-
-// ── The node of the fold ───────────────────────────────────────────────────────────────────────
-
-layout! {
-    FoldNode, "node of the fold", {
-        left: [u8; 32],
-        right: [u8; 32],
-        commitment: bytes(super::WEIGHT_COMMIT_BYTES),
         proof: bytes(super::PROOF_LEN),
     }
 }
@@ -664,12 +674,19 @@ layout! {
 // ── The beacon of a round ──────────────────────────────────────────────────────────────────────
 
 layout! {
+    /// The cement a beacon carries is the aggregate over the part-nullifiers of the heavy
+    /// attestations published so far, each at most once, with the window as its context, beside
+    /// their count; every verifier recomputes both and refuses a beacon whose pair differs.
     Beacon, "beacon", {
         window: u64,
         chain: u8,
         round: u32,
         previous: [u8; 32],
-        cement_state: bytes(super::WEIGHT_COMMIT_BYTES),
+        cement_aggregate: [u8; 32],
+        cement_count: u64,
+        /// The votes the ballots of those parts drew, each part's at most once: the evidence the
+        /// close of the window reads beside the count, and no value of what the window decided.
+        cement_votes: u64,
     }
 }
 
@@ -684,15 +701,26 @@ impl Beacon {
     }
 }
 
-impl FoldNode {
-    // A node of the fold carries no signature, so its scope is the whole of its canonical bytes,
-    // and its identifier is taken over that under the class domain of the fold.
-    pub fn id(&self) -> Result<[u8; 32], ObjectError> {
-        Ok(super::identifier(
-            mt_codec::domain::MT_FOLD_NODE,
-            &self.signed_scope()?,
-        ))
+// ── The ballot of a part ───────────────────────────────────────────────────────────────────────
+
+layout! {
+    /// It carries no key and no signature: the proof binds the part, the window and the count, and
+    /// nobody but the holder of the half that derived the part can write one.
+    Ballot, "ballot", checked by votes_of_a_ballot, {
+        window: u64,
+        part_nullifier: [u8; 32],
+        votes: u64,
+        proof: bytes(super::PROOF_LEN),
     }
+}
+
+// A ballot casts at least one vote and no more than a standing holds units: one that casts none says
+// nothing, and one that casts more says what no proof of this set can assert.
+fn votes_of_a_ballot(value: &Ballot) -> Result<(), ObjectError> {
+    if value.votes == 0 || value.votes > count_of("standing_censuses") as u64 {
+        return Err(ObjectError::Votes);
+    }
+    Ok(())
 }
 
 // ── The three objects of a name, and the three of a channel ────────────────────────────────────
@@ -796,12 +824,23 @@ layout! {
 
 // ── The committed record of a person ───────────────────────────────────────────────────────────
 
+fn record_continuity(record: &Record) -> Result<(), ObjectError> {
+    let maximum = scalar("max_entry_segments")
+        .and_then(|n| u32::try_from(n).ok())
+        .filter(|&n| n != 0 && n <= u64::BITS)
+        .ok_or(ObjectError::RecordContinuity)?;
+    if record.segment_bitmap.checked_shr(maximum).unwrap_or(0) != 0 {
+        return Err(ObjectError::RecordContinuity);
+    }
+    Ok(())
+}
+
 layout! {
     /// The record is a preimage and never appears on the wire or in state; only its commitment
     /// does. Its field set **awaits Canon** — it freezes with the one open link the Constitution
     /// names — so an implementation reproduces the order and the widths and claims no conformance
     /// over them.
-    Record, "committed record of a person", {
+    Record, "committed record of a person", checked by record_continuity, {
         segment_bitmap: u64,
         last_active_segment: u32,
         opened_window: u64,
@@ -819,7 +858,10 @@ impl Record {
     // current one: a bitmap read without the shift measures continuity against a past that has
     // moved.
     pub fn segments_lived(&self, current_segment: u32) -> u32 {
-        if current_segment < self.last_active_segment {
+        // Refuse reserved bits before shifting: otherwise an invented bit can
+        // enter the permitted region merely by waiting. In-memory constructors
+        // have not necessarily passed through the layout decoder.
+        if record_continuity(self).is_err() || current_segment < self.last_active_segment {
             return 0;
         }
         let distance = current_segment - self.last_active_segment;
@@ -847,25 +889,24 @@ mod tests {
         // that no two objects of different shapes were given one length by a copied line.
         let totals = [
             (Proposal::NAME, Proposal::expected_len()),
-            (WindowProof::NAME, WindowProof::expected_len()),
             (Frame::NAME, Frame::expected_len()),
             (Confirmation::NAME, Confirmation::expected_len()),
             (LightAttestation::NAME, LightAttestation::expected_len()),
             (Candidacy::NAME, Candidacy::expected_len()),
-            (FoldNode::NAME, FoldNode::expected_len()),
             (Beacon::NAME, Beacon::expected_len()),
             (SlotCommit::NAME, SlotCommit::expected_len()),
             (SlotRenew::NAME, SlotRenew::expected_len()),
             (NameReveal::NAME, NameReveal::expected_len()),
             (ChannelReveal::NAME, ChannelReveal::expected_len()),
             (ChannelPublication::NAME, ChannelPublication::expected_len()),
+            (Ballot::NAME, Ballot::expected_len()),
         ];
         for (name, total) in totals {
             assert!(total > 0, "the total of {name} is zero");
         }
         let carrying: Vec<usize> = totals
             .iter()
-            .filter(|(_, total)| *total > super::super::PROOF_LEN)
+            .filter(|(_, total)| *total > super::super::PRESENCE_PROOF_LEN)
             .map(|(_, total)| *total)
             .collect();
         let mut distinct = carrying.clone();
@@ -883,29 +924,35 @@ mod tests {
     #[test]
     fn every_total_is_the_sum_of_the_fields_the_set_names() {
         use mt_codec::size;
+        let censuses = count_of("standing_censuses");
         assert_eq!(
             Proposal::expected_len(),
             8 + 4
                 + 8 * 32
+                + 8
+                + 32
+                + 8
+                + censuses * (32 + 8)
                 + 2
                 + size::SIGNING_PUBLIC_KEY
-                + super::super::PROOF_LEN
+                + super::super::PRESENCE_PROOF_LEN
                 + size::SIGNATURE
         );
+        // The decided fields stand from the height through the suite, the census among them.
+        assert_eq!(
+            super::super::PROPOSAL_DECIDED_LEN,
+            8 + 4 + 7 * 32 + 8 + 32 + 8 + censuses * (32 + 8) + 2
+        );
+        assert_eq!(Ballot::expected_len(), 8 + 32 + 8 + super::super::PROOF_LEN);
         assert_eq!(
             LightAttestation::expected_len(),
             8 + 2 + 64 + 32 + 32 + 2 + size::SIGNING_PUBLIC_KEY + size::SIGNATURE
         );
         assert_eq!(
             Confirmation::expected_len(),
-            LightAttestation::expected_len()
-                + super::super::WEIGHT_COMMIT_BYTES
-                + super::super::PRESENCE_PROOF_LEN
+            LightAttestation::expected_len() + super::super::PRESENCE_PROOF_LEN
         );
-        assert_eq!(
-            Beacon::expected_len(),
-            8 + 1 + 4 + 32 + super::super::WEIGHT_COMMIT_BYTES
-        );
+        assert_eq!(Beacon::expected_len(), 8 + 1 + 4 + 32 + 32 + 8 + 8);
     }
 
     fn a_proposal() -> Proposal {
@@ -920,31 +967,74 @@ mod tests {
             machine_root: [0x66; 32],
             admitted_root: [0x77; 32],
             operations_root: [0x88; 32],
+            admitted_count: 3,
+            cement_aggregate: [0x99; 32],
+            cement_count: 2,
+            census: (0..count_of("standing_censuses"))
+                .map(|at| Census {
+                    root: [0xC0 + at as u8; 32],
+                    count: at as u64,
+                })
+                .collect(),
             suite_id: 1,
             runner_pubkey: vec![0xA1; mt_codec::size::SIGNING_PUBLIC_KEY],
-            ticket_proof: vec![0x00; super::super::PROOF_LEN],
+            ticket_proof: vec![0x00; super::super::PRESENCE_PROOF_LEN],
             signature: vec![0xF0; mt_codec::size::SIGNATURE],
         }
     }
 
-    // The identifier of a proposal stands over the deterministic fields alone. The named wrong
-    // implementation hashes the whole object: it agrees with the serialization hash the set
-    // freezes and disagrees with the identifier — and a name over proof bytes is a name a runner
-    // redraws by reproving.
+    // The identifier of a proposal stands over the fields the window decided. The named wrong
+    // implementations: one hashing the whole object, which agrees with the serialization hash the
+    // set freezes and disagrees with the identifier — a name over proof bytes is a name a runner
+    // redraws by reproving — and one hashing through the final beacon or the runner's key, under
+    // which two branches or two runners of one decision publish two names and the cement of the next
+    // window parts between them.
     #[test]
-    fn the_identifier_of_a_proposal_ignores_the_proof_and_the_signature() {
+    fn the_identifier_of_a_proposal_ignores_the_runner_the_proof_and_the_signature() {
         let one = a_proposal();
         let reproven = Proposal {
-            ticket_proof: vec![0x5A; super::super::PROOF_LEN],
+            ticket_proof: vec![0x5A; super::super::PRESENCE_PROOF_LEN],
             signature: vec![0x0F; mt_codec::size::SIGNATURE],
             ..a_proposal()
         };
         assert_eq!(one.id(), reproven.id());
-        let moved = Proposal {
+        let another_runner = Proposal {
+            runner_pubkey: vec![0xB2; mt_codec::size::SIGNING_PUBLIC_KEY],
+            ..a_proposal()
+        };
+        assert_eq!(one.id(), another_runner.id());
+        let mut through_the_beacon = one.encode();
+        through_the_beacon.truncate(super::super::PROPOSAL_DECIDED_LEN + 32);
+        assert_ne!(
+            Ok(super::super::identifier(
+                mt_codec::domain::MT_PROPOSAL,
+                &through_the_beacon
+            )),
+            one.id(),
+            "a name over the final beacon is another name"
+        );
+        // The beacon a runner closed on is where the window decided, not what it decided: two
+        // branches of the versions of a round carrying one cement are one name.
+        let another_branch = Proposal {
             final_beacon: [0x23; 32],
             ..a_proposal()
         };
+        assert_eq!(one.id(), another_branch.id());
+        let moved = Proposal {
+            cement_aggregate: [0x9A; 32],
+            ..a_proposal()
+        };
         assert_ne!(one.id(), moved.id());
+        // The two public facts the windows after it stand on are of the name as well.
+        let recounted = Proposal {
+            cement_count: 3,
+            ..a_proposal()
+        };
+        assert_ne!(one.id(), recounted.id());
+        // And the standing the window two on is counted over: a census moved is another decision.
+        let mut recensused = a_proposal();
+        recensused.census[3].count += 1;
+        assert_ne!(one.id(), recensused.id());
         let whole = super::super::identifier(mt_codec::domain::MT_PROPOSAL, &one.encode());
         assert_ne!(
             Ok(whole),
@@ -953,34 +1043,12 @@ mod tests {
         );
     }
 
-    #[test]
-    fn the_proof_of_a_window_has_one_width_and_one_name() {
-        let held = WindowProof {
-            window: 1000,
-            proposal: [0x99; 32],
-            proof: vec![0x00; super::super::PROOF_LEN],
-        };
-        assert_eq!(held.encode().len(), WindowProof::expected_len());
-        assert_eq!(
-            WindowProof::expected_len(),
-            8 + 32 + super::super::PROOF_LEN
-        );
-        // No signature and no key: the scope is the whole of it.
-        assert_eq!(WindowProof::scope_len(), WindowProof::expected_len());
-        let other = WindowProof {
-            proposal: [0x9A; 32],
-            ..held.clone()
-        };
-        assert_ne!(held.id(), other.id());
-    }
-
     fn a_confirmation() -> Confirmation {
         Confirmation {
             window: 1000,
             attested: vec![[0x10; 32], [0x20; 32]],
             part_nullifier: [0x30; 32],
             round_nullifier: [0x40; 32],
-            weight_commit: vec![0x11; super::super::WEIGHT_COMMIT_BYTES],
             suite_id: 1,
             answering_key: vec![0xA1; mt_codec::size::SIGNING_PUBLIC_KEY],
             proof: vec![0x00; super::super::PRESENCE_PROOF_LEN],
@@ -1045,23 +1113,25 @@ mod tests {
             Candidacy
         );
         round_trip!(
-            FoldNode {
-                left: [0xAB; 32],
-                right: [0xCD; 32],
-                commitment: vec![0x11; super::super::WEIGHT_COMMIT_BYTES],
-                proof: vec![0x00; super::super::PROOF_LEN],
-            },
-            FoldNode
-        );
-        round_trip!(
             Beacon {
                 window: 1000,
                 chain: 0,
                 round: 7,
                 previous: [0xEE; 32],
-                cement_state: vec![0x11; super::super::WEIGHT_COMMIT_BYTES],
+                cement_aggregate: [0x11; 32],
+                cement_count: 5,
+                cement_votes: 2,
             },
             Beacon
+        );
+        round_trip!(
+            Ballot {
+                window: 1000,
+                part_nullifier: [0x30; 32],
+                votes: 3,
+                proof: vec![0x00; super::super::PROOF_LEN],
+            },
+            Ballot
         );
         round_trip!(
             SlotCommit {
@@ -1128,6 +1198,29 @@ mod tests {
         );
     }
 
+    // A ballot casting no vote, or more than a standing holds units, is refused where it is written
+    // and where it is read: the named wrong implementation takes the count off the wire and lets a
+    // ballot of nought votes or of more votes than census windows reach a cement.
+    #[test]
+    fn a_ballot_casts_between_one_vote_and_a_unit_of_every_census() {
+        let censuses = count_of("standing_censuses") as u64;
+        let ballot = |votes: u64| Ballot {
+            window: 1000,
+            part_nullifier: [0x30; 32],
+            votes,
+            proof: vec![0x00; super::super::PROOF_LEN],
+        };
+        assert!(ballot(1).bytes().is_ok());
+        assert!(ballot(censuses).bytes().is_ok());
+        for votes in [0, censuses + 1, u64::MAX] {
+            assert_eq!(ballot(votes).bytes(), Err(ObjectError::Votes), "{votes}");
+            assert_eq!(
+                Ballot::parse(&ballot(votes).encode()),
+                Err(ObjectError::Votes)
+            );
+        }
+    }
+
     #[test]
     fn an_object_of_the_wrong_length_is_refused_before_it_is_parsed() {
         let bytes = a_proposal().encode();
@@ -1156,7 +1249,6 @@ mod tests {
         assert!(Frame::parse(&[0u8; 3]).is_err());
         assert!(Confirmation::parse(&[0u8; 3]).is_err());
         assert!(Candidacy::parse(&[0u8; 3]).is_err());
-        assert!(FoldNode::parse(&[0u8; 3]).is_err());
         assert!(Beacon::parse(&[0u8; 3]).is_err());
         assert!(SlotCommit::parse(&[0u8; 31]).is_err());
         assert!(SlotRenew::parse(&[0u8; 63]).is_err());
@@ -1249,24 +1341,18 @@ mod tests {
             ..a_proposal()
         };
         let expected = Proposal::expected_len();
-        assert_eq!(empty.encode().len(), 8 + 4 + 8 * 32 + 2);
+        // The fixed fields: the window, the version, eight digests, the admitted count, the cement
+        // pair, the census of the standing — a root and a count per census window — and the suite.
+        let fixed = 8 + 4 + 8 * 32 + 8 + 32 + 8 + count_of("standing_censuses") * (32 + 8) + 2;
+        assert_eq!(empty.encode().len(), fixed);
         assert_eq!(
             empty.bytes(),
             Err(ObjectError::Length {
                 expected,
-                found: 8 + 4 + 8 * 32 + 2
+                found: fixed
             })
         );
         assert!(empty.signed_scope().is_err());
-        // And a beacon of the wrong width names nothing.
-        let short = Beacon {
-            window: 1000,
-            chain: 0,
-            round: 7,
-            previous: [0xEE; 32],
-            cement_state: Vec::new(),
-        };
-        assert!(short.id().is_err());
     }
 
     #[test]
@@ -1288,6 +1374,20 @@ mod tests {
             Frame::expected_len(),
             spends * (inputs + outputs + 1) * 32 + super::super::PROOF_LEN
         );
+    }
+
+    #[test]
+    fn a_correct_total_length_does_not_hide_malformed_nested_runs() {
+        let mut frame = a_frame();
+        let moved = frame.spends[0].nullifiers.pop().unwrap();
+        frame.spends[1].nullifiers.push(moved);
+        assert_eq!(frame.encode().len(), Frame::expected_len());
+        assert_eq!(frame.bytes(), Err(ObjectError::FrameShape));
+        assert!(frame.id().is_err());
+        let mut frame = a_frame();
+        let moved = frame.spends[0].commitments.pop().unwrap();
+        frame.spends[1].commitments.push(moved);
+        assert_eq!(frame.bytes(), Err(ObjectError::FrameShape));
     }
 
     #[test]

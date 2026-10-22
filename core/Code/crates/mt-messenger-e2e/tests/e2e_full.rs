@@ -117,3 +117,14 @@ fn replay_below_cursor_keeps_session() {
     let r = bob.encrypt(b"reply", &[0xB1; 64]).unwrap();
     assert_eq!(alice.decrypt(&r).unwrap(), b"reply");
 }
+
+#[test]
+fn regression_limits_maximum_plaintext_is_deliverable() {
+    let (mut alice, mut bob) = setup();
+    let plaintext = vec![0x55; mt_messenger_e2e::session::MAX_PLAINTEXT];
+    let packet = alice.encrypt(&plaintext, &[0xA1; 64]).unwrap();
+    assert!(
+        bob.decrypt(&packet).is_ok(),
+        "the documented maximum must be deliverable"
+    );
+}

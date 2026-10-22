@@ -13,6 +13,7 @@
 // ceremony and included in `compute_genesis_state_hash()`.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct GenesisPeer {
@@ -56,6 +57,12 @@ pub enum ManifestError {
         expected: usize,
         actual: usize,
     },
+    InvalidHex {
+        field: &'static str,
+    },
+    RepeatedIdentity {
+        field: &'static str,
+    },
 }
 
 impl std::fmt::Display for ManifestError {
@@ -66,7 +73,10 @@ impl std::fmt::Display for ManifestError {
                 write!(f, "manifest contains no bootstrap = true peer")
             },
             Self::MultipleBootstrap(n) => {
-                write!(f, "manifest contains {n} bootstrap peers, expected exactly 1")
+                write!(
+                    f,
+                    "manifest contains {n} bootstrap peers, expected exactly 1"
+                )
             },
             Self::EmptyPeers => write!(f, "manifest contains 0 peers, minimum 1"),
             Self::InvalidHexLength {
@@ -77,6 +87,10 @@ impl std::fmt::Display for ManifestError {
                 f,
                 "field {field}: expected {expected} hex characters, got {actual}"
             ),
+            Self::InvalidHex { field } => {
+                write!(f, "field {field}: expected lowercase hexadecimal")
+            },
+            Self::RepeatedIdentity { field } => write!(f, "field {field}: repeated identity"),
         }
     }
 }
@@ -84,10 +98,13 @@ impl std::fmt::Display for ManifestError {
 impl std::error::Error for ManifestError {}
 
 impl GenesisManifest {
-    /// Parses TOML text and validates invariants:
+    /// Parses JSON text and validates invariants:
     ///   - peers is non-empty
     ///   - exactly one peer with `bootstrap = true`
-    ///   - account_id_hex / node_id_hex are 64 characters long each
+    ///   - account_id_hex / node_id_hex are canonical 32-byte hexadecimal identities
+    ///   - each peer, account and node identity occurs once
+    ///
+    /// The transport validates PeerId and Multiaddr syntax before startup succeeds.
     pub fn parse(json_text: &str) -> Result<Self, ManifestError> {
         let manifest: GenesisManifest =
             serde_json::from_str(json_text).map_err(ManifestError::Json)?;
@@ -109,20 +126,31 @@ impl GenesisManifest {
             1 => (),
             n => return Err(ManifestError::MultipleBootstrap(n)),
         }
+        let mut identities = BTreeSet::new();
         for peer in &self.peers {
-            if peer.account_id_hex.len() != 64 {
-                return Err(ManifestError::InvalidHexLength {
-                    field: "account_id_hex",
-                    expected: 64,
-                    actual: peer.account_id_hex.len(),
-                });
+            for (field, value) in [
+                ("account_id_hex", peer.account_id_hex.as_str()),
+                ("node_id_hex", peer.node_id_hex.as_str()),
+            ] {
+                if value.len() != 64 {
+                    return Err(ManifestError::InvalidHexLength {
+                        field,
+                        expected: 64,
+                        actual: value.len(),
+                    });
+                }
+                if !value
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                {
+                    return Err(ManifestError::InvalidHex { field });
+                }
+                if !identities.insert((field, value)) {
+                    return Err(ManifestError::RepeatedIdentity { field });
+                }
             }
-            if peer.node_id_hex.len() != 64 {
-                return Err(ManifestError::InvalidHexLength {
-                    field: "node_id_hex",
-                    expected: 64,
-                    actual: peer.node_id_hex.len(),
-                });
+            if !identities.insert(("peer_id", peer.peer_id.as_str())) {
+                return Err(ManifestError::RepeatedIdentity { field: "peer_id" });
             }
         }
         Ok(())
@@ -224,6 +252,40 @@ mod tests {
         let serialized = original.to_json_string().unwrap();
         let reparsed = GenesisManifest::parse(&serialized).unwrap();
         assert_eq!(original, reparsed);
+    }
+
+    #[test]
+    fn identities_must_be_hexadecimal_and_canonical() {
+        for invalid in ["g".repeat(64), "A".repeat(64), "é".repeat(32)] {
+            for account in [true, false] {
+                let mut m = GenesisManifest::parse(&three_peer_manifest_json()).unwrap();
+                let field = if account {
+                    m.peers[0].account_id_hex = invalid.clone();
+                    "account_id_hex"
+                } else {
+                    m.peers[0].node_id_hex = invalid.clone();
+                    "node_id_hex"
+                };
+                assert!(
+                    matches!(m.validate(), Err(ManifestError::InvalidHex { field: f }) if f == field)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_second_peer_cannot_reuse_an_identity() {
+        for field in ["peer_id", "account_id_hex", "node_id_hex"] {
+            let mut m = GenesisManifest::parse(&three_peer_manifest_json()).unwrap();
+            match field {
+                "peer_id" => m.peers[1].peer_id = m.peers[0].peer_id.clone(),
+                "account_id_hex" => m.peers[1].account_id_hex = m.peers[0].account_id_hex.clone(),
+                _ => m.peers[1].node_id_hex = m.peers[0].node_id_hex.clone(),
+            }
+            assert!(
+                matches!(m.validate(), Err(ManifestError::RepeatedIdentity { field: f }) if f == field)
+            );
+        }
     }
 
     #[test]

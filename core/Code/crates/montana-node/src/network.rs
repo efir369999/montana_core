@@ -10,7 +10,6 @@
 // not the Ed25519 pk. Each node's GenesisManifest peer_id MUST be the
 // ML-DSA-derived multihash to align with what the XX upgrade returns.
 
-use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -29,6 +28,43 @@ use crate::identity::NodeError;
 
 const HEARTBEAT_PERIOD: Duration = Duration::from_secs(5);
 
+struct DialPeer {
+    id: PeerId,
+    address: Multiaddr,
+}
+
+// Parse every entry, including our own. An example manifest must fail startup,
+// rather than leave the consensus loop running after its network thread exits.
+fn prepare_peers(
+    manifest: &GenesisManifest,
+    local_peer_id: PeerId,
+) -> Result<Vec<DialPeer>, NodeError> {
+    manifest
+        .validate()
+        .map_err(|e| NodeError::Network(format!("manifest: {e}")))?;
+    let mut peers = Vec::new();
+    for (index, peer) in manifest.peers.iter().enumerate() {
+        let id = PeerId::from_str(&peer.peer_id)
+            .map_err(|_| NodeError::Network(format!("manifest peer {index}: invalid peer_id")))?;
+        let mut address = Multiaddr::from_str(&peer.multiaddr)
+            .map_err(|_| NodeError::Network(format!("manifest peer {index}: invalid multiaddr")))?;
+        if address.is_empty()
+            || address
+                .iter()
+                .any(|part| matches!(part, libp2p::multiaddr::Protocol::P2p(_)))
+        {
+            return Err(NodeError::Network(format!(
+                "manifest peer {index}: expected a transport address without /p2p"
+            )));
+        }
+        address.push(libp2p::multiaddr::Protocol::P2p(id));
+        if id != local_peer_id {
+            peers.push(DialPeer { id, address });
+        }
+    }
+    Ok(peers)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn run_network_loop(
     local_keypair: libp2p::identity::Keypair,
@@ -39,7 +75,9 @@ pub async fn run_network_loop(
     listen_addr: Multiaddr,
     mut broadcast_rx: tokio::sync::mpsc::UnboundedReceiver<ProtocolMessage>,
     incoming_tx: tokio::sync::mpsc::UnboundedSender<ProtocolMessage>,
+    ready_tx: std::sync::mpsc::Sender<()>,
 ) -> Result<(), NodeError> {
+    let peers = prepare_peers(&manifest, local_peer_id)?;
     let cfg = NetworkConfig {
         listen_addrs: vec![listen_addr.clone()],
         max_inbound: 13,
@@ -56,61 +94,42 @@ pub async fn run_network_loop(
     .map_err(|e| NodeError::Network(format!("build swarm: {e}")))?;
 
     eprintln!(
-        "[network] local_peer_id={local_peer_id} listen={listen_addr} \
-         peers_to_dial={cnt}",
-        cnt = manifest.peers.len() - 1
+        "[network] starting transport; peers_to_dial={}",
+        peers.len()
     );
-
-    let mut dialed: HashMap<PeerId, String> = HashMap::new();
-    // Redial targets: neighbours from the manifest; on connection loss (or if a
-    // neighbour has not come up yet at start) dial again on every heartbeat
-    // tick — the network must link up out of the box, without restarts.
-    let mut redial_targets: Vec<(PeerId, String, Multiaddr)> = Vec::new();
-    for peer in &manifest.peers {
-        let peer_id_parsed = PeerId::from_str(&peer.peer_id)
-            .map_err(|e| NodeError::Network(format!("invalid peer_id {}: {e}", peer.peer_id)))?;
-        if peer_id_parsed == local_peer_id {
-            continue;
-        }
-        let multiaddr_parsed = Multiaddr::from_str(&peer.multiaddr).map_err(|e| {
-            NodeError::Network(format!("invalid multiaddr {}: {e}", peer.multiaddr))
-        })?;
-        let dial_target: Multiaddr = format!("{}/p2p/{}", multiaddr_parsed, peer_id_parsed)
-            .parse()
-            .map_err(|e: libp2p::multiaddr::Error| {
-                NodeError::Network(format!("compose multiaddr: {e}"))
-            })?;
-        eprintln!("[network] dialing {} ({})", peer.label, dial_target);
+    let mut redial_targets = Vec::new();
+    for peer in peers {
         swarm
-            .dial(dial_target.clone())
-            .map_err(|e| NodeError::Network(format!("dial {}: {e}", peer.label)))?;
-        dialed.insert(peer_id_parsed, peer.label.clone());
-        redial_targets.push((peer_id_parsed, peer.label.clone(), dial_target));
+            .dial(peer.address.clone())
+            .map_err(|_| NodeError::Network("initial peer dial refused".into()))?;
+        redial_targets.push((peer.id, peer.address));
     }
 
     let mut heartbeat = tokio::time::interval(HEARTBEAT_PERIOD);
     heartbeat.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     let mut request_id_counter: u64 = 0;
-    let mut connected_peers: HashMap<PeerId, String> = HashMap::new();
+    let mut connected_peers = std::collections::HashSet::new();
+    let mut ready_tx = Some(ready_tx);
 
     loop {
         tokio::select! {
             ev = swarm.select_next_some() => {
                 match ev {
-                    SwarmEvent::NewListenAddr { address, .. } => {
-                        eprintln!("[network] listening on {address}/p2p/{local_peer_id}");
+                    SwarmEvent::NewListenAddr { .. } => {
+                        if let Some(ready) = ready_tx.take() {
+                            ready.send(()).map_err(|_| NodeError::Network("startup caller disconnected".into()))?;
+                        }
+                        eprintln!("[network] listener ready");
                     }
-                    SwarmEvent::ConnectionEstablished { peer_id, endpoint, .. } => {
-                        let label = dialed
-                            .get(&peer_id)
-                            .cloned()
-                            .unwrap_or_else(|| "unknown".to_string());
-                        eprintln!(
-                            "[network] CONNECTION ESTABLISHED peer={peer_id} label={label} \
-                             remote={remote}",
-                            remote = endpoint.get_remote_address()
-                        );
-                        connected_peers.insert(peer_id, label);
+                    SwarmEvent::ListenerClosed { .. } => {
+                        return Err(NodeError::Network("network listener closed".into()));
+                    }
+                    SwarmEvent::ListenerError { .. } => {
+                        eprintln!("[network] recoverable listener error");
+                    }
+                    SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                        connected_peers.insert(peer_id);
+                        eprintln!("[network] connection established; connected={}", connected_peers.len());
                         request_id_counter = request_id_counter.wrapping_add(1);
                         let initial_ping = ProtocolMessage::new(
                             MsgType::Ping,
@@ -119,17 +138,12 @@ pub async fn run_network_loop(
                         );
                         swarm.behaviour_mut().request_response.send_request(&peer_id, initial_ping);
                     }
-                    SwarmEvent::ConnectionClosed { peer_id, cause, .. } => {
-                        let label = connected_peers.remove(&peer_id).unwrap_or_default();
-                        eprintln!(
-                            "[network] connection closed peer={peer_id} label={label} \
-                             cause={cause:?}"
-                        );
+                    SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                        connected_peers.remove(&peer_id);
+                        eprintln!("[network] connection closed; connected={}", connected_peers.len());
                     }
-                    SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
-                        eprintln!(
-                            "[network] outgoing connection ERROR peer={peer_id:?} error={error}"
-                        );
+                    SwarmEvent::OutgoingConnectionError { .. } => {
+                        eprintln!("[network] outgoing connection failed");
                     }
                     SwarmEvent::Behaviour(MontanaBehaviourEvent::RequestResponse(
                         RrEvent::Message {
@@ -138,20 +152,14 @@ pub async fn run_network_loop(
                             ..
                         },
                     )) => {
-                        eprintln!("[network] RR Request msg_type={:?} request_id={} payload_len={}", request.msg_type, request.request_id, request.payload.len());
                         if request.msg_type == MsgType::Ping {
                             let pong = ProtocolMessage::new(MsgType::Pong, request.request_id, Vec::new());
-                            if let Err(e) = swarm
-                                .behaviour_mut()
-                                .request_response
-                                .send_response(channel, pong)
-                            {
-                                eprintln!("[network] send Pong failed: {e:?}");
+                            if swarm.behaviour_mut().request_response.send_response(channel, pong).is_err() {
+                                eprintln!("[network] heartbeat response failed");
                             }
                         } else {
-                            let msg_type_dbg = request.msg_type;
-                            if let Err(e) = incoming_tx.send(request.clone()) {
-                                eprintln!("[network] forward {msg_type_dbg:?} failed: {e}");
+                            if incoming_tx.send(request.clone()).is_err() {
+                                return Err(NodeError::Network("consensus receiver disconnected".into()));
                             }
                             let ack = ProtocolMessage::new(MsgType::Pong, request.request_id, Vec::new());
                             let _ = swarm.behaviour_mut().request_response.send_response(channel, ack);
@@ -159,29 +167,23 @@ pub async fn run_network_loop(
                     }
                     SwarmEvent::Behaviour(MontanaBehaviourEvent::RequestResponse(
                         RrEvent::Message {
-                            peer,
-                            message: RrMessage::Response { request_id, response },
+                            message: RrMessage::Response { response, .. },
                             ..
                         },
-                    )) if response.msg_type == MsgType::Pong => {
-                        eprintln!(
-                            "[network] heartbeat OK peer={peer} request_id={request_id}"
-                        );
-                    }
-                    SwarmEvent::Behaviour(MontanaBehaviourEvent::RequestResponse(rr_other)) => {
-                        eprintln!("[network] RR other event: {rr_other:?}");
+                    )) if response.msg_type == MsgType::Pong => {}
+                    SwarmEvent::Behaviour(MontanaBehaviourEvent::RequestResponse(_)) => {
+                        eprintln!("[network] request-response event");
                     }
                     _ => {}
                 }
             }
             _ = heartbeat.tick() => {
-                for (peer_id, label, addr) in &redial_targets {
-                    if !connected_peers.contains_key(peer_id) {
-                        eprintln!("[network] redial {} ({})", label, addr);
+                for (peer_id, addr) in &redial_targets {
+                    if !connected_peers.contains(peer_id) {
                         let _ = swarm.dial(addr.clone());
                     }
                 }
-                let peers: Vec<PeerId> = connected_peers.keys().copied().collect();
+                let peers: Vec<PeerId> = connected_peers.iter().copied().collect();
                 for peer_id in peers {
                     request_id_counter = request_id_counter.wrapping_add(1);
                     let ping = ProtocolMessage::new(
@@ -193,21 +195,86 @@ pub async fn run_network_loop(
                 }
             }
             Some(broadcast_msg) = broadcast_rx.recv() => {
-                let peers: Vec<PeerId> = connected_peers.keys().copied().collect();
-                let msg_type_dbg = broadcast_msg.msg_type;
-                let peer_count = peers.len();
+                let peers: Vec<PeerId> = connected_peers.iter().copied().collect();
                 for peer_id in peers {
                     swarm.behaviour_mut().request_response.send_request(&peer_id, broadcast_msg.clone());
                 }
-                eprintln!(
-                    "[network] broadcast {msg_type_dbg:?} request_id={rid} to {peer_count} peer(s)",
-                    rid = broadcast_msg.request_id
-                );
+
             }
             _ = tokio::signal::ctrl_c() => {
                 eprintln!("[network] Ctrl-C, exiting");
                 return Ok(());
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mt_genesis::GenesisPeer;
+
+    fn manifest() -> (GenesisManifest, PeerId, PeerId) {
+        let local = libp2p::identity::Keypair::generate_ed25519()
+            .public()
+            .to_peer_id();
+        let remote = libp2p::identity::Keypair::generate_ed25519()
+            .public()
+            .to_peer_id();
+        let peers = [local, remote]
+            .into_iter()
+            .enumerate()
+            .map(|(index, id)| GenesisPeer {
+                label: format!("peer-{index}"),
+                multiaddr: "/ip4/127.0.0.1/tcp/8444".into(),
+                peer_id: id.to_string(),
+                account_id_hex: if index == 0 { "1" } else { "2" }.repeat(64),
+                node_id_hex: if index == 0 { "a" } else { "b" }.repeat(64),
+                bootstrap: index == 0,
+            })
+            .collect();
+        (
+            GenesisManifest {
+                network_name: "test".into(),
+                peers,
+            },
+            local,
+            remote,
+        )
+    }
+
+    #[test]
+    fn an_example_address_is_rejected_even_in_the_local_entry() {
+        for index in [0, 1] {
+            let (mut manifest, local, _) = manifest();
+            manifest.peers[index].multiaddr = "/ip4/<front>/tcp/8444".into();
+            let error = prepare_peers(&manifest, local).err().expect("must reject");
+            assert!(
+                !error.to_string().contains("<front>"),
+                "do not echo operator endpoints"
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_and_embedded_peer_ids_are_rejected() {
+        let (mut manifest, local, remote) = manifest();
+        manifest.peers[1].multiaddr = format!("/ip4/127.0.0.1/tcp/8444/p2p/{remote}");
+        assert!(prepare_peers(&manifest, local).is_err());
+        manifest.peers[1].multiaddr = "/ip4/127.0.0.1/tcp/8444".into();
+        manifest.peers[1].peer_id = "not-a-peer-id".into();
+        assert!(prepare_peers(&manifest, local).is_err());
+    }
+
+    #[test]
+    fn the_prepared_target_pins_the_remote_identity_once() {
+        let (manifest, local, remote) = manifest();
+        let peers = prepare_peers(&manifest, local).expect("valid manifest");
+        assert_eq!(peers.len(), 1);
+        assert_eq!(peers[0].id, remote);
+        assert_eq!(
+            peers[0].address.to_string(),
+            format!("/ip4/127.0.0.1/tcp/8444/p2p/{remote}")
+        );
     }
 }

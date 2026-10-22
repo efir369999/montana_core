@@ -591,13 +591,10 @@ pub fn sorted_candidates_for_fallback(candidates: &[Candidate]) -> Vec<Candidate
 //   quorum(W) = (67 × active_chain_length + 99) / 100   (integer, authoritative [I-9])
 // Unsigned u64. spec bound active ≤ 10^14: 67 × 10^14 + 99 < 2^63 — safe.
 //
-// M4-LOW-5 closure: saturating_mul/saturating_add protect against u64::MAX
-// overflow (active_chain_length > u64::MAX/67 ≈ 2.7×10^17, irrelevant
-// in practice but defense-in-depth: on overflow return a graceful
-// u64::MAX/100 instead of a silent wrap or a panic in a debug build).
+// Widen before multiplication: saturating the intermediate would LOWER the
+// quorum for large totals. The rounded result never exceeds its u64 input.
 pub fn quorum(active_chain_length: u64) -> u64 {
-    let scaled = 67u64.saturating_mul(active_chain_length);
-    scaled.saturating_add(99) / 100
+    ((67u128 * u128::from(active_chain_length) + 99) / 100) as u64
 }
 
 // spec: an object is cemented when cemented_sum ≥ quorum(W).
@@ -1848,6 +1845,17 @@ mod tests {
         // ~67% of big
         assert!(q > big / 2);
         assert!(q < big);
+    }
+
+    #[test]
+    fn quorum_does_not_fall_at_the_old_overflow_boundary() {
+        let edge = u64::MAX / 67;
+        for total in [edge - 1, edge, edge + 1, u64::MAX - 1, u64::MAX] {
+            let q = quorum(total);
+            assert!(u128::from(q) * 100 >= u128::from(total) * 67);
+            assert!(u128::from(q - 1) * 100 < u128::from(total) * 67);
+            assert!(q <= total);
+        }
     }
 
     #[test]

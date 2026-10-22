@@ -4,7 +4,7 @@
 
 use crate::crypto::{kem_decapsulate, kem_encapsulate, kem_keypair_from_seed};
 use crate::ratchet::{ad_bytes, kdf_ck, kdf_rk, msg_key, open, seal, MLKEM_PUBKEY_SIZE};
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 pub const MLKEM_CT_SIZE: usize = 1088;
 pub const MLKEM_SK_SIZE: usize = 2400;
@@ -43,6 +43,7 @@ pub enum RatchetError {
     BadFormat,
     TooManySkipped,
     TooLarge,
+    CounterExhausted,
     Decrypt,
     Replay,
     Crypto,
@@ -245,11 +246,9 @@ impl SessionState {
     pub fn from_bytes(b: &[u8]) -> Result<Self, RatchetError> {
         let mut p = 0usize;
         let take = |p: &mut usize, n: usize| -> Result<&[u8], RatchetError> {
-            if b.len() < *p + n {
-                return Err(RatchetError::BadFormat);
-            }
-            let s = &b[*p..*p + n];
-            *p += n;
+            let end = p.checked_add(n).ok_or(RatchetError::BadFormat)?;
+            let s = b.get(*p..end).ok_or(RatchetError::BadFormat)?;
+            *p = end;
             Ok(s)
         };
         let session_id: [u8; 32] = take(&mut p, 32)?.try_into().unwrap();
@@ -267,8 +266,20 @@ impl SessionState {
         let ns = u32::from_le_bytes(take(&mut p, 4)?.try_into().unwrap());
         let nr = u32::from_le_bytes(take(&mut p, 4)?.try_into().unwrap());
         let pn = u32::from_le_bytes(take(&mut p, 4)?.try_into().unwrap());
-        let ratchet_pending = take(&mut p, 1)?[0] != 0;
+        let ratchet_pending = match take(&mut p, 1)?[0] {
+            0 => false,
+            1 => true,
+            _ => return Err(RatchetError::BadFormat),
+        };
         let count = u32::from_le_bytes(take(&mut p, 4)?.try_into().unwrap()) as usize;
+        if count > MAX_MKSKIPPED {
+            return Err(RatchetError::TooManySkipped);
+        }
+        // Validate the complete tail before allocation. A stored count cannot
+        // enlarge the runtime key bound or hide a truncated/trailing encoding.
+        if b.len() - p != count * (MLKEM_PUBKEY_SIZE + 4 + 32) {
+            return Err(RatchetError::BadFormat);
+        }
         let mut mkskipped = Vec::with_capacity(count);
         for _ in 0..count {
             let rp = take(&mut p, MLKEM_PUBKEY_SIZE)?.to_vec();
@@ -301,42 +312,65 @@ impl SessionState {
         if plaintext.len() > MAX_PLAINTEXT {
             return Err(RatchetError::TooLarge);
         }
-        if self.ratchet_pending {
-            self.pn = self.ns;
-            self.ns = 0;
-            let (new_pub, new_sk) = kem_keypair_from_seed(rng_seed).ok_or(RatchetError::Crypto)?;
+        // Prepare the outgoing transition separately. Every fallible step must
+        // finish before changing counters, root, chain or the local KEM key.
+        let (root, sending_chain, public, secret, send_ct, pn, ns) = if self.ratchet_pending {
             let dhr = self.dhr.ok_or(RatchetError::BadFormat)?;
             let (ct, ss) = kem_encapsulate(&dhr).ok_or(RatchetError::Crypto)?;
+            let ss = Zeroizing::new(ss);
+            let (new_pub, new_sk) = kem_keypair_from_seed(rng_seed).ok_or(RatchetError::Crypto)?;
             let (new_rk, new_cks) = kdf_rk(&self.rk, &ss);
-            self.rk = new_rk;
-            self.cks = Some(new_cks);
-            self.dhs_pub = new_pub;
-            self.dhs_sk = new_sk;
-            self.send_ct = Some(ct);
-            self.ratchet_pending = false;
-        }
-        let cks = self.cks.ok_or(RatchetError::BadFormat)?;
-        let (mut mk, next_cks) = kdf_ck(&cks);
-        self.cks = Some(next_cks);
+            (
+                Zeroizing::new(new_rk),
+                Zeroizing::new(new_cks),
+                new_pub,
+                Some(Zeroizing::new(new_sk)),
+                Some(ct),
+                self.ns,
+                0,
+            )
+        } else {
+            (
+                Zeroizing::new(self.rk),
+                Zeroizing::new(self.cks.ok_or(RatchetError::BadFormat)?),
+                self.dhs_pub,
+                None,
+                self.send_ct,
+                self.pn,
+                self.ns,
+            )
+        };
+        let next_ns = ns.checked_add(1).ok_or(RatchetError::CounterExhausted)?;
+        let (mut mk, next_cks) = kdf_ck(&sending_chain);
         let (mut enc_key, nonce) = msg_key(&mk);
-        let ad = ad_bytes(&self.session_id, self.pn, self.ns, &self.dhs_pub);
+        let ad = ad_bytes(&self.session_id, pn, ns, &public);
         let padded = pad_message(plaintext);
         let body = seal(&enc_key, &nonce, &padded, &ad);
         mk.zeroize();
         enc_key.zeroize();
 
-        let has_ct = self.send_ct.is_some();
+        let has_ct = send_ct.is_some();
         let mut out = Vec::new();
-        out.extend_from_slice(&self.dhs_pub);
+        out.extend_from_slice(&public);
         out.push(if has_ct { 0x01 } else { 0x00 });
-        if let Some(ct) = &self.send_ct {
+        if let Some(ct) = &send_ct {
             out.extend_from_slice(ct);
         }
-        out.extend_from_slice(&self.pn.to_le_bytes());
-        out.extend_from_slice(&self.ns.to_le_bytes());
+        out.extend_from_slice(&pn.to_le_bytes());
+        out.extend_from_slice(&ns.to_le_bytes());
         out.extend_from_slice(&(body.len() as u32).to_le_bytes());
         out.extend_from_slice(&body);
-        self.ns += 1;
+        self.rk = *root;
+        self.cks = Some(next_cks);
+        self.dhs_pub = public;
+        if let Some(secret) = secret {
+            self.dhs_sk.zeroize();
+            self.dhs_sk = secret.to_vec();
+        }
+        self.send_ct = send_ct;
+        self.pn = pn;
+        self.ns = next_ns;
+        self.ratchet_pending = false;
         Ok(out)
     }
 
@@ -370,9 +404,11 @@ impl SessionState {
         p += 4;
         let m_ns = u32::from_le_bytes(msg[p..p + 4].try_into().unwrap());
         p += 4;
+        let next_nr = m_ns.checked_add(1).ok_or(RatchetError::CounterExhausted)?;
         let body_len = u32::from_le_bytes(msg[p..p + 4].try_into().unwrap()) as usize;
         p += 4;
-        if body_len > MAX_PLAINTEXT + 16 || msg.len() != p + body_len {
+        // The largest plaintext still needs its one-byte padding delimiter.
+        if body_len > MAX_PLAINTEXT + 1 + 16 || msg.len() != p + body_len {
             return Err(RatchetError::BadFormat);
         }
         let body = &msg[p..p + body_len];
@@ -461,7 +497,7 @@ impl SessionState {
         self.rk = rk;
         self.ckr = Some(next_c);
         self.dhr = dhr;
-        self.nr = nr + 1;
+        self.nr = next_nr;
         self.ratchet_pending = pending;
         for s in new_skipped {
             self.mkskipped.push(s);
@@ -470,5 +506,100 @@ impl SessionState {
             self.mkskipped.remove(0);
         }
         unpad_message(pt)
+    }
+}
+
+#[cfg(test)]
+mod adversarial_state_tests {
+    use super::*;
+
+    fn state() -> SessionState {
+        SessionState {
+            session_id: [1; 32],
+            rk: [2; 32],
+            dhs_pub: [3; MLKEM_PUBKEY_SIZE],
+            dhs_sk: vec![4; MLKEM_SK_SIZE],
+            dhr: None,
+            cks: Some([5; 32]),
+            send_ct: None,
+            ckr: None,
+            ns: 9,
+            nr: 0,
+            pn: 2,
+            ratchet_pending: false,
+            mkskipped: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn adversarial_trailing_state_bytes_are_refused() {
+        let mut bytes = state().to_bytes();
+        bytes.push(1);
+        assert!(SessionState::from_bytes(&bytes).is_err());
+    }
+
+    #[test]
+    fn adversarial_noncanonical_pending_flag_is_refused() {
+        let mut bytes = state().to_bytes();
+        let flag = bytes.len() - 5;
+        bytes[flag] = 2;
+        assert!(SessionState::from_bytes(&bytes).is_err());
+    }
+
+    #[test]
+    fn adversarial_skipped_key_count_cannot_exceed_the_runtime_bound() {
+        let mut held = state();
+        for n in 0..=MAX_MKSKIPPED {
+            held.mkskipped
+                .push((vec![3; MLKEM_PUBKEY_SIZE], n as u32, [6; 32]));
+        }
+        assert!(SessionState::from_bytes(&held.to_bytes()).is_err());
+    }
+
+    #[test]
+    fn adversarial_exhausted_send_counter_refuses_without_changing_state() {
+        let mut held = state();
+        held.ns = u32::MAX;
+        let before = held.to_bytes();
+        assert!(held.encrypt(b"message", &[7; 64]).is_err());
+        assert!(held.to_bytes() == before, "failed send changed the session");
+    }
+
+    #[test]
+    fn adversarial_failed_ratchet_step_preserves_the_send_state() {
+        let mut held = state();
+        held.ratchet_pending = true;
+        let before = held.to_bytes();
+        assert_eq!(
+            held.encrypt(b"message", &[7; 64]),
+            Err(RatchetError::BadFormat)
+        );
+        assert!(
+            held.to_bytes() == before,
+            "failed ratchet step changed the session"
+        );
+    }
+    #[test]
+    fn regression_limits_exhausted_receive_counter_preserves_state() {
+        let mut held = state();
+        held.nr = u32::MAX;
+        held.dhr = Some([3; MLKEM_PUBKEY_SIZE]);
+        held.ckr = Some([5; 32]);
+        let before = held.to_bytes();
+        let (mk, _) = kdf_ck(&[5; 32]);
+        let (key, nonce) = msg_key(&mk);
+        let ad = ad_bytes(&held.session_id, 0, u32::MAX, &[3; MLKEM_PUBKEY_SIZE]);
+        let body = seal(&key, &nonce, &pad_message(b"message"), &ad);
+        let mut packet = vec![3; MLKEM_PUBKEY_SIZE];
+        packet.push(0);
+        packet.extend_from_slice(&0u32.to_le_bytes());
+        packet.extend_from_slice(&u32::MAX.to_le_bytes());
+        packet.extend_from_slice(&(body.len() as u32).to_le_bytes());
+        packet.extend_from_slice(&body);
+        assert!(held.decrypt(&packet).is_err());
+        assert!(
+            held.to_bytes() == before,
+            "failed receive changed the session"
+        );
     }
 }

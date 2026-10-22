@@ -1,5 +1,50 @@
+use mt_crypto::Hash32;
 use mt_net::{FastSyncResponseChunk, TableId};
 use mt_sync::{FastSyncChunk, FastSyncTableId};
+use std::collections::BTreeMap;
+
+// Transport data cannot authenticate its own checkpoint. Only roots recorded
+// after canonical application may enter this constructor's verified map.
+pub(super) struct FastSyncSession {
+    pub(super) client: mt_sync::FastSyncClient,
+    pub(super) request_id: u64,
+    pub(super) window: u64,
+    root: Hash32,
+    pub(super) timechain: Hash32,
+}
+
+impl FastSyncSession {
+    pub(super) fn from_verified(
+        request_id: u64,
+        window: u64,
+        advertised_root: Hash32,
+        verified_roots: &BTreeMap<u64, Hash32>,
+        verified_clocks: &BTreeMap<u64, Hash32>,
+    ) -> Option<Self> {
+        let root = *verified_roots.get(&window)?;
+        if root != advertised_root {
+            return None;
+        }
+        Some(Self {
+            client: mt_sync::FastSyncClient::new(),
+            request_id,
+            window,
+            root,
+            timechain: *verified_clocks.get(&window)?,
+        })
+    }
+
+    pub(super) fn matches(&self, request_id: u64, window: u64) -> bool {
+        request_id == self.request_id && window == self.window
+    }
+
+    pub(super) fn finalize(
+        self,
+    ) -> Result<(u64, mt_sync::snapshot::TypedTables), mt_sync::FastSyncClientError> {
+        self.client
+            .finalize(&BTreeMap::from([(self.window, self.root)]))
+    }
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum WireChunkError {
@@ -54,6 +99,27 @@ mod tests {
     use mt_codec::CanonicalEncode;
     use mt_crypto::PUBLIC_KEY_SIZE;
     use mt_state::{AccountRecord, ACCOUNT_RECORD_SIZE};
+
+    #[test]
+    fn a_remote_head_cannot_create_or_move_its_own_snapshot_anchor() {
+        let mut roots = BTreeMap::new();
+        let mut clocks = BTreeMap::new();
+        assert!(FastSyncSession::from_verified(7, 42, [1; 32], &roots, &clocks).is_none());
+        roots.insert(42, [1; 32]);
+        assert!(FastSyncSession::from_verified(7, 42, [1; 32], &roots, &clocks).is_none());
+        clocks.insert(42, [3; 32]);
+        assert!(FastSyncSession::from_verified(7, 42, [2; 32], &roots, &clocks).is_none());
+        assert!(FastSyncSession::from_verified(7, 43, [1; 32], &roots, &clocks).is_none());
+        let session = FastSyncSession::from_verified(7, 42, [1; 32], &roots, &clocks).unwrap();
+        assert!(session.matches(7, 42));
+        assert!(!session.matches(8, 42));
+        assert!(!session.matches(7, 43));
+        roots.insert(42, [2; 32]);
+        assert_eq!(
+            session.root, [1; 32],
+            "in-flight verification is pinned to its anchor"
+        );
+    }
 
     fn acct(seed: u8) -> Vec<u8> {
         let rec = AccountRecord {

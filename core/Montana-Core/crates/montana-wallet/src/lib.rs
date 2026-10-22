@@ -404,17 +404,20 @@ mod tests {
 
     impl Scratch {
         fn named(what: &str) -> Self {
-            let at = std::env::temp_dir().join(format!("montana-wallet-{what}"));
-            std::fs::create_dir_all(&at).expect("a scratch directory is writable");
+            let unique = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("a test timestamp")
+                .as_nanos();
+            let at = std::env::temp_dir().join(format!(
+                "montana-wallet-{what}-{}-{unique}",
+                std::process::id()
+            ));
+            std::fs::create_dir(&at).expect("a fresh scratch directory is writable");
             Self(at)
         }
     }
 
-    impl Drop for Scratch {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.0);
-        }
-    }
+    // Scratch artifacts are retained for inspection; tests never remove existing files.
 
     fn a_note(which: u8, value: u128, position: u64) -> Note {
         Note::of(

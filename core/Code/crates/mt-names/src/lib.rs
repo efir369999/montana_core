@@ -104,9 +104,9 @@ mod tests {
             ("🙂🙂", NameError::Charset),
             ("ALIÇE", NameError::Charset), // ç is outside the set -- a refusal, not a name substitution
             ("alice🙂", NameError::Charset),
-            ("алиса-alice", NameError::Charset),
+            ("алиса-alice", NameError::Charset), // CYRILLIC-DATA-OK: the refusal's own input
             ("alice montana", NameError::Charset), // space inside
-            ("  alice  ", NameError::Charset),     // trimming is the client's job, not the layer's
+            ("  alice  ", NameError::Charset),   // trimming is the client's job, not the layer's
             ("alice.montana", NameError::Charset),
             ("alice@montana", NameError::Charset), // only a leading @ is stripped
             ("abc", NameError::TooShort),
@@ -1837,13 +1837,23 @@ mod acceptance_tests {
         let v = chain_visible(&objs);
         let mut wire = v.app_id.to_vec();
         wire.extend_from_slice(&v.batch_root);
-        assert!(!wire.windows(32).any(|w| w == s), "slot visible in the chain");
+        assert!(
+            !wire.windows(32).any(|w| w == s),
+            "slot visible in the chain"
+        );
         assert!(
             !wire.windows(32).any(|w| w == anchor(&c)),
             "anchor visible in the chain"
         );
-        assert!(!wire.windows(4).any(|w| w == b"anna"), "name visible in the chain");
-        assert_eq!(wire.len(), 64, "exactly app_id and the batch root go to the chain");
+        assert!(
+            !wire.windows(4).any(|w| w == b"anna"),
+            "name visible in the chain"
+        );
+        assert_eq!(
+            wire.len(),
+            64,
+            "exactly app_id and the batch root go to the chain"
+        );
     }
 
     /// G-44 continued: the reveal CONTAINS the slot and anchor -- and that is right, because
