@@ -2345,7 +2345,7 @@ final class MTGroup {
             // The banner a running app owes its person: the group's title over who wrote and what (a channel speaks as itself).
             let shown = MontanaNotify.body(for: words) ?? String(localized: "New message", bundle: MTLanguage.bundle)
             let who = g.kind == .group ? speakerName(Self.speaker(g.id, seat)) : ""
-            MontanaNotify.presentGroup(title: g.title, body: who.isEmpty ? shown : who + ": " + shown, chat: key, copy: copy,
+            MontanaNotify.presentGroup(title: g.title, body: shown, speaker: who, chat: key, copy: copy,
                                        mentioned: g.kind == .group && Self.mentionsMe(words))   // a mention rings through the mute
         }
         if landed, g.mine {

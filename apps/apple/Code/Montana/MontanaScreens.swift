@@ -153,8 +153,8 @@ struct SafetyNumberView: View {
     /// it out loud is comparing the one thing an attacker cannot leave alone. Both sides derive it
     /// from the same secret, so neither has to agree who reads first.
     private func compute() {
-        guard let secret = MTPipeBook.secret(for: peerRef),
-              let fp = MTPipe.fingerprint(secret: secret) else { digits = ""; return }
+        guard let material = MTPipeBook.kept(for: peerRef)?.fingerprint,
+              let fp = MTPipe.fingerprint(material: material) else { digits = ""; return }
         digits = fp
     }
 

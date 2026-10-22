@@ -90,7 +90,7 @@ final class NotificationService: UNNotificationServiceExtension {
             if t.hasPrefix("@") { t.removeFirst() }
             var glyph = rdv.glyph
             if glyph.isEmpty, let f = t.first, MontanaAvatar.isEmoji(f) { glyph = String(f) }
-            content.title = t.isEmpty ? "Montana" : MontanaAvatar.spokenName(t)
+            content.title = t.isEmpty || !Self.prefOn("notifSender") ? "Montana" : MontanaAvatar.spokenName(t)
             content.body = Self.bannerBody(text)
             Self.diagLine("rdv-letter: stored and shown mid=\(rdv.mid.prefix(8))")
             Self.deliverWithAvatar(content, from: "", glyph: glyph, handler: contentHandler)
@@ -211,7 +211,7 @@ final class NotificationService: UNNotificationServiceExtension {
             }
             // A GROUP'S WORD (MTGroup in the app, 05.10): a letter and an invitation wear the group's own face, the tap opens the
             // group; an answer to a letter is stashed for the app without a face.
-            let group = Self.groupFace(rawText)
+            let group = Self.groupFace(rawText, named: Self.prefOn("notifSender"))
             if rawText.hasPrefix("\u{200B}\u{200B}GR:"), group == nil {
                 Self.diagLine("group word stashed silently mid=\(mid.prefix(8))")
                 if let target = Self.groupDeletion(rawText) {   // a deletion in a group takes its letter's notice off too (16.10)
@@ -256,7 +256,7 @@ final class NotificationService: UNNotificationServiceExtension {
             }
             var t = sh.name
             if t.hasPrefix("@") { t.removeFirst() }
-            content.title = t.isEmpty ? "Montana" : MontanaAvatar.spokenName(t)
+            content.title = t.isEmpty || !Self.prefOn("notifSender") ? "Montana" : MontanaAvatar.spokenName(t)
             content.subtitle = sh.seatName
             content.body = Self.bannerBody(sh.text)
             content.threadIdentifier = "seat:" + sh.seat
@@ -271,7 +271,7 @@ final class NotificationService: UNNotificationServiceExtension {
             // exists — no letter» is closed here too.
             var glyph = sc.glyph
             if glyph.isEmpty, let f0 = Self.cleanEnvName(sc.name).first, MontanaAvatar.isEmoji(f0) { glyph = String(f0) }
-            let group = Self.groupFace(sc.text)   // a group's word wears the group's face here too (MTGroup in the app)
+            let group = Self.groupFace(sc.text, named: Self.prefOn("notifSender"))   // a group's word wears the group's face here too (MTGroup in the app)
             if sc.text.hasPrefix("\u{200B}\u{200B}GR:"), group == nil {
                 Self.diagLine("group word from the box stashed silently mid=\(sc.mid.prefix(8))")
                 contentHandler(Self.quietFace())
@@ -556,6 +556,10 @@ final class NotificationService: UNNotificationServiceExtension {
     /// content is changed.
     /// `named`: the name the system hears for this notice instead of the conversation (a call's token); the face is still found by `from`.
     private static func nativeFace(_ content: UNMutableNotificationContent, from: String, glyph: String, named: String? = nil) -> UNNotificationContent {
+        // A LETTER'S BANNER WITH THE SENDER HIDDEN WEARS NO FACE (Show sender, 22.10.2026): applySettings wrote «Montana» over the
+        // title, and the communication style drew the person's photo under it; the app's own banner skips the style the same way
+        // (MontanaNotify.sendersFace). A call's notice (named by its token) keeps its face.
+        if named == nil, !prefOn("notifSender") { return content }
         let sys = named ?? MTNoticeAlias.of(from)   // the person and the conversation under this phone's alias, never the link (12.10.2026)
         let display = content.title.isEmpty ? (from.isEmpty ? "Contact" : from) : content.title
         // Without a real name the communication intent is not built: the system would draw the
@@ -1259,7 +1263,8 @@ final class NotificationService: UNNotificationServiceExtension {
     /// A GROUP'S WORD (MTGroup in the app, 05.10): a letter's face is its group's title over its speaker's name and words -- a
     /// channel's post speaks as the channel -- and an invitation's face names the group it opens. Nil for an answer to a letter
     /// and for anything unreadable: those are stashed without a face.
-    private static func groupFace(_ raw: String) -> (title: String, body: String, chat: String, mid: String)? {
+    /// `named`: the person's Show sender -- off, the speaker and the asker go unnamed, as the app's banner (MontanaNotify.showsSender).
+    private static func groupFace(_ raw: String, named: Bool) -> (title: String, body: String, chat: String, mid: String)? {
         let mark = "\u{200B}\u{200B}GR:"
         guard raw.hasPrefix(mark), let d = String(raw.dropFirst(mark.count)).data(using: .utf8),
               let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
@@ -1273,7 +1278,7 @@ final class NotificationService: UNNotificationServiceExtension {
             guard let tx = o["tx"] as? String, !tx.isEmpty else { return nil }
             let words = bannerBody(tx)
             let who = ((o["n"] as? String) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            return (title, channel || who.isEmpty ? words : who + ": " + words, chat, (o["id"] as? String) ?? "")
+            return (title, channel || who.isEmpty || !named ? words : who + ": " + words, chat, (o["id"] as? String) ?? "")
         case "inv":
             let body = channel ? String(localized: "You were added to the channel", bundle: MTLanguage.bundle)
                                : String(localized: "You were added to the group", bundle: MTLanguage.bundle)
@@ -1285,7 +1290,7 @@ final class NotificationService: UNNotificationServiceExtension {
                   let e = try? JSONSerialization.jsonObject(with: td) as? [String: Any], (e["e"] as? String) == "ask" else { return nil }
             guard roomMayRing(chat) else { return nil }   // [I-15] one group's invitations ring once in two minutes
             let who = ((o["n"] as? String) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            let shown = who.isEmpty ? String(localized: "Correspondent", bundle: MTLanguage.bundle) : who
+            let shown = who.isEmpty || !named ? String(localized: "Correspondent", bundle: MTLanguage.bundle) : who
             let body: String
             if (e["m"] as? String) == "live" {
                 body = String(localized: "\(shown) invites you to a live stream", bundle: MTLanguage.bundle)

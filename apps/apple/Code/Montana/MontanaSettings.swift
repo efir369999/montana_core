@@ -449,23 +449,39 @@ struct NotificationsView: View {
             .listRowBackground(MTGlassRowPlate())
 
             Section {
-                HStack(spacing: 12) {
-                    icon("speaker.wave.2.fill", .pink)
-                    Toggle("Sound", isOn: $sound)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 12) {
+                        icon("speaker.wave.2.fill", .pink)
+                        Toggle("Sound", isOn: $sound)
+                    }
+                    Text("Notifications of new messages play a sound. Off, they arrive silently.")
+                        .font(.caption).foregroundColor(.gray)
                 }
-                HStack(spacing: 12) {
-                    icon("text.bubble.fill", .green)
-                    Toggle("Show message text", isOn: $preview)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 12) {
+                        icon("text.bubble.fill", .green)
+                        Toggle("Show message text", isOn: $preview)
+                    }
+                    Text("A notification shows the words of the message. Off, it shows none of them.")
+                        .font(.caption).foregroundColor(.gray)
                 }
-                HStack(spacing: 12) {
-                    icon("person.fill", .orange)
-                    Toggle("Show sender", isOn: $showSender)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 12) {
+                        icon("person.fill", .orange)
+                        Toggle("Show sender", isOn: $showSender)
+                    }
+                    Text("A notification of a message shows who wrote and their photo. Off, it reads Montana instead.")
+                        .font(.caption).foregroundColor(.gray)
                 }
                 // The name stands on the locked screen even when the system hides previews:
                 // a native category option, re-registered the moment the switch flips.
-                HStack(spacing: 12) {
-                    icon("lock.fill", .blue)
-                    Toggle("Show name on lock screen", isOn: $nameOnLock)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 12) {
+                        icon("lock.fill", .blue)
+                        Toggle("Show name on lock screen", isOn: $nameOnLock)
+                    }
+                    Text("When the phone hides previews on the lock screen, the notification still names who wrote.")
+                        .font(.caption).foregroundColor(.gray)
                 }
             }
             .listRowBackground(MTGlassRowPlate())
@@ -2129,13 +2145,21 @@ struct PrivacyView: View {
                     Text("Your name and coins stand in the Montana top for everyone, and your correspondents see your coins. Off, you are not in the top.")
                         .font(.caption).foregroundColor(.gray)
                 }
-                HStack(spacing: 12) {
-                    icon("checkmark.circle.fill", .green)
-                    Toggle("Read receipts", isOn: $readReceipts)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 12) {
+                        icon("checkmark.circle.fill", .green)
+                        Toggle("Read receipts", isOn: $readReceipts)
+                    }
+                    Text("People see that you have read their messages, and channel owners count your views. Off, nobody is told.")
+                        .font(.caption).foregroundColor(.gray)
                 }
-                HStack(spacing: 12) {
-                    icon("person.crop.circle.fill", .orange)
-                    Toggle("Sync contacts", isOn: $syncContacts)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 12) {
+                        icon("person.crop.circle.fill", .orange)
+                        Toggle("Sync contacts", isOn: $syncContacts)
+                    }
+                    Text("A contact you save in Montana with a public name gets a card in the phone's Contacts. Off, no card is written.")
+                        .font(.caption).foregroundColor(.gray)
                 }
                 // THE CARD OF A LINK IS READ BY MY OWN DEVICE (the author's word 22.09): sending a link
                 // with the switch on, this phone opens that page to take its title and picture, and the
@@ -2183,10 +2207,14 @@ struct PrivacyView: View {
             }
             .listRowBackground(MTGlassRowPlate())
             Section {
-                HStack(spacing: 12) {
-                    icon("eye.slash.fill", .purple)
-                    Toggle("Filter objectionable content", isOn: $objectionableFilter)
-                        .onChange(of: objectionableFilter) { _, on in MontanaKeychain.set("objectionableFilterOn", Data([on ? 1 : 0])) }
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 12) {
+                        icon("eye.slash.fill", .purple)
+                        Toggle("Filter objectionable content", isOn: $objectionableFilter)
+                            .onChange(of: objectionableFilter) { _, on in MontanaKeychain.set("objectionableFilterOn", Data([on ? 1 : 0])) }
+                    }
+                    Text("Messages, wall posts and comments from others with offensive words stay folded until you tap them.")
+                        .font(.caption).foregroundColor(.gray)
                 }
                 NavigationLink { MontanaBlockedView() } label: {
                     HStack(spacing: 12) {

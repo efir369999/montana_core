@@ -203,6 +203,19 @@ enum MontanaNotify {
         return (try? content.updating(from: intent))
     }
 
+    /// SHOW SENDER HAS ONE OWNER (the switch on the Notifications screen, 22.10.2026): off, no banner of a letter -- a person's, a
+    /// group's, a pin, a typing word, a kept deletion -- names who wrote or wears their face; it reads the app's own name. The banner
+    /// of a group dropped the switch (its title and «who: words» stood), and the extension's twin drew the person's photo under
+    /// «Montana»; every letter's face now passes here and through the extension's applySettings and nativeFace.
+    static var showsSender: Bool { UserDefaults.standard.object(forKey: "notifSender") as? Bool ?? true }
+    static func sendersFace(_ content: UNMutableNotificationContent, from: String) -> UNNotificationContent {
+        guard showsSender else {
+            content.title = "Montana"   // NOT-UI: the app's own name, the same word in every language
+            return content
+        }
+        return withCommunication(content, from: from) ?? content
+    }
+
     // ── the share sheet's suggestions ─────────────────────────────────────────
     /// A PERSON'S CHATS IN THE SYSTEM'S SHARE SHEET (the author's word 23.09: «when Siri's suggestions for sharing are
     /// on, Montana's contacts and chats are offered»). The system offers the conversations an app donates as sent
@@ -311,7 +324,7 @@ enum MontanaNotify {
         }
         let content = UNMutableNotificationContent()
         decorate(content, from: from, chat: chat, body: String(localized: "is typing…", bundle: MTLanguage.bundle), countUnread: false)
-        let final = withCommunication(content, from: from) ?? content
+        let final = sendersFace(content, from: from)
         MontanaTrace.mark("notify", mid: nil, "kind=typing from=\(String(from.prefix(10)))")
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: "typing-" + MTNoticeAlias.of(chat), content: final, trigger: nil)) { err in
@@ -332,7 +345,7 @@ enum MontanaNotify {
         let body = "📌 " + (preview && !words.isEmpty ? words : String(localized: "Pinned a message", bundle: MTLanguage.bundle))
         let content = UNMutableNotificationContent()
         decorate(content, from: from, chat: chat, body: body, countUnread: false)
-        let final = withCommunication(content, from: from) ?? content
+        let final = sendersFace(content, from: from)
         MontanaTrace.mark("notify", mid: nil, "kind=pin from=\(String(from.prefix(10)))")
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: "pin-" + MTNoticeAlias.of(chat) + "-" + sid, content: final, trigger: nil)) { err in
@@ -362,7 +375,7 @@ enum MontanaNotify {
         let body = String(format: String(localized: "Their phone keeps the message you deleted for everyone. In Montana levels open functions: from level %lld a person can forbid deletion on their phone.", bundle: MTLanguage.bundle), MTLevelAccess.Feature.keepDeleted.level)
         decorate(content, from: from, chat: chat, body: body, countUnread: false)
         content.userInfo["kept"] = 1   // the foreground judge shows it in the open chat too: it is no letter the chat draws (K5)
-        let final = withCommunication(content, from: from) ?? content
+        let final = sendersFace(content, from: from)
         MontanaTrace.mark("notify", mid: nil, "kind=kept from=\(String(from.prefix(10)))")
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: "kept-" + MTNoticeAlias.of(chat), content: final, trigger: nil)) { err in
@@ -373,7 +386,8 @@ enum MontanaNotify {
     /// A GROUP'S LETTER LANDED WHILE THE APP RUNS (MTGroup, 05.10): the group's title over its speaker's words, the face the
     /// extension gives the same letter while the app sleeps. The one notebook of shown letters answers by the copy's own name --
     /// the name the extension wrote when it showed this copy -- so one copy rings once, by whichever process.
-    static func presentGroup(title: String, body: String, chat: String, copy: String, mentioned: Bool = false) {
+    /// `speaker`: who said the words, named over them only while the person's Show sender stands (a channel speaks as itself).
+    static func presentGroup(title: String, body: String, speaker: String = "", chat: String, copy: String, mentioned: Bool = false) {
         let ud = UserDefaults.standard
         guard ud.object(forKey: "notifEnabled") as? Bool ?? true else {
             MontanaTrace.mark("notify_skip", mid: nil, "why=disabled kind=group")
@@ -386,7 +400,8 @@ enum MontanaNotify {
         }
         let preview = ud.object(forKey: "notifPreview") as? Bool ?? true
         let plate = UNMutableNotificationContent()
-        decorate(plate, from: chat, chat: chat, body: preview ? body : String(localized: "New message", bundle: MTLanguage.bundle), countUnread: false)
+        let words = speaker.isEmpty || !showsSender ? body : speaker + ": " + body
+        decorate(plate, from: chat, chat: chat, body: preview ? words : String(localized: "New message", bundle: MTLanguage.bundle), countUnread: false)
         plate.title = title
         if mentioned {   // A MENTION RINGS THROUGH THE MUTE (stage R, as the reference rings one): the person was named
             plate.interruptionLevel = .active
@@ -395,7 +410,7 @@ enum MontanaNotify {
         // THE GROUP WEARS ITS OWN FACE HERE TOO (the author's word 17.10.2026 16:0x MSK: «the notifications' thumbnails for groups
         // and channels»): this banner left as a bare plate with the app's icon, while the extension's twin of the same letter wore
         // a face. The group's face is mirrored by its key (ChatStore.mirrorFaceToShared); a group without one wears the list's circle.
-        let content = withCommunication(plate, from: chat) ?? plate
+        let content = sendersFace(plate, from: chat)
         MontanaTrace.mark("notify", mid: key.isEmpty ? nil : key, "kind=group body_len=\(content.body.count) preview=\(preview ? 1 : 0)")
         UNUserNotificationCenter.current().add(
             // ONE LETTER, ONE PLACE ON THE SCREEN (16.10.2026, No.73, as present() above): the copy's bare name is the name its push
@@ -470,7 +485,7 @@ enum MontanaNotify {
             MontanaTelemetry.shared.event("[notify] ring mid=\(key.prefix(8))")
         }
         let preview = ud.object(forKey: "notifPreview") as? Bool ?? true
-        let showSender = ud.object(forKey: "notifSender") as? Bool ?? true
+        let showSender = showsSender
         let content = UNMutableNotificationContent()
         decorate(content, from: from, chat: chat,
                  body: preview ? (raw ?? "") : typeOnlyBody(text), countUnread: false)

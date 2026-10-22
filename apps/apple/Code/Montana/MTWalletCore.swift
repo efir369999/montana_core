@@ -2399,12 +2399,11 @@ struct MTWeave {
     /// The fabric is read before a level is asked of it.
     func prime() { load() }
     /// The hash a correspondence's fingerprint is read from (MTPipe.fingerprintMaterial over its secret): the addressee of every
-    /// testimony on it, both ways. Derived once a life for each correspondence.
+    /// testimony on it, both ways. Derived once, at the pipe's birth, and kept by the book (MTPipeKept).
     private var pairs: [String: Data] = [:]
     private func pair(_ conv: String) -> Data? {
         if let m = pairs[conv] { return m }
-        guard let secret = MTPipeBook.secret(for: conv), secret.count == 32 else { return nil }
-        let m = MTPipe.fingerprintMaterial(secret)
+        guard let m = MTPipeBook.kept(for: conv)?.fingerprint else { return nil }
         pairs[conv] = m
         return m
     }
@@ -4058,10 +4057,11 @@ enum MTCoinTx {
     /// The coin key's tag on the wire: SHA-256 of the coin key -- the sender's name in every record.
     static func keyTag(_ pk: Data) -> String { hex(Data(SHA256.hash(data: pk))) }
     static var myKeyTag: String? { keys().map { k in keyTag(k.pk) } }
-    /// The pair's tag: HMAC-SHA-256 under the pipe's secret -- its two ends know it, no one else does.
-    static func pairTag(_ conv: String) -> Data? {
-        guard let secret = MTPipeBook.secret(for: conv), !secret.isEmpty else { return nil }
-        return Data(HMAC<SHA256>.authenticationCode(for: pairInfo, using: SymmetricKey(data: secret)))
+    /// The pair's tag: HMAC-SHA-256 under the pipe's secret -- its two ends know it, no one else does. Kept from the pipe's
+    /// birth (MTPipeKept), so the secret it stands on may walk away.
+    static func pairTag(_ conv: String) -> Data? { MTPipeBook.kept(for: conv)?.pair }
+    static func pairTag(secret: Data) -> Data {
+        Data(HMAC<SHA256>.authenticationCode(for: pairInfo, using: SymmetricKey(data: secret)))
     }
     private static func le(_ v: UInt64) -> Data { withUnsafeBytes(of: v.littleEndian) { p in Data(p) } }
     private static func u64(_ b: [UInt8], _ at: Int) -> UInt64 {

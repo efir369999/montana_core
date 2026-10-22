@@ -60,6 +60,9 @@ final class MontanaTests: XCTestCase {
         XCTAssertEqual(fp, MTPipe.fingerprint(secret: s1), "one correspondence — one number")
         XCTAssertNotEqual(fp, MTPipe.fingerprint(secret: s2), "a swapped secret changes the number")
         XCTAssertNil(MTPipe.fingerprint(secret: Data(repeating: 0x41, count: 31)))
+        // The number read off the kept material is the number read off the secret, for both secrets.
+        XCTAssertEqual(MTPipe.fingerprint(material: MTPipeKept.of(s1).fingerprint), fp)
+        XCTAssertEqual(MTPipe.fingerprint(material: MTPipeKept.of(s2).fingerprint), MTPipe.fingerprint(secret: s2))
     }
 
     // A letter does not name its sender: the envelope holds only its own number and the text,
@@ -147,6 +150,18 @@ final class MontanaTests: XCTestCase {
         XCTAssertNotEqual(ra, MTPipeBook.reference(of: b), "two correspondences do not share a name")
         XCTAssertEqual(ra.count, 32, "sixteen bytes in hex")
         XCTAssertNil(MTPipeBook.reference(of: Data(repeating: 0x21, count: 31)), "a short secret is refused")
+    }
+
+    func testKeptDerivativesAreTheOwnerFormulas() {
+        // Thirty-two distinct bytes: a record built over a reversed or truncated secret fails every line.
+        let secret = Data((0..<32).map { UInt8($0) })
+        let kept = MTPipeKept.of(secret)
+        XCTAssertEqual(kept.root, MTNodeWire.convRoot(secret))
+        XCTAssertEqual(kept.fingerprint, MTPipe.fingerprintMaterial(secret))
+        XCTAssertEqual(kept.faceBid, MontanaFirstContact.pipeFaceBid(secret))
+        XCTAssertEqual(kept.faceKey, MontanaFirstContact.pipeFaceKey(secret))
+        XCTAssertEqual(kept.pair, MTCoinTx.pairTag(secret: secret))
+        XCTAssertNotEqual(kept, MTPipeKept.of(Data(secret.reversed())))
     }
 
     // A letter is recognised by the tag of its pipe, and the correspondence is read off the match —

@@ -137,7 +137,12 @@ enum MTPipe {
 
     static func fingerprint(secret: Data) -> String? {
         guard secret.count == 32 else { return nil }
-        let h = fingerprintMaterial(secret)
+        return fingerprint(material: fingerprintMaterial(secret))
+    }
+
+    /// The thirty digits read off a material already derived -- the one a correspondence keeps from its birth (MTPipeKept).
+    static func fingerprint(material h: Data) -> String? {
+        guard h.count == 32 else { return nil }
         let groups = (0 ..< 6).map { i -> String in
             let g = h.subdata(in: h.startIndex + i * 5 ..< h.startIndex + i * 5 + 5)
             let v = g.reduce(UInt64(0)) { ($0 << 8) | UInt64($1) } % 100_000
@@ -244,6 +249,25 @@ enum MTPipe {
 }
 
 
+/// What a correspondence derives from its secret once and for good. Each field names its one owner formula; none walks with
+/// the day, so none may be read from the walked secret.
+struct MTPipeKept: Codable, Equatable {
+    let root: Data          // MTNodeWire.convRoot
+    let fingerprint: Data   // MTPipe.fingerprintMaterial: the safety number and a testimony's addressee
+    let faceBid: String     // MontanaFirstContact.pipeFaceBid
+    let faceKey: Data       // MontanaFirstContact.pipeFaceKey
+    let pair: Data          // MTCoinTx.pairTag(secret:)
+
+    static func of(_ secret: Data) -> MTPipeKept {
+        MTPipeKept(root: MTNodeWire.convRoot(secret),
+                   fingerprint: MTPipe.fingerprintMaterial(secret),
+                   faceBid: MontanaFirstContact.pipeFaceBid(secret),
+                   faceKey: MontanaFirstContact.pipeFaceKey(secret),
+                   pair: MTCoinTx.pairTag(secret: secret))
+    }
+}
+
+
 /// The secret a correspondence stands on, kept where the tag that stands on it is computed.
 ///
 /// The set states it outright: the secret a first letter establishes is the one **on which every
@@ -311,11 +335,65 @@ enum MTPipeBook {
 
     static func secret(for conv: String) -> Data? { load()[conv] }
 
+    // -- what a correspondence keeps of its secret for good -------------------
+    // THE PERMANENT DERIVATIVES ARE BORN WITH THE PIPE (22.10.2026, OZ 3 phase 2 step 1). The walk erases the established
+    // secret only if nothing reads it after birth; what does not walk with the day -- the root, the fingerprint's
+    // material, the face's name and key, the pair's tag -- is derived here once and kept beside the secret, sealed alike.
+    // A pipe born before this build gets its record from the secret it still holds, on the first question.
+    private static let keptKey = "pipeKept"
+    private static var keptCache: [String: MTPipeKept]?
+
+    /// nil: the map lies on the disk and does not open now -- a writer must not replace it with what it holds in hand.
+    private static func keptLoad() -> [String: MTPipeKept]? {
+        cacheLock.lock()
+        let hit = keptCache
+        cacheLock.unlock()
+        if let hit { return hit }
+        let m: [String: MTPipeKept]
+        if UserDefaults.standard.data(forKey: keptKey) == nil {
+            m = [:]
+        } else {
+            guard let d = MontanaLocalVault.getDecrypted(keptKey),
+                  let read = try? JSONDecoder().decode([String: MTPipeKept].self, from: d) else {
+                MontanaTrace.mark("pipes_kept_unreadable", "")
+                return nil
+            }
+            m = read
+        }
+        cacheLock.lock()
+        if keptCache == nil { keptCache = m }
+        let now = keptCache ?? m
+        cacheLock.unlock()
+        return now
+    }
+
+    private static func keptStore(_ m: [String: MTPipeKept]) {
+        guard let d = try? JSONEncoder().encode(m), MontanaLocalVault.setEncrypted(keptKey, d) else {
+            MontanaTrace.mark("pipes_kept_write_refused", "n=\(m.count)")
+            return
+        }
+        cacheLock.lock(); keptCache = m; cacheLock.unlock()
+    }
+
+    static func kept(for conv: String) -> MTPipeKept? {
+        let m = keptLoad()
+        if let k = m?[conv] { return k }
+        guard let s = secret(for: conv), s.count == 32 else { return nil }
+        let k = MTPipeKept.of(s)
+        if var m, MontanaDeviceKey.key != nil { m[conv] = k; keptStore(m) }
+        return k
+    }
+
+    private static func forgetKept(_ conv: String) {
+        guard var m = keptLoad(), m.removeValue(forKey: conv) != nil else { return }
+        keptStore(m)
+    }
+
     /// The identity left: the book in memory leaves with it. The disk copy is sealed under the
     /// device key that SeedScope resets, so only the cache could have carried the previous
     /// person's pipes into the next person's book — and re-sealed them there on the first write.
     static func forgetAll() {
-        cacheLock.lock(); cache = nil; cacheLock.unlock()
+        cacheLock.lock(); cache = nil; keptCache = nil; cacheLock.unlock()
         dropIndex()
     }
 
@@ -336,6 +414,7 @@ enum MTPipeBook {
         guard MontanaDeviceKey.key != nil else { MontanaTrace.mark("pipes_read_locked", "forget"); return }
         var m = load()
         if m.removeValue(forKey: conv) != nil { store(m) }
+        forgetKept(conv)
         unmarkDying(conv)
         forgetFirst(conv)
         forgetRoot(conv)                       // the meeting point does not outlive the pipe
@@ -477,6 +556,7 @@ enum MTPipeBook {
         guard let ref = reference(of: secret) else { return nil }
         let born = self.secret(for: ref) == nil
         guard remember(secret, for: ref) else { return nil }
+        _ = kept(for: ref)
         touch(ref)
         if seal, born { MontanaArchive.writeHead(convRef: ref, legacy: []) }   // the folder is the archive's to resolve, on its queue
         return ref

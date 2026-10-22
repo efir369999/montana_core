@@ -215,21 +215,21 @@ extension MontanaFirstContact {
     // the two of them; the other side reads it the moment the first letter hands it that secret. An empty seal says
     // «no face». The node learns nothing the meeting has not shown it already — the same pair at the same moment,
     // the size the face letter carries anyway.
-    private static func pipeFaceBid(_ secret: Data) -> String {
+    static func pipeFaceBid(_ secret: Data) -> String {
         var m = Data("mt-pipe-f".utf8); m.append(0); m.append(secret)
         return SHA256.hash(data: m).map { String(format: "%02x", $0) }.joined()
     }
-    private static func pipeFaceKey(_ secret: Data) -> Data {
+    static func pipeFaceKey(_ secret: Data) -> Data {
         var m = Data("mt-pipe-fk".utf8); m.append(0); m.append(secret)
         return Data(SHA256.hash(data: m))
     }
 
     /// The beginner's side, at the pipe's birth.
     static func layPipeFace(conv: String) {
-        guard let secret = MTPipeBook.secret(for: conv) else { return }
+        guard let kept = MTPipeBook.kept(for: conv) else { return }
         let face = E2E.myAvatarData() ?? Data()
-        guard let sealed = MontanaDirect.seal(key: [UInt8](pipeFaceKey(secret)), face) else { return }
-        let bid = pipeFaceBid(secret)
+        guard let sealed = MontanaDirect.seal(key: [UInt8](kept.faceKey), face) else { return }
+        let bid = kept.faceBid
         Task.detached(priority: .userInitiated) {
             let ok = await MontanaWakePush.putBlob(bid, data: sealed, over: true)
             MontanaTrace.mark("pipe_face_up", "\(ok ? "ok" : "FAIL") bytes=\(face.count) conv=\(String(conv.prefix(10)))")
@@ -242,8 +242,8 @@ extension MontanaFirstContact {
     private static var pipeFaceAsked: Set<String> = []
     static func readPipeFace(conv: String) {
         pipeFaceLock.lock(); let first = pipeFaceAsked.insert(conv).inserted; pipeFaceLock.unlock()
-        guard first, let secret = MTPipeBook.secret(for: conv) else { return }
-        let bid = pipeFaceBid(secret), key = pipeFaceKey(secret)
+        guard first, let kept = MTPipeBook.kept(for: conv) else { return }
+        let bid = kept.faceBid, key = kept.faceKey
         Task.detached(priority: .userInitiated) {
             for (i, pause) in [UInt64(0), 2, 6].enumerated() {
                 if pause != 0 { try? await Task.sleep(nanoseconds: pause * 1_000_000_000) }

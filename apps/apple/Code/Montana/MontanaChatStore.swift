@@ -6980,6 +6980,7 @@ enum SeedScope {
         "coinBoard.told",   // the balances this person's correspondents told (MTCoinBoard, 03.10): learned for this person, told again
         "coinBoard.levels",   // the Global Levels this person's correspondents told (MTCoinBoard, 11.10): learned for this person
         "mt.account.keys", "mt.twin.ref", "mt.node.identity", "mt.node.kem", "pipeSecrets",
+        "pipeKept",   // what each pipe keeps of its secret for good (MTPipeKept, 22.10): the secrets' own, gone with them
         "mt.history.folders", "mt.history.heads.form", "mt.history.nameheads", "mt.history.pushed",
         "mt.history.boxed", "mt.history.twinSeen",   // the history laid for this seed's other devices, and theirs filed here (11.10)
         "mt.group.mirrored.1",   // this device gave this person's groups to the seed's other devices (the twin mirror, 18.10)

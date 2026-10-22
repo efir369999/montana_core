@@ -30203,6 +30203,167 @@
           }
         }
       }
+    },
+    "Notifications of new messages play a sound. Off, they arrive silently.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications of new messages play a sound. Off, they arrive silently."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уведомления о новых сообщениях звучат. Выключено — приходят беззвучно."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新消息通知会响铃。关闭后，通知静音送达。"
+          }
+        }
+      }
+    },
+    "A notification shows the words of the message. Off, it shows none of them.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A notification shows the words of the message. Off, it shows none of them."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уведомление показывает текст сообщения. Выключено — ни одного слова из него."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知会显示消息内容。关闭后，不显示任何文字。"
+          }
+        }
+      }
+    },
+    "A notification of a message shows who wrote and their photo. Off, it reads Montana instead.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A notification of a message shows who wrote and their photo. Off, it reads Montana instead."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уведомление о сообщении показывает имя и фото отправителя. Выключено — вместо них стоит Montana."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消息通知会显示发送者的姓名和头像。关闭后，改为显示 Montana。"
+          }
+        }
+      }
+    },
+    "When the phone hides previews on the lock screen, the notification still names who wrote.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When the phone hides previews on the lock screen, the notification still names who wrote."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Когда телефон скрывает превью на заблокированном экране, уведомление всё равно называет, кто написал."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当手机在锁定屏幕上隐藏预览时，通知仍会显示发送者。"
+          }
+        }
+      }
+    },
+    "People see that you have read their messages, and channel owners count your views. Off, nobody is told.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People see that you have read their messages, and channel owners count your views. Off, nobody is told."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Собеседники видят, что ты прочитал их сообщения, а владельцы каналов считают твои просмотры. Выключено — никому не сообщается."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对方会看到你已读他们的消息，频道主会统计你的浏览。关闭后，不会告知任何人。"
+          }
+        }
+      }
+    },
+    "A contact you save in Montana with a public name gets a card in the phone's Contacts. Off, no card is written.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A contact you save in Montana with a public name gets a card in the phone's Contacts. Off, no card is written."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Контакт, сохранённый в Montana с публичным именем, получает карточку в Контактах телефона. Выключено — карточки не пишутся."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你在 Montana 中保存的带公开名称的联系人会写入手机通讯录。关闭后，不再写入。"
+          }
+        }
+      }
+    },
+    "Messages, wall posts and comments from others with offensive words stay folded until you tap them.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messages, wall posts and comments from others with offensive words stay folded until you tap them."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сообщения, записи на стене и комментарии других людей с оскорбительными словами свёрнуты, пока ты их не коснёшься."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他人发送的含冒犯性词语的消息、墙帖和评论会被折叠，点按后才显示。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

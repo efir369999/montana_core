@@ -540,7 +540,9 @@ final class MTGroupRoom: NSObject, CXProviderDelegate {
                 asked.insert(once)
                 rangBy[gid + "/" + seat] = now
                 s.askedBy = seat
-                let asker = name.flatMap { $0.isEmpty ? nil : $0 } ?? self.name(seat, in: gid)
+                // the asker is named only while the person's Show sender stands (MontanaNotify.showsSender)
+                let asker = MontanaNotify.showsSender ? (name.flatMap { $0.isEmpty ? nil : $0 } ?? self.name(seat, in: gid))
+                                                      : String(localized: "Correspondent", bundle: MTLanguage.bundle)
                 let body: String
                 switch (s.kind, e.v == 1) {
                 case (.live, _): body = String(localized: "\(asker) invites you to a live stream", bundle: MTLanguage.bundle)
