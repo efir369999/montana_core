@@ -3294,6 +3294,9 @@ enum MontanaAudioSession {
         let v = VoicePlayer.shared
         return v.playingFile != nil && !v.paused && !v.isVoice
     }
+    /// SOMETHING SOUNDS NOW: another app's sound, or anything of ours -- a track, a voice, a video, YouTube, a call. A tap that
+    /// is not yet a tape asks this before it readies a microphone (VoiceRecorder.prewarm).
+    static var sounds: Bool { AVAudioSession.sharedInstance().isOtherAudioPlaying || !quiet }
     /// A video looked at with its sound, by a person's tap: playback for as long as its viewer holds the sound by its name; the
     /// same name lets it go (release), and the last to let go brings the session back to rest (16.10). The hold is taken under a
     /// call or a tape too, so that their end closes the road into this video's playback, not into rest.

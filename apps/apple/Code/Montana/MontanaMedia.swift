@@ -93,8 +93,14 @@ final class VoiceRecorder: NSObject, ObservableObject {
         _ = r?.prepareToRecord()
         return r
     }
+    /// A TAP IS NOT A TAPE (the author's word 22.10.2026 23:3x MSK: «switching the button from the voice message to the video and
+    /// to the coin intercepts the sound and it breaks off»). The finger lands before it is known whether it taps -- the mode
+    /// switches -- or holds. Readying took the recording session, which does not mix, at the landing: every tap of the switch cut
+    /// the music and the voice that played. While anything sounds the landing readies nothing; the sound is taken only by the
+    /// hold's own begin (start), which the person asked for. In silence the readied tape cuts nothing and keeps its speed (21.09).
     func prewarm() {
         guard !isRecording, prepared == nil, !preparing, AVAudioApplication.shared.recordPermission == .granted else { return }
+        guard !MontanaAudioSession.sounds else { MontanaTrace.markFolded("voice_rec", "prewarm yields: something sounds", window: 60); return }
         request += 1
         prepare(request: request, start: false)
     }
