@@ -337,8 +337,8 @@ cd "<repo-root>" && cargo fmt --all -- --check && cargo clippy --all-targets -- 
 
 ## H. M6 Network layer (mt-net + mt-net-transport)
 
-- [x] **mt-net wire format byte-exact** — ProtocolMessage envelope (14 B header + payload), 18 message types in registry, IBT online + mesh proof, Bootstrap PoW, Uniform Framing (1024 B fixed), 12 structured payloads (FastSync*, PeerList*, BatchLookup*, RangeSubscribe*, Bye)
-- [x] **mt-net 110 unit + integration tests pass** — `cargo test -p mt-net --features testing`
+- [x] **mt-net wire format byte-exact** — ProtocolMessage envelope (14 B header + payload), 18 message types in registry, IBT online + mesh proof, Bootstrap PoW, 12 structured payloads (FastSync*, PeerList*, BatchLookup*, RangeSubscribe*, Bye)
+- [x] **mt-net 103 unit + integration tests pass** — `cargo test -p mt-net --features testing`
 - [x] **mt-net-transport libp2p TCP+TLS 1.3+Noise+Yamux upgrade chain** — verified through `cargo test -p mt-net-transport --features testing` (14 tests pass)
 - [x] **Manual Validation Gate scenario 6 PASS** — two-node handshake e2e (commit `9a15f49`); `tests/e2e_two_node_handshake.rs::two_node_request_response_ping_pong`
 - [x] **Manual Validation Gate scenario 7 PASS** — proposal exchange e2e + 512 KiB boundary (commit `04f8d29`); `tests/e2e_proposal_exchange.rs::{proposal_envelope_round_trip, large_payload_near_max_limit}`

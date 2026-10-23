@@ -5,7 +5,6 @@ extern crate alloc;
 pub mod dandelion;
 pub mod envelope;
 pub mod error;
-pub mod framing;
 pub mod ibt;
 pub mod mesh;
 pub mod msg_type;
@@ -22,11 +21,6 @@ pub use envelope::{
     decode_envelope, encode_envelope, ProtocolMessage, ENVELOPE_HEADER_SIZE, MSG_VERSION_V1,
 };
 pub use error::NetError;
-pub use framing::{
-    decode_frame, decode_message_from_frames, encode_frame, encode_message_to_frames, Frame,
-    FrameWindowState, FLAG_CONTINUATION, FLAG_DATA, FLAG_PADDING, FRAME_HEADER_SIZE,
-    FRAME_PAYLOAD_CAP, FRAME_SIZE, MAX_BURST_FRAMES, MIN_PADDING_RATIO_DEN, MIN_PADDING_RATIO_NUM,
-};
 pub use ibt::{
     ibt_mesh_message, ibt_mesh_proof, ibt_mesh_verify_explicit, ibt_mesh_verify_with_window,
     ibt_online_message, ibt_online_proof, ibt_online_verify, IbtError, OnlineNonceTracker,

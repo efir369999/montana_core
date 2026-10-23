@@ -74,7 +74,7 @@ cargo test -p mt-conformance
 
 # M6 network layer
 cargo test -p mt-net --features testing
-# Expected: 96 unit + 14 integration = 110 tests pass
+# Expected: 89 unit + 14 integration = 103 tests pass
 
 # M6 transport layer
 cargo test -p mt-net-transport --features testing

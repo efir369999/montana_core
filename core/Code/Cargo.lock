@@ -2222,7 +2222,6 @@ dependencies = [
 name = "mt-net"
 version = "1.2.0"
 dependencies = [
- "getrandom 0.2.15",
  "mt-codec",
  "mt-crypto",
  "sha2 0.10.9",

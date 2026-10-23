@@ -9,7 +9,6 @@ pub enum NetError {
     PayloadLengthMismatch,
     PayloadTooLarge,
     InvalidPayloadField,
-    EntropyUnavailable,
 }
 
 impl fmt::Display for NetError {
@@ -22,7 +21,6 @@ impl fmt::Display for NetError {
             NetError::PayloadLengthMismatch => write!(f, "payload size != payload_length field"),
             NetError::PayloadTooLarge => write!(f, "payload exceeds protocol max"),
             NetError::InvalidPayloadField => write!(f, "payload structural invariant violated"),
-            NetError::EntropyUnavailable => write!(f, "OS CSPRNG (getrandom) unavailable"),
         }
     }
 }
