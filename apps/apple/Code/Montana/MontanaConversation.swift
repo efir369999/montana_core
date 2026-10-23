@@ -1751,13 +1751,13 @@ struct ChatConversationView: View {
         }
         // THE WHOLE LIBRARY IS THE PLATFORM'S OWN PAGE (the author's word 22.09, given back after a page
         // of ours was tried and refused: «bring the system one back — there everything works»): its
-        // collections, its search, its pinch, its ten at most — the same ceiling our own grid holds.
+        // collections, its search, its pinch, and no ceiling — as our own grid holds none (23.10 20:5x).
         // Ours does one thing to it: the tick and the chosen tile are asked to wear OUR gold, the
         // colour of the mark (the author's word 22.09); and what it hands back are the library's own
         // names, so the pictures walk the ONE road into the field our own grid walks (stagePicks) — and
         // what the library will not name under limited access is handed over by the page itself (24.09).
         .sheet(isPresented: $showGallery) {
-            MTSystemPhotos(limit: MTGalleryPick.limit) { picks in stagePicks(picks) }
+            MTSystemPhotos { picks in stagePicks(picks) }
                 .ignoresSafeArea()
         }
         .mtBoxed()
@@ -1776,9 +1776,12 @@ struct ChatConversationView: View {
             MontanaMediaStore.hold(Array(after.subtracting(before)))
             MontanaMediaStore.release(Array(before.subtracting(after)))
         }
-        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
-            if case .success(let urls) = result, let src = urls.first,
-               let (stored, original) = copyToDocs(from: src, original: src.lastPathComponent) {
+        // FILES BY THE HANDFUL, IN THE ORDER CHOSEN (the author's word 23.10 20:5x): every file the page hands back
+        // leaves as its own letter, one after another as the page lists them.
+        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+            guard case .success(let urls) = result else { return }
+            for src in urls {
+                guard let (stored, original) = copyToDocs(from: src, original: src.lastPathComponent) else { continue }
                 store.append(chat.name, Message(text: "", isFromMe: true, time: nowHHMM(),
                                                 docFile: stored, docName: original,
                                                 deliveryStatus: .sending,

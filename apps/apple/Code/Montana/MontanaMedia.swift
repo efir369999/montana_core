@@ -2799,16 +2799,17 @@ struct SelectableThumb: View {
 /// THE GALLERY OF THE COMPOSE ROW (the author word 22.09, by his own screenshots). A touch on the
 /// gallery opens the phone own latest pictures as the platform lays them out — newest first, three
 /// in a row, the pinch changing how many — chosen one at a time or by dragging the finger from a
-/// circle across them, at most ten, the circle wearing the platform own tint and the number of the
-/// choice. At the foot stand two buttons of our glass: the way back, and the whole library, which
-/// opens THE PLATFORM OWN picker with its collections, its search and its own ten. (Those two carry
+/// circle across them, as many as the person wants, the circle wearing the platform own tint and the
+/// number of the choice. At the foot stand two buttons of our glass: the way back, and the whole library,
+/// which opens THE PLATFORM OWN picker with its collections and its search. (Those two carry
 /// words because the author asked for these very buttons; the rule of wordless buttons holds
 /// everywhere he has not said otherwise.) What is chosen does not leave the room: it stands above
 /// the field as an attachment, and the field grows upward under it.
 struct MTGalleryPick: View {
     @ObservedObject var recent: RecentMedia
-    /// The ceiling of one pick, the platform own and ours alike (the author word 22.09): ten.
-    static let limit = 10
+    // NO CEILING ON A PICK (the author's word 23.10 20:5x: «one owner everywhere -- chats, channels, groups;
+    // mass choice, the order of choosing is the order of sending, without a limit»): the wire folds a pick into
+    // groups of ten by itself (MTMediaGroup.slots), so nothing here counts.
     /// The camera's own name among the pictures — the plate's grid calls it by the same one.
     static let cameraId = AttachSheet.cameraId
     var onPick: ([PHAsset]) -> Void       // what was chosen, in the order it was chosen
@@ -2825,7 +2826,7 @@ struct MTGalleryPick: View {
         // have lost the only way to it, so it stands as the first tile of the grid — where the plate's
         // own grid has always had it. It takes no place in a pick and no drag ever touches it.
         MTTileGrid(ids: [Self.cameraId] + recent.assets.map(\.localIdentifier),
-                   selected: $selected, fixed: [Self.cameraId], limit: Self.limit) { id in
+                   selected: $selected, fixed: [Self.cameraId]) { id in
             if id == Self.cameraId {
                 MTCameraTile(action: onCamera)
             } else if let a = byId[id] {
@@ -2856,10 +2857,10 @@ struct MTGalleryPick: View {
     private func take(_ assets: [PHAsset]) {
         byId = Dictionary(assets.map { ($0.localIdentifier, $0) }, uniquingKeysWith: { a, _ in a })
     }
-    /// One at a time, up to the ceiling; a second touch takes the picture back out of the pick.
+    /// One at a time; a second touch takes the picture back out of the pick.
     private func toggle(_ id: String) {
         if let i = selected.firstIndex(of: id) { selected.remove(at: i) }
-        else if selected.count < Self.limit { selected.append(id) }
+        else { selected.append(id) }
     }
     private var foot: some View {
         HStack(spacing: 10) {
@@ -2914,15 +2915,14 @@ enum MTPick {
 /// the library names only what the person allowed; every other picture is handed over by the page itself
 /// (MTPick.provider), so nothing picked is dropped (the author's word 24.09).
 struct MTSystemPhotos: UIViewControllerRepresentable {
-    let limit: Int
     var onPick: ([MTPick]) -> Void
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
         var c = PHPickerConfiguration(photoLibrary: .shared())
-        c.selectionLimit = limit
+        c.selectionLimit = 0            // no ceiling (23.10 20:5x)
         c.filter = .any(of: [.images, .videos])
-        c.selection = .default          // the tick, as the author's screen shows it
+        c.selection = .ordered          // the page numbers the choice: the order chosen is the order sent (23.10 20:5x)
         c.preferredAssetRepresentationMode = .current
         let p = PHPickerViewController(configuration: c)
         p.delegate = context.coordinator
