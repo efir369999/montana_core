@@ -244,6 +244,7 @@ struct MTBoardWord: Codable {
     var pv: String? = nil
     var c: Int? = nil           // «coin»: the coins given on the post (03.10)
     var r: String? = nil        // «coin»: the gift's own name, credited once
+    var sd: String? = nil       // «coin»: the chain's SEND the coins left by; the word itself carries none (23.10)
     var vs: [String]? = nil     // «view»: the posts seen, a few at once (06.10)
 }
 
@@ -975,8 +976,12 @@ final class MTBoard: ObservableObject {
             if moved { saveMine() }
         case "view": break
         // COINS GIVEN ON MY POST (the author's word 03.10 13:40): credited once by the gift's name, on the post's own row of the book.
+        // A SEND OF THE CHAIN (MTBoard.coin): the word names it and the post, the coins come by the scan alone; a build before
+        // still carries the coins in the word.
         case "coin" where MTBoardRule.admits(conv, to: .see):
-            if let id = w.id, let c = w.c, 0 < c, let r = w.r, !r.isEmpty {
+            if let id = w.id, let tx = w.sd {
+                MainActor.assumeIsolated { MTCoinTx.heard(tx, on: "post:" + id) }
+            } else if let id = w.id, let c = w.c, 0 < c, let r = w.r, !r.isEmpty {
                 // handle() brings every word here on the main thread.
                 MainActor.assumeIsolated { _ = MTCoinBook.ledger.receive(c, from: conv, ref: "post:" + r, on: "post:" + id) }
             }
@@ -1227,15 +1232,26 @@ final class MTBoard: ObservableObject {
         send(MTBoardWord(t: "ask"), to: wall)
         DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in self?.asking.remove(wall) }
     }
-    /// COINS ON ANOTHER'S POST (the author's word 03.10 13:40): the book pays first — a short balance refuses and nothing
-    /// leaves — then the wall's word carries the coins to its owner, as a like travels.
-    @MainActor func coin(_ p: MTBoardSeen, on wall: String?, _ coins: Int) -> Bool {
+    /// COINS ON ANOTHER'S POST ARE A SEND OF THE CHAIN (the author's word 03.10 13:40 for the coins, and 23.10.2026 03:27 and
+    /// 03:37 MSK: «each a SEND record in the chain, the phone only the chain's mirror»): the coins leave by the pair's version 3
+    /// SEND under the post's name -- a wall's correspondence is a pipe already (MontanaConv.holds), no first letter is owed -- and
+    /// the wall's word only names that SEND; the owner's book takes the coins from the chain alone (MTCoinTx.heard, receive3).
+    /// A short chain, an owner without a key or a record that did not stand refuses, and nothing leaves.
+    @MainActor func coin(_ p: MTBoardSeen, on wall: String?, _ coins: Int) async -> Bool {
         guard !MTBoardGlobal.isRef(wall) else { return false }   // a post of the table answers nobody (18.10)
-        guard let wall, !p.mine, 0 < coins, !MTGroup.isKey(wall) else { return false }   // a channel's owner keeps no coins of its posts yet
-        let r = UUID().uuidString
-        guard MTCoinBook.ledger.spend(coins, on: "post:" + p.id, peer: wall, ref: r) else { return false }
-        _ = send(MTBoardWord(t: "coin", id: p.id, c: coins, r: r), to: wall)
-        return true
+        guard let wall, !p.mine, 0 < coins, !MTGroup.isKey(wall), MontanaConv.holds(wall) else { return false }   // a channel's owner keeps no coins of its posts yet
+        switch await MTCoinTx.send3(coins, conv: wall, on: "post:" + p.id) {
+        case .sent(let id):
+            _ = send(MTBoardWord(t: "coin", id: p.id, sd: id), to: wall)
+            return true
+        case .pending:
+            return true   // a SEND waiting for its node's word has left the book and names nothing -- the owner's scan credits it
+        case .notApplicable(let why):
+            MontanaTrace.mark("coin_refused", "wall v3 why=\(why) coins=\(coins)")
+            return false
+        case .failed:
+            return false
+        }
     }
     func like(_ p: MTBoardSeen, on wall: String?) {
         guard !MTBoardGlobal.isRef(wall) else { return }   // a post of the table answers nobody (18.10)

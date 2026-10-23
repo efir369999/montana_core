@@ -537,7 +537,7 @@ struct MTBoardCell: View {
         }
     }
     private func give(_ c: Int) {
-        if !board.coin(post, on: owner, c) { coinRefused = true }
+        Task { @MainActor in if !(await board.coin(post, on: owner, c)) { coinRefused = true } }
     }
     // -- a channel's post: the thread's face --------------------------------------------------------
     /// THE THREAD'S FACE (his pictures, 16.10.2026): no plate -- the face in its own column at the left, the name and the moment on
