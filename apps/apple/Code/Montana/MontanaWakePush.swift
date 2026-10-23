@@ -828,7 +828,11 @@ enum MontanaWakePush {
         UNUserNotificationCenter.current().getNotificationSettings { st in
             MontanaTrace.mark("wakepush_boot", "authz=\(st.authorizationStatus.rawValue) canon=\(agreesWithCanon() ? 1 : 0)")
         }
-        DispatchQueue.main.async { UIApplication.shared.registerForRemoteNotifications() }
+        if MTMacHost.on {
+            leaveDoorsOnMac()
+        } else {
+            DispatchQueue.main.async { UIApplication.shared.registerForRemoteNotifications() }
+        }
         dropDeadRegSets()   // once a launch: the maps of tokens and formulas this phone holds no more
     }
 
@@ -920,6 +924,7 @@ enum MontanaWakePush {
     /// where the store lives and carried in.
     private static let regQ = DispatchQueue(label: "montana.wakepush.register", qos: .utility)
     static func registerConvs() {
+        guard !MTMacHost.on else { MontanaTrace.markFolded("wakepush_reg", "skip mac -- raised by the person's hand only", window: 600); return }
         if regStrobe { regTrail = true; return }
         regStrobe = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
@@ -3085,6 +3090,7 @@ enum MontanaWakePush {
         }
     }
     static func registerVoip(refusing refused: Set<String>? = nil) {
+        guard !MTMacHost.on else { MontanaTrace.markFolded("wakepush_vreg", "skip mac -- raised by the person's hand only", window: 600); return }
         guard let hex = MontanaKeychain.get(voipTokenKey).flatMap({ String(data: $0, encoding: .utf8) }), !hex.isEmpty else {
             MontanaTrace.mark("wakepush_vreg", "skip no-token"); return   // no PushKit token yet; onVoipToken brings it
         }
@@ -3179,7 +3185,7 @@ enum MontanaWakePush {
     /// withdrew the old rows, and the node went on waking it for conversations it could no longer open (iPhone 17:
     /// wakepush_vrx peer=nil, the caller heard nothing). Every row of both tokens is withdrawn at each notify machine by the
     /// removal door itself («all»), before the keys go. No registration follows here, so no answer is awaited.
-    static func withdrawTokenRowsEverywhere() {
+    static func withdrawTokenRowsEverywhere(done: ((Bool) -> Void)? = nil) {
         let letters = MontanaKeychain.get(ownTokenKey).flatMap { String(data: $0, encoding: .utf8) } ?? ""
         let calls = MontanaKeychain.get(voipTokenKey).flatMap { String(data: $0, encoding: .utf8) } ?? ""
         guard !letters.isEmpty || !calls.isEmpty else { MontanaTrace.mark("wakepush_unreg", "all -- no token"); return }
@@ -3188,14 +3194,39 @@ enum MontanaWakePush {
                                    "topic": Bundle.main.bundleIdentifier ?? "", "environment": apsEnvironment()]
         let doors = oneDoorPerNode(notBusy(orderedBases(for: "notify")))
         MontanaTrace.mark("wakepush_unreg", "all doors=\(doors.count) letters=\(letters.isEmpty ? 0 : 1) calls=\(calls.isEmpty ? 0 : 1)")
+        let answered = DispatchGroup()
+        let every = MTBox(!doors.isEmpty)
         for b in doors {
-            guard let gone = URL(string: b + "/unregister") else { continue }   // SERVER-DEBT-ACK: the accelerator node (rung 4), not the delivery road
+            guard let gone = URL(string: b + "/unregister") else { every.value = false; continue }   // SERVER-DEBT-ACK: the accelerator node (rung 4), not the delivery road
             var req = URLRequest(url: gone); req.httpMethod = "POST"   // SERVER-DEBT-ACK: the accelerator node (rung 4), not the delivery road
             req.setValue("application/json", forHTTPHeaderField: "content-type")
             req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+            answered.enter()
             knockSession.dataTask(with: req) { _, resp, _ in   // SERVER-DEBT-ACK: the accelerator node (rung 4), not the delivery road
-                MontanaTrace.mark("wakepush_unreg", "all code=\((resp as? HTTPURLResponse)?.statusCode ?? -1) door=\(gone.host ?? "-")")
+                let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+                MontanaTrace.mark("wakepush_unreg", "all code=\(code) door=\(gone.host ?? "-")")
+                if code != 200 { every.value = false }
+                answered.leave()
             }.resume()
+        }
+        if let done { answered.notify(queue: .main) { done(every.value) } }
+    }
+
+    /// A MAC IS RAISED BY THE PERSON'S HAND ONLY (the author's words 23.10.2026 17:4x MSK: «Montana on the Mac opened by itself
+    /// on a call and the call came to the wrong place -- it opens even after I closed it and quit», «I pressed quit and the
+    /// Montana process hangs»). Measured on the author's Mac that minute (build 2241): 17:42:06 a silent ring launched the quit
+    /// app, 17:43:53 a second launch stood on the screen within a second, took the ring of a:30a858 and answered it held by the
+    /// Mac's Focus (ring-held-focus) -- a missed call, the door held 1606 call rows under the Mac's PushKit token. Every push is
+    /// a birth of the process the person did not ask for, so a Mac keeps no token at any door: Apple forgets the letter token,
+    /// every row of both tokens leaves every notify machine, and the keys go only when every door has said yes -- until then
+    /// the next launch asks again. A Mac hears letters and calls while the person keeps it open.
+    static func leaveDoorsOnMac() {
+        DispatchQueue.main.async { UIApplication.shared.unregisterForRemoteNotifications() }
+        let had = [ownTokenKey, voipTokenKey].filter { MontanaKeychain.get($0) != nil }
+        guard !had.isEmpty else { return }
+        withdrawTokenRowsEverywhere { every in
+            MontanaTrace.mark("wakepush_unreg", "mac every=\(every ? 1 : 0) keys=\(had.count)")
+            if every { had.forEach { MontanaKeychain.delete($0) } }
         }
     }
 

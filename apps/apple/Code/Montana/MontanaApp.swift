@@ -293,6 +293,13 @@ enum MontanaOutsideOpen {
     }
 }
 
+/// MONTANA ON A MAC LIVES WHILE THE PERSON KEEPS IT OPEN (the author's words 23.10.2026 17:4x MSK). An iPhone app on a Mac is a
+/// window, not a phone in a pocket: nothing but the person's hand raises it (MontanaWakePush.leaveDoorsOnMac), no system window
+/// is asked for it (MontanaBackgroundRefresh), and its quit is the end of the process (MTSendAssertion).
+enum MTMacHost {
+    static let on = ProcessInfo.processInfo.isiOSAppOnMac
+}
+
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, PKPushRegistryDelegate {
     static var launchedAt: TimeInterval = ProcessInfo.processInfo.systemUptime
     static var sceneSeen = false
@@ -428,7 +435,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             if UIApplication.shared.applicationState == .background { AppDelegate.appLeft() }
         }
         voipRegistry.delegate = self   // stage 5: a call to a sleeping node -- the PushKit voip token
-        voipRegistry.desiredPushTypes = [.voIP]
+        // A Mac asks for no call push and drops the token it had: PushKit would raise the quit app at every ring (MTMacHost).
+        voipRegistry.desiredPushTypes = MTMacHost.on ? [] : [.voIP]
         // The call machine is born HERE, on the main thread: its birth touches the audio subsystem,
         // the call presentation and the badge. The first call signal arrives from a foreign thread,
         // and birth on that call would crash under the person's hands.
@@ -1803,6 +1811,7 @@ enum MontanaBackgroundRefresh {
         }
     }
     static func schedule() {
+        guard !MTMacHost.on else { BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: id); return }   // a Mac is raised by the person only
         let req = BGAppRefreshTaskRequest(identifier: id)
         req.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         do {

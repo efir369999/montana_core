@@ -3637,6 +3637,8 @@ final class MTSendAssertion {
     // handed to the background upload session — the expiry hook is where that handoff fires.
     var onExpire: (() -> Void)?
     init(_ name: String) {
+        // A Mac takes no background window: its quit ends the process, not half a minute of the queue later (MTMacHost).
+        guard !MTMacHost.on else { return }
         id = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
             MontanaTrace.mark("bg_expired", "system background window expired: \(name)")
             self?.onExpire?()

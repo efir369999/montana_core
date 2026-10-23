@@ -1195,20 +1195,21 @@ enum MTLevelAccess {
         let ledger = MTLocalCoinLedger.shared.whole
         let joined = ledger.join(fresh)
         let book = ledger.entries
+        // WHAT EACH ROW LACKS IS RECKONED OFF THE MAIN THREAD (the author's words 23.10.2026 18:0x MSK: «on T1, build 2296, the chats
+        // page stutters when I enter and use it -- check it and make it clean, without stalls»). Measured on T1 that minute: this
+        // reckoning -- the union of every piece's moves and the book filtered by it, 30 089 moves for each of four rows -- held the
+        // main thread 84 ms at a chat's opening, 101 ms in the chats list and 72 ms at the drawer (frame_stack, MTCoinVault.gather
+        // at MTWalletCore.swift:1199-1205 by the dSYM of 2296), at every return to the screen and after every spend. The same
+        // answer, reckoned on a copy; only the laying, which awaits the nodes anyway, comes back here.
+        let plans = await Task.detached(priority: .userInitiated) { [answered, book, pieces, held, full, fold = Self.fold] in
+            MTCoinVault.plan(answered, book: book, pieces: pieces, held: held, full: full, fold: fold)
+        }.value
+        if moved(gen, why) { return }
         var laid = 0, whole = 0
-        for slot in answered {
+        for plan in plans {
+            let slot = plan.slot, lacking = plan.lacking, anew = plan.anew
             guard let r = rows.first(where: { x in x.slot == slot }) else { continue }
-            let ids = held[slot] ?? []
-            var carried = Set<String>()
-            for id in ids { carried.formUnion(pieces[id] ?? []) }
-            let anew = Self.fold <= ids.count || full.contains(slot)
-            let lacking = anew ? book : book.filter { !carried.contains($0.id) }
-            guard !lacking.isEmpty else { continue }
-            // ONLY A PIECE READ HERE IS REPLACED (the coin audit's third point, 05.10.2026 21:4x MSK): a piece that would not open
-            // -- a book of a later build, a broken blob -- or whose moves the book did not take was skipped above but stood in the
-            // replace list, and its moves left every node. It stays on the node now, beside the whole.
-            let inBook = anew ? Set(book.map(\.id)) : []
-            var replace = anew ? ids.filter { id in pieces[id].map { moves in moves.isSubset(of: inBook) } ?? false } : []
+            var replace = plan.replace
             for start in stride(from: 0, to: lacking.count, by: Self.span) {
                 let part = Array(lacking[start..<min(start + Self.span, lacking.count)])
                 // THE OLD PIECES GO WITH THE LAST NEW ONE (the coin audit's sixth point, 05.10.2026 21:4x MSK): the first part
@@ -1235,6 +1236,31 @@ enum MTLevelAccess {
         pieces = pieces.filter { live.contains($0.key) }   // a piece no node keeps is forgotten here too
         MontanaTrace.mark("coins_vault", "why=\(why) rows=\(answered.count)/\(rows.count) got=\(fresh.count) joined=\(joined) laid=\(laid) whole=\(whole) moves=\(book.count)")
         MTTopNet.shared.put()   // the row tells the union just gathered
+    }
+    private struct Plan { let slot: String; let lacking: [MTCoinEntry]; let replace: [String]; let anew: Bool }
+    private nonisolated static func plan(_ answered: [String], book: [MTCoinEntry], pieces: [String: Set<String>],
+                                         held: [String: [String]], full: Set<String>, fold: Int) -> [Plan] {
+        var inBook: Set<String>?
+        var plans: [Plan] = []
+        for slot in answered {
+            let ids = held[slot] ?? []
+            var carried = Set<String>()
+            for id in ids { carried.formUnion(pieces[id] ?? []) }
+            let anew = fold <= ids.count || full.contains(slot)
+            let lacking = anew ? book : book.filter { !carried.contains($0.id) }
+            guard !lacking.isEmpty else { continue }
+            // ONLY A PIECE READ HERE IS REPLACED (the coin audit's third point, 05.10.2026 21:4x MSK): a piece that would not open
+            // -- a book of a later build, a broken blob -- or whose moves the book did not take was skipped above but stood in the
+            // replace list, and its moves left every node. It stays on the node now, beside the whole.
+            var replace: [String] = []
+            if anew {
+                let whole = inBook ?? Set(book.map(\.id))
+                inBook = whole
+                replace = ids.filter { id in pieces[id].map { moves in moves.isSubset(of: whole) } ?? false }
+            }
+            plans.append(Plan(slot: slot, lacking: lacking, replace: replace, anew: anew))
+        }
+        return plans
     }
     fileprivate static func post(_ url: String, _ body: [String: Any], timeout: Double) async -> (Int, [String: Any]?) {
         guard let u = URL(string: url), let d = try? JSONSerialization.data(withJSONObject: body) else { return (-1, nil) }   // SERVER-DEBT-ACK: the accelerator node (rung 4), the seed's sealed book
