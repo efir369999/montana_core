@@ -2408,8 +2408,10 @@ struct ChatConversationView: View {
                 // person is told why, and nothing leaves.
                 onCoin: (!m.isMine && MTCoinSend.canPay(chat, store: store)) ? { n in
                     close()
-                    if MTCoinSend.react(n, on: m, in: chat, store: store) { UIImpactFeedbackGenerator(style: .light).impactOccurred() } else {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { coinRefused = true }
+                    Task { @MainActor in
+                        if await MTCoinSend.react(n, on: m, in: chat, store: store) { UIImpactFeedbackGenerator(style: .light).impactOccurred() } else {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { coinRefused = true }
+                        }
                     }
                 } : nil,
                 // ANY BUBBLE, MINE OR THEIRS (the author's word 18.09): the notice names the letter's

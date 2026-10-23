@@ -6602,6 +6602,14 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             }
             return
         }
+        // A PAID REACTION IS A SEND OF THE CHAIN (MTCoinSend.give): the word names the SEND and its letter; the coins come by the scan.
+        if op == "coin3" {
+            if !mine, let tx = obj["tx"] as? String, let sid = obj["sid"] as? String, !sid.isEmpty {
+                let note = { MainActor.assumeIsolated { MTCoinTx.heard(tx, on: sid) } }
+                if Thread.isMainThread { note() } else { DispatchQueue.main.async(execute: note) }
+            }
+            return
+        }
         applyReaction(chat, sid: (obj["sid"] as? String) ?? "", txt: (obj["txt"] as? String) ?? "",
                       emoji: emoji, add: op == "add", at: at)
     }

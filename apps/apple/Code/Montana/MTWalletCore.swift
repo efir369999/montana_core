@@ -2636,6 +2636,9 @@ struct MTCoinEntry: Codable, Hashable, Identifiable {
     var shownOn: String? {
         ref.hasPrefix(MTCoinSend.bubblePrefix) || ref.hasPrefix(MTCoinSend.receivedPrefix + MTCoinSend.bubblePrefix) ? nil : on
     }
+    /// The coins this move stands under its letter with: a SEND that came back (MTCoinTx.backPrefix) is laid under the letter its
+    /// SEND stood under and takes its coins from there, so a paid reaction no node took shows nothing under the letter.
+    var shownCoins: Int { ref.hasPrefix(MTCoinTx.backPrefix) ? -c : c }
 }
 
 /// THE ONE DOOR OF THE COINS (the author's word 03.10 13:52: «an in-app coin core with no crypto core, behind one
@@ -3019,7 +3022,7 @@ struct MTCoinCounts {
         for e in r.moves {
             sum += e.signed
             counts.add(e)
-            if let on = e.shownOn { onTarget[on, default: 0] += e.c }
+            if let on = e.shownOn { onTarget[on, default: 0] += e.shownCoins }
             let place = MTPiLevels.place(sum)
             if level < place {
                 for n in (level + 1)...place { levels.append((n, e.at)) }
@@ -3084,7 +3087,7 @@ struct MTCoinCounts {
         ownPeers.formUnion(Self.own([e], names: taken))
         balance = next
         counts.add(e)
-        if let on = e.shownOn { onTarget[on, default: 0] += e.c }
+        if let on = e.shownOn { onTarget[on, default: 0] += e.shownCoins }
         MTCoinBalance.set(balance)
         reached(at: e.at)
         return true
@@ -3323,6 +3326,10 @@ struct MTCoinCounts {
     func send(_ coins: Int, to peer: String, ref: String) -> Bool {
         move(.send, coins, peer: peer, ref: ref, on: nil)
     }
+    /// A SEND given on a letter (a paid reaction, MTCoinTx.send3): its coins stand under that letter.
+    func send(_ coins: Int, to peer: String, ref: String, on target: String?) -> Bool {
+        move(.send, coins, peer: peer, ref: ref, on: target)
+    }
 
     /// A COIN LETTER PROVEN DELIVERED TAKES ITS COINS AGAIN, WHATEVER THE BALANCE (the author's words 06.10.2026 12:3x-12:4x MSK: «close the double spends»; «the safety of the restore by the seed»): its
     /// coins came back while it was red (MTCoinSend.hold), the receiver credited it all the same, and its late receipt asks them
@@ -3543,26 +3550,42 @@ enum MTCoinSend {
             return .noKey
         }
     }
-    /// Coins given on the correspondent's letter: the book pays, the reaction word carries them («op»: «coin»). An older build
-    /// reads an unknown op as nothing at all.
-    @MainActor static func react(_ coins: Int, on m: Message, in chat: Chat, store: ChatStore) -> Bool {
+    /// COINS GIVEN ON THE CORRESPONDENT'S LETTER ARE A SEND OF THE CHAIN (the author's words 23.10.2026 03:27 and 03:37 MSK: the
+    /// reactions «each a SEND record in the chain, the phone only the chain's mirror»): the coins leave by the pair's version 3 SEND
+    /// under the letter's name, and the reaction word only names that SEND («op»: «coin3», «tx») -- the reader's book takes the
+    /// coins from the chain alone (MTCoinTx.receive3), never from the word. An older build reads an unknown op as nothing at all.
+    @MainActor static func react(_ coins: Int, on m: Message, in chat: Chat, store: ChatStore) async -> Bool {
         guard !m.isMine, let sid = m.msgId, !sid.isEmpty, canPay(chat, store: store) else { return false }
-        return give(coins, on: sid, words: m.text, to: chat.convId ?? chat.name, ref: UUID().uuidString)
+        return await give(coins, on: sid, words: m.text, to: chat.convId ?? chat.name)
     }
-    /// An auto-reaction's coins on a chosen person's letter (MTAutoReact): the paid reaction's own road, under the name «auto:» and
-    /// the letter's wire name, so a letter brought twice pays once.
+    /// An auto-reaction's coins on a chosen person's letter (MTAutoReact): the paid reaction's own road, once a letter -- the name
+    /// «auto:» and the letter's wire name is taken before the SEND goes (a builds-before payment stands in the book under it), so a
+    /// letter brought twice pays once; a SEND that never went gives the name back.
     static let autoPrefix = "auto:"   // NOT-UI: the book's own name
-    @MainActor static func autoGive(_ coins: Int, on m: Message, to conv: String) -> Bool {
-        guard let sid = m.msgId, !sid.isEmpty else { return false }
-        return give(coins, on: sid, words: m.text, to: conv, ref: autoPrefix + sid)
+    @MainActor static func autoGive(_ coins: Int, on m: Message, to conv: String) async -> Bool {
+        guard let sid = m.msgId, !sid.isEmpty, !MTLocalCoinLedger.shared.whole.holds(.spend, autoPrefix + sid),
+              MTCoinTx.once(autoPrefix + sid) else { return false }
+        let paid = await give(coins, on: sid, words: m.text, to: conv)
+        if !paid { MTCoinTx.release(autoPrefix + sid) }
+        return paid
     }
-    /// The one road of a paid reaction: the book pays on the letter's name, the reaction word carries the coins.
-    @MainActor private static func give(_ coins: Int, on sid: String, words: String, to conv: String, ref: String) -> Bool {
-        guard MTCoinBook.ledger.spend(coins, on: sid, peer: conv, ref: ref) else { return false }
-        let obj: [String: Any] = ["sid": sid, "txt": words, "e": "🪙", "op": "coin", "c": coins, "r": ref]   // NOT-UI: wire keys
-        guard let json = try? JSONSerialization.data(withJSONObject: obj), let body = String(data: json, encoding: .utf8) else { return true }
-        MontanaDeliveryEngine.shared.enqueue(to: conv, chat: conv, mid: UUID().uuidString, text: reactionMark + body, silent: true)
-        return true
+    /// The one road of a paid reaction: the pair's SEND under the letter's name; the word names it, carries no coins of its own.
+    /// A SEND still waiting for its node's word (pending) has left the book and says no name -- the reader's scan credits it.
+    @MainActor private static func give(_ coins: Int, on sid: String, words: String, to conv: String) async -> Bool {
+        switch await MTCoinTx.send3(coins, conv: conv, on: sid) {
+        case .sent(let id):
+            let obj: [String: Any] = ["sid": sid, "txt": words, "e": "🪙", "op": "coin3", "c": coins, "tx": id]   // NOT-UI: wire keys
+            guard let json = try? JSONSerialization.data(withJSONObject: obj), let body = String(data: json, encoding: .utf8) else { return true }
+            MontanaDeliveryEngine.shared.enqueue(to: conv, chat: conv, mid: UUID().uuidString, text: reactionMark + body, silent: true)
+            return true
+        case .pending:
+            return true
+        case .notApplicable(let why):
+            MontanaTrace.mark("coin_refused", "reaction v3 why=\(why) coins=\(coins)")
+            return false
+        case .failed:
+            return false
+        }
     }
     /// THE BUBBLE BURNS ITS COIN (the author's words 05.10.2026 01:21-01:31 MSK: «every bubble -1 coin»; «any bubble in an ordinary
     /// chat with the feed at the bottom»; and 22:29-22:32 MSK: «in ordinary chats take away the coin under every message as a
@@ -3783,9 +3806,12 @@ enum MTAutoReact {
         guard !m.isFromMe, let r = rule(chat), m.coinLetter == nil, m.chessLetter == nil, !MTRowLetter.ownRow(m.text),
               let born = ChatStore.birthMs(fromMid: m.mid), r.since <= born, Date().timeIntervalSince1970 - born <= MTCoinSend.fresh,
               let c = store.listChats().first(where: { c in c.name == chat }), MTCoinSend.canPay(c, store: store) else { return }
-        let paid = MTCoinSend.autoGive(r.coins, on: m, to: c.convId ?? c.name)
-        if paid { MTCoinPaid.shared.paid(r.coins, in: chat) }
-        MontanaTrace.mark("auto_react", "coins=\(r.coins) paid=\(paid ? 1 : 0)")
+        let conv = c.convId ?? c.name
+        Task { @MainActor in
+            let paid = await MTCoinSend.autoGive(r.coins, on: m, to: conv)
+            if paid { MTCoinPaid.shared.paid(r.coins, in: chat) }
+            MontanaTrace.mark("auto_react", "coins=\(r.coins) paid=\(paid ? 1 : 0)")
+        }
     }
 }
 
@@ -4278,7 +4304,7 @@ enum MTCoinTx {
                 switch word {
                 case .left: try? fm.removeItem(at: u)
                 case .notLeft, .behind:
-                    if let conv { book.receive(r.coins, from: conv, ref: backPrefix + r.id, on: nil) }
+                    if let conv { book.receive(r.coins, from: conv, ref: backPrefix + r.id, on: book.entry(.send, refPrefix + r.id)?.on) }
                     try? fm.removeItem(at: u)
                 case .unknown: continue
                 }
@@ -4599,13 +4625,44 @@ extension MTCoinTx {
     }
     private static func openSends() -> [[String: Any]] { (load("coin3-open.json")["open"] as? [[String: Any]]) ?? [] }
     private static func keepOpen(_ rows: [[String: Any]]) { save("coin3-open.json", ["open": rows]) }
+    /// THE LETTER A PAID REACTION'S SEND STANDS UNDER, AS ITS WORD NAMED IT (MTCoinSend.give): the word moves no coins; it names
+    /// the SEND, and the scan asked at once credits that SEND under the letter. A word later than the scan leaves the coins right
+    /// and under no letter. The newest 256 names are kept.
+    @MainActor static func heard(_ tx: String, on sid: String) {
+        guard tx.count == 64, tx.allSatisfy({ ch in ch.isHexDigit }), !sid.isEmpty else { return }
+        var rows = ((load(heardFile)["on"] as? [[String]]) ?? []).filter { r in r.first != tx }
+        rows.append([tx, sid])
+        save(heardFile, ["on": Array(rows.suffix(256))])
+        guard !MTLocalCoinLedger.shared.whole.holds(.receive, refPrefix + tx) else { return }
+        Task { @MainActor in await scanFresh(why: "reaction") }
+    }
+    private static let heardFile = "coin3-heard.json"
+    private static func heardOn(_ tx: String) -> String? {
+        ((load(heardFile)["on"] as? [[String]]) ?? []).last { r in r.first == tx }.flatMap { r in r.count == 2 ? r[1] : nil }
+    }
+    /// A name taken once (an auto-reaction's «auto:» and its letter): false if it stands. Two days are kept -- an auto-reaction pays
+    /// only a letter born within a day (MTCoinSend.fresh).
+    @MainActor static func once(_ name: String) -> Bool {
+        let now = Date().timeIntervalSince1970
+        var o = ((load(onceFile)["n"] as? [String: Double]) ?? [:]).filter { _, at in now - at < 2 * MTCoinSend.fresh }
+        guard o[name] == nil else { return false }
+        o[name] = now
+        save(onceFile, ["n": o])
+        return true
+    }
+    @MainActor static func release(_ name: String) {
+        var o = (load(onceFile)["n"] as? [String: Double]) ?? [:]
+        o[name] = nil
+        save(onceFile, ["n": o])
+    }
+    private static let onceFile = "coin3-once.json"
     enum Send3 { case sent(String), pending, notApplicable(String), failed }
     private static let noReceiverKey = "no receiver key"   // NOT-UI: the trace's reason, and the one the send page names
     /// SENDS (version 3): the receiver's key known (their about word), my chain announced and holding the sum, the record names
     /// the declared part of it (proven is spent first), commits to the receiver's key under the pair's blind, and is laid on my
     /// chain's head. Anything that makes v3 impossible (an older correspondent, the chain not holding the sum yet) is said as
     /// notApplicable -- the version 2 road takes it until the cut.
-    @MainActor static func send3(_ coins: Int, conv: String) async -> Send3 {
+    @MainActor static func send3(_ coins: Int, conv: String, on target: String? = nil) async -> Send3 {
         let seat = MTCoinSeat()
         guard let me = myKeyTag, let door = chainDoor(me), let secret = MTPipeBook.secret(for: conv), !secret.isEmpty,
               let pair = pairTag(conv) else { return .notApplicable("no pipe") }
@@ -4621,7 +4678,7 @@ extension MTCoinTx {
             let dec = max(0, Int64(coins) - st.proven)
             guard let rec = build3(.send, amount: UInt64(coins), prev: st.head, nonce: nonce, pair: pair, to: commit, a: UInt64(dec)) else { return .failed }
             let id = name(rec)
-            guard book.send(coins, to: conv, ref: refPrefix + id) else { return .failed }
+            guard book.send(coins, to: conv, ref: refPrefix + id, on: target) else { return .failed }
             let pending = pendingURL(id)
             if let pending { try? rec.write(to: pending, options: .atomic) }
             let word = await lay(rec)
@@ -4633,7 +4690,7 @@ extension MTCoinTx {
                 keepOpen(openSends() + [["id": id, "conv": conv, "coins": coins, "at": st.now]])
                 return .sent(id)
             case .notLeft, .behind:
-                book.receive(coins, from: conv, ref: backPrefix + id, on: nil)
+                book.receive(coins, from: conv, ref: backPrefix + id, on: target)
                 if let pending { try? FileManager.default.removeItem(at: pending) }
                 if word == .notLeft { return .failed }
             case .unknown:
@@ -4661,7 +4718,7 @@ extension MTCoinTx {
             taken = (f.obj?["state"] as? String) == "recv" && (f.obj?["by"] as? String) == me
         }
         MontanaTrace.mark("coin_v3", "recv code=\(r.code) word=\(r.word) taken=\(taken ? 1 : 0) id=\(s.id.prefix(12))")
-        return taken && seat.book?.receive(s.coins, from: conv, ref: refPrefix + s.id, on: nil) == true
+        return taken && seat.book?.receive(s.coins, from: conv, ref: refPrefix + s.id, on: heardOn(s.id)) == true
     }
     /// A TRANSFER TO ONE'S OWN OTHER ACCOUNT IS ONE PAIR, SENT AND RECEIVED IN THE SAME STEP (the author's words 12.10.2026 13:2x MSK:
     /// «either the coins left or not -- there is no third -- this is point 0»; 15:3x, No.66: «a transfer to oneself in Montana must
@@ -4732,12 +4789,12 @@ extension MTCoinTx {
             guard let book = seat.book else { return }   // the open sends stay in their person's folder
             let state = (f.obj?["state"] as? String) ?? ""
             if state == "recv" { continue }
-            if state == "refund" { book.receive(coins, from: conv, ref: backPrefix + id, on: nil); continue }
+            if state == "refund" { book.receive(coins, from: conv, ref: backPrefix + id, on: book.entry(.send, refPrefix + id)?.on); continue }
             guard state == "open", let st = await chain3(me, door: door), at + 86_460 <= st.now else { left.append(o); continue }
             let r = await layOnHead { c in seat.stands ? build3(.refund, amount: UInt64(coins), prev: c.head, nonce: fresh(), ref: id) : nil }
             MontanaTrace.mark("coin_v3", "refund code=\(r.code) word=\(r.word) id=\(id.prefix(12))")
             guard let after = seat.book else { return }
-            if r.code == 200 { after.receive(coins, from: conv, ref: backPrefix + id, on: nil) } else { left.append(o) }
+            if r.code == 200 { after.receive(coins, from: conv, ref: backPrefix + id, on: after.entry(.send, refPrefix + id)?.on) } else { left.append(o) }
         }
         guard seat.stands else { return }
         keepOpen(left)
