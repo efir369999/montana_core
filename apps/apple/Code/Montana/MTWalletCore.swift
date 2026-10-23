@@ -1679,6 +1679,8 @@ struct MTCallCredit {
             coins = MTCoinBook.ledger.mintInWindow(MTCoinBook.price * fresh, prefix: refPrefix + t.call + ":", seconds: fresh)
         } else {
             coins = -MTCoinBook.ledger.burnInWindow(MTCoinBook.price * fresh, prefix: burnPrefix + t.call + ":", seconds: fresh)
+            // the chain's balance is the person's, not the book's: the whole price is owed to the chain whatever the book could burn
+            if MTCoinChainRules.onlineCut <= Int64(MTTimeChain.now()) { MTCoinTx.owe(burn: MTCoinBook.price * fresh) }
         }
         MontanaTrace.markFolded("call_coins", "coins=\(coins) seconds=\(fresh) recording=\(recording ? 1 : 0)", window: 60)
     }
@@ -1691,6 +1693,7 @@ struct MTCallCredit {
         let earned = MTCoinBook.ledger.closeMintWindow(refPrefix + t.call + ":")
         let burned = MTCoinBook.ledger.closeMintWindow(burnPrefix + t.call + ":")
         let coins = earned + burned
+        MTCoinTx.burnNow()   // the call's last seconds go to the chain at its end, not a window later
         if !finished.contains(t.call) { finished.append(t.call) }
         while finished.count > 8 { minted.removeValue(forKey: finished.removeFirst()) }
         return MTCallCredit(call: t.call, coins: coins)
@@ -4369,6 +4372,7 @@ enum MTCoinTx {
                 }
             }
         }
+        await burnOwed()   // what an ended process owed the chain for its calls
         await scan(why: "launch")
     }
     @MainActor private static var scanning = false
@@ -4711,6 +4715,88 @@ extension MTCoinTx {
         save(onceFile, ["n": o])
     }
     private static let onceFile = "coin3-once.json"
+    /// AN UNRECORDED CALL BURNS ON THE CHAIN (the author's words 23.10.2026 03:27 and 03:37 MSK: every spend is a record of the chain,
+    /// the phone only its mirror): from the online cut, the first second the node takes a BURN (V14), the seconds MTCallMint burns are
+    /// owed in the person's folder and laid as one BURN on my chain's head -- once a window while the call talks and at its end. The
+    /// BURN waits on disk until its node's word decides it, and the owed falls only by a BURN taken, so no second burns twice; what
+    /// the chain does not hold is burnt as far as it holds, as the book's burn stops at its balance.
+    private static let burnFile = "coin3-burn.json"
+    private static func burnURL() -> URL? { MTTimeChainPlace.dir()?.appendingPathComponent("tx-burn.rec") }
+    @MainActor private static var owedLive = 0
+    @MainActor private static var burnDue = false
+    @MainActor private static var burning = false
+    @MainActor static func owe(burn coins: Int) {
+        guard 0 < coins, coins <= Int.max / 2 - owedLive else { return }
+        owedLive += coins
+        guard !burnDue else { return }
+        burnDue = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + Double(MTCoinChainRules.window)) {
+            MainActor.assumeIsolated {
+                burnDue = false
+                Task { @MainActor in await burnOwed() }
+            }
+        }
+    }
+    @MainActor static func burnNow() {
+        guard 0 < owedLive || 0 < owedBurn() else { return }
+        Task { @MainActor in await burnOwed() }
+    }
+    private static func owedBurn() -> Int { (load(burnFile)["owed"] as? Int) ?? 0 }
+    private static func keepOwed(_ owed: Int, covers: Int? = nil) {
+        var o: [String: Any] = ["owed": max(0, owed)]
+        if let covers { o["covers"] = covers }
+        save(burnFile, o)
+    }
+    @MainActor static func burnOwed() async {
+        let seat = MTCoinSeat()
+        if 0 < owedLive {
+            keepOwed(owedBurn() + owedLive, covers: load(burnFile)["covers"] as? Int)
+            owedLive = 0
+        }
+        guard !burning else { return }
+        burning = true
+        defer { burning = false }
+        let fm = FileManager.default
+        // a BURN an ended process or a lost answer left: its node's word first, the owed it covered falls only if the node took it
+        if let u = burnURL(), let rec = try? Data(contentsOf: u) {
+            guard let me = myKeyTag, let door = chainDoor(me) else { return }
+            var word = Word.left
+            if (await ask(door + "/tx-get", ["id": name(rec)])).code != 200 { word = await lay(rec) }
+            if word == .behind, (await ask(door + "/tx-get", ["id": name(rec)])).code == 200 { word = .left }
+            guard seat.stands else { return }
+            let covers = (load(burnFile)["covers"] as? Int) ?? 0
+            switch word {
+            case .left: keepOwed(owedBurn() - covers)
+            case .notLeft, .behind: keepOwed(owedBurn())
+            case .unknown: return
+            }
+            try? fm.removeItem(at: u)
+            MontanaTrace.mark("coin_v3", "burn settled word=\(word) covers=\(covers)")
+        }
+        let owing = owedBurn()
+        guard 0 < owing, MTCoinChainRules.onlineCut <= Int64(Date().timeIntervalSince1970) else { return }
+        var amount: Int64 = 0
+        let r = await layOnHead { s in
+            guard seat.stands, s.v3, MTCoinChainRules.onlineCut <= s.now else { return nil }
+            amount = min(Int64(owing), s.proven + s.declared)
+            guard 0 < amount,
+                  let rec = build3(.burn, amount: UInt64(amount), prev: s.head, nonce: fresh(), a: UInt64(max(0, amount - s.proven))) else { return nil }
+            if let u = burnURL() { try? rec.write(to: u, options: .atomic) }
+            keepOwed(owedBurn(), covers: owing)
+            return rec
+        }
+        MontanaTrace.mark("coin_v3", "burn code=\(r.code) word=\(r.word) amount=\(amount) owed=\(owing)")
+        guard r.rec != nil, seat.stands else { return }
+        switch r.code {
+        case 200:
+            keepOwed(owedBurn() - owing)
+            if let u = burnURL() { try? fm.removeItem(at: u) }
+        case -1: return   // the answer was lost: the record waits for its node's word
+        default:
+            keepOwed(owedBurn())
+            if let u = burnURL() { try? fm.removeItem(at: u) }
+        }
+    }
     enum Send3 { case sent(String), pending, notApplicable(String), failed }
     private static let noReceiverKey = "no receiver key"   // NOT-UI: the trace's reason, and the one the send page names
     /// SENDS (version 3): the receiver's key known (their about word), my chain announced and holding the sum, the record names
