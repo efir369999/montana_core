@@ -21942,18 +21942,18 @@
         }
       }
     },
-    "Not in your book yet": {
+    "Not in your TimeChain yet": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ещё нет в вашей книге"
+            "value": "Ещё нет в вашей цепочке времени"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "尚未记入你的账本"
+            "value": "尚未记入你的时间链"
           }
         }
       }

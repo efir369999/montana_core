@@ -754,7 +754,7 @@ struct MTCoinMovePage: View {
                     } header: { Text("System chain") }
                 }
             } else {
-                Text("Not in your book yet").foregroundStyle(.secondary)
+                Text("Not in your TimeChain yet").foregroundStyle(.secondary)
             }
         }
         .scrollContentBackground(.hidden).montanaPageGround()
