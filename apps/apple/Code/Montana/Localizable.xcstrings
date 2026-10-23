@@ -2973,22 +2973,6 @@
         }
       }
     },
-    "Gold ground": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Золотой фон"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "金色背景"
-          }
-        }
-      }
-    },
     "History": {
       "localizations": {
         "ru": {

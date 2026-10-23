@@ -3818,7 +3818,7 @@ enum MTCoinChainRules {
     /// shortest interval a MINT covers (sections 3, 7) and how often the phone asks its chain to take what the book holds above it.
     static let window: Int64 = 60
     static let zero = String(repeating: "0", count: 64)
-    enum Kind: UInt8 { case send = 1, recv = 2, mint = 3, refund = 4, genesis = 5 }
+    enum Kind: UInt8 { case send = 1, recv = 2, mint = 3, refund = 4, genesis = 5, burn = 6 }
     /// A record as the rules read it; a record of the layouts before kinds is a send that names no receiver.
     struct Rec { let id: String; let version: UInt8; let kind: UInt8; let amount: Int64; let from: String; let to: Data; let ref: String; let a: UInt64; let b: UInt64 }
     /// A key's state folded over its chain (section 3).
@@ -3846,13 +3846,23 @@ enum MTCoinChainRules {
     /// 1 second, the client merely shows it»): from this node second every v3 record first folds the seconds its key has lived, so no
     /// phone lays a MINT for its time. The node's TX_TIME_CUT, 23.10.2026 00:00 MSK.
     nonisolated static let timeCut: Int64 = 1_792_702_800
-    /// The key's seconds of life up to the node second `at`, credited once: minted = max(minted, at - birth), proven by the same step.
+    /// MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 03:27 and 03:37 MSK: «minting is a separate entity, and it happens
+    /// if the person is online or behind the VPN» -- «right, do it»): from this node second the key's life mints nothing by itself, and a
+    /// MINT counts only what its interval holds of the last mintFresh seconds before its node took it -- the seconds the key was present.
+    /// A BURN is taken from the same second. The node's TX_ONLINE_CUT, 26.10.2026 00:00 MSK.
+    nonisolated static let onlineCut: Int64 = 1_792_962_000
+    nonisolated static let mintFresh: Int64 = 120
+    /// The key's seconds of life up to the node second `at`, and never past the online cut, credited once: minted = max(minted, lived),
+    /// proven by the same step.
     nonisolated static func timeStep(_ s: St, at: Int64) -> St {
-        guard timeCut <= at, 0 < s.height, s.minted < at - s.birth else { return s }
+        let lived = min(at, onlineCut) - s.birth
+        guard timeCut <= at, 0 < s.height, s.minted < lived else { return s }
         var n = s
-        n.proven = s.proven + at - s.birth - s.minted; n.minted = at - s.birth
+        n.proven = s.proven + lived - s.minted; n.minted = lived
         return n
     }
+    /// The seconds a MINT taken at the node second `at` may count from the online cut: what its interval holds of the last mintFresh.
+    nonisolated static func present(t0: Int64, t1: Int64, at: Int64) -> Int64 { max(0, t1 - max(t0, at - mintFresh)) }
     /// A BOOK'S PAST, NEVER A FRESH KEY'S WORD (18.10.2026, the critic's P-1; the node's TX_GENESIS_GATE): from this node second a
     /// GENESIS above 0 stands only on the key's own past on its chain and announces at most the time since that past began.
     nonisolated static let genesisGate: Int64 = 1_792_354_500
@@ -3872,6 +3882,7 @@ enum MTCoinChainRules {
         case .mint?: return pair == none && to == none && ref == none
         case .refund?: return pair == none && to == none && ref != none && a == 0 && b == 0
         case .genesis?: return pair == none && to == none && ref == none && a == 0 && b == 0
+        case .burn?: return pair == none && to == none && ref == none && b == 0 && a <= amount
         case nil: return false
         }
     }
@@ -3928,8 +3939,11 @@ enum MTCoinChainRules {
             // interval's seconds leaves the key's time to the next one (17.10.2026, P1: a MINT of 120 laid before the pay for 4.4 days
             // away had closed those days, and 2 452 406 coins stood in the book and not on the chain); from the cut 1 coin a second
             if allowTime(t1 - s.birth, at: at) - s.minted < a { return (nil, false) }
+            if onlineCut <= at && present(t0: t0, t1: t1, at: at) < a { return (nil, false) }
             n.proven = s.proven + a; n.mintEnd = t1; n.minted = s.minted + a
-        case .send?:
+        case .send?, .burn?:
+            // a BURN spends as a SEND and names no one: no RECV or REFUND can name it (the open SENDs hold SENDs alone)
+            if p.kind == Kind.burn.rawValue && at < onlineCut { return (nil, false) }
             let dec = Int64(p.a)
             if s.proven + s.declared < a || dec != max(0, a - s.proven) { return (nil, false) }
             n.proven = s.proven - (a - dec); n.declared = s.declared - dec

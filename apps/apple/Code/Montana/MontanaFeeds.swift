@@ -75,15 +75,17 @@ enum MTWallpaper {
     /// Indigo keeps the name it was born with: phones store «aurora» and correspondents receive «n:aurora».
     static let indigo = "aurora"
     static let burgundy = "burgundy"
-    /// THE AUTHOR'S GOLD (the author's word 03.10: «the gold ground by default», his file in Media byte for byte).
-    static let gold = "gold"
+    /// THE GOLD GROUND IS GONE WHOLE (the author's words 23.10.2026 02:09 and 12:50 MSK: «remove the gold colour from the build
+    /// as our colour»; «I meant only the page's gold ground -- remove the gold completely»): it is no choice, no default and no
+    /// picture any more. A choice stored or a ground told by a correspondent under its name wears the default ground.
+    static let retired: Set<String> = ["gold"]
     static let names: [(String, LocalizedStringKey)] = [
-        (gold, "Gold ground"), ("montana", "Montana ground"), ("default", "Default ground"), ("black", "Black ground"), ("dark", "Dark ground"), ("blue", "Blue ground"),
+        ("montana", "Montana ground"), ("default", "Default ground"), ("black", "Black ground"), ("dark", "Dark ground"), ("blue", "Blue ground"),
         ("sky", "Sky"), ("dusk", "Dusk"), ("water", "Water"), (indigo, "Indigo"), (burgundy, "Burgundy"), ("rose", "Rose"), ("forest", "Forest"),
     ]
     static func name(_ key: String) -> LocalizedStringKey { names.first { $0.0 == key }?.1 ?? "Default ground" }
     /// The two Montana grounds are separate from the platform-style catalogue. Indigo remains «aurora» in saved and shared data.
-    static let montanaOffered = [gold, indigo, burgundy]
+    static let montanaOffered = [indigo, burgundy]
     static let systemOffered = names.map(\.0).filter { !montanaOffered.contains($0) }
     /// ONE PAINT PER GROUND ([C-1]): the full screen and the thumbnail draw the very same view, so a
     /// ground can never look one way in the chooser and another in the chat. Drawn by us, because the
@@ -124,8 +126,6 @@ enum MTWallpaper {
             }
         case burgundy:
             Color.clear.overlay { Image("MontanaBurgundy").resizable().scaledToFill() }.clipped()   // the author's file as it came
-        case gold:
-            Color.clear.overlay { Image("MontanaGoldGround").resizable().scaledToFill() }.clipped()   // the author's file as it came (03.10)
         case indigo:
             ZStack {
                 LinearGradient(colors: [Color(red: 0.04, green: 0.04, blue: 0.12), Color(red: 0.08, green: 0.10, blue: 0.24)],
@@ -188,7 +188,10 @@ enum MTWallpaper {
     }
     private static func parse(_ s: String?) -> Choice {
         guard let s else { return .general }
-        if s.hasPrefix("named:") { return .named(String(s.dropFirst(6))) }   // COMPAT-LOCAL: a stored choice, never on the wire
+        if s.hasPrefix("named:") {   // COMPAT-LOCAL: a stored choice, never on the wire
+            let n = String(s.dropFirst(6))
+            return .named(retired.contains(n) ? byDefault : n)
+        }
         if s.hasPrefix("photo:") { return .photo(String(s.dropFirst(6))) }   // COMPAT-LOCAL: a stored choice, never on the wire
         return .general
     }
@@ -197,7 +200,7 @@ enum MTWallpaper {
     }
     /// The one default: every page and every chat that chose none wear my page's ground, so nothing chosen reads here.
     /// «No background» chosen by hand is stored, never read as nothing chosen.
-    static let byDefault = gold   // the author's word 03.10: the gold ground by default
+    static let byDefault = "default"   // the app's own dark ground with the Montana pattern (the gold's place until 23.10.2026)
     /// THE GROUND DECIDES THE INK (the author's word 20.10 21:4x: the gold ground, the font by default black in the whole
     /// app, so that everything reads). The gold is a light ground; white words on it do not read. The platform's own answer
     /// to a light ground is its light appearance: every primary word, bar and material turns to the platform's dark ink.
