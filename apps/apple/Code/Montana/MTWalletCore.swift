@@ -1558,7 +1558,7 @@ enum MTLevelAccess {
         UIApplication.shared.applicationState != .background && (MontanaVPNTunnel.shared.status == .connected || MTForeignVPN.link() != nil)
     }
     /// The app came to the screen, the wallet opened or the tunnel rose: the beat asks the count now and every second.
-    func count() { MTMintBeat.run() }
+    func count() { MTMintBeat.run(); MTCoinTx.beHere() }   // and the chain's minting by presence (fold-7)
     /// A tunnel that is down holds nothing alive.
     func settle() { if MontanaVPNTunnel.shared.status != .connected { on = false } }
     func ask() {
@@ -4451,6 +4451,32 @@ extension MTCoinTx {
             }
         }
     }
+    /// THE PERSON HERE MINTS (fold-7): online -- the app in front of the person -- or behind the living tunnel of the VPN.
+    @MainActor static var here: Bool {
+        UIApplication.shared.applicationState != .background || MontanaVPNTunnel.shared.status == .connected
+    }
+    /// The seconds the road to the node may take: a MINT reaching it later than this counts less than it names.
+    nonisolated static let presentMargin: Int64 = 20
+    /// Under the node's minute plus one beat, a MINT's interval never passes the freshness less the margin: no second here is lost.
+    nonisolated static let presentBeat: UInt64 = 40
+    @MainActor private static var presence: Task<Void, Never>?
+    /// The app came to the screen, the wallet opened or the tunnel rose: while the person stays here every beat asks the chain, and
+    /// before the online cut the beat sleeps toward it and asks nothing.
+    @MainActor static func beHere() {
+        guard presence == nil else { return }
+        presence = Task { @MainActor in
+            while !Task.isCancelled, here {
+                let wait = MTCoinChainRules.onlineCut - Int64(Date().timeIntervalSince1970)
+                if 0 < wait {
+                    try? await Task.sleep(nanoseconds: UInt64(min(wait, 600)) * 1_000_000_000)
+                    continue
+                }
+                await reconcile()
+                try? await Task.sleep(nanoseconds: presentBeat * 1_000_000_000)
+            }
+            presence = nil
+        }
+    }
     /// THE CHAIN HOLDS WHAT THE BOOK HOLDS (sections 3-4). A key's first v3 record is its GENESIS: the book as it stands, at most
     /// what time could have minted since the coins began, announced and never called proven (before the v2 cut; a GENESIS of 0
     /// after it). After it, what the book holds above the chain is laid as a MINT of the time since the last one, at most what the
@@ -4478,8 +4504,26 @@ extension MTCoinTx {
             st = again
         }
         // ONLY THE CHAIN MINTS (section 4, fold-6): from the node's TX_TIME_CUT the chain credits the key's seconds itself, so the phone
-        // lays no MINT and shows the fold /tx-head answers
-        guard st.now < MTCoinChainRules.timeCut else { return told(st) }
+        // lays no MINT and shows the fold /tx-head answers -- until the node's TX_ONLINE_CUT, past which a key's life mints nothing by itself
+        guard st.now < MTCoinChainRules.timeCut else {
+            // MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 03:27 and 03:37 MSK: «minting is a separate entity, and it
+            // happens if the person is online or behind the VPN»): the node counts of a MINT only what its interval holds of the last
+            // mintFresh seconds before it takes it, so while the person is here the phone lays the seconds since the last MINT, never
+            // older than the freshness less the road's margin; the node's minute between two MINTs is the pace
+            guard MTCoinChainRules.onlineCut <= st.now, here, st.mintEnd + 60 <= st.now else { return told(st) }
+            let r = await layOnHead { s in
+                guard seat.stands, 0 < s.height, MTCoinChainRules.onlineCut <= s.now else { return nil }
+                let t1 = s.now, t0 = max(s.mintEnd, t1 - MTCoinChainRules.mintFresh + presentMargin)
+                // the node folds the key's life first, credited up to the online cut (fold-6): that much stands minted already
+                let minted = max(s.minted ?? 0, MTCoinChainRules.onlineCut - s.birth)
+                let amount = min(MTCoinChainRules.present(t0: t0, t1: t1, at: t1 + presentMargin),
+                                 MTCoinChainRules.allowTime(t1 - s.birth, at: t1) - minted)
+                guard 0 < amount, t0 + 60 <= t1 else { return nil }
+                return build3(.mint, amount: UInt64(amount), prev: s.head, nonce: fresh(), a: UInt64(t0), b: UInt64(t1))
+            }
+            MontanaTrace.mark("coin_v3", "present mint code=\(r.code) word=\(r.word)")
+            return told(r.code == 200 ? await chain3(me, door: door) : st)
+        }
         let wall = Date().timeIntervalSince1970
         guard force || Double(MTCoinChainRules.window) <= wall - mintedAt else { return told(st) }
         mintedAt = wall
