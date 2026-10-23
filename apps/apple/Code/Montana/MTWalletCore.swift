@@ -3922,17 +3922,24 @@ enum MTCoinChainRules {
     /// A BURN is taken from the same second. The node's TX_ONLINE_CUT, 26.10.2026 00:00 MSK.
     nonisolated static let onlineCut: Int64 = 1_792_962_000
     nonisolated static let mintFresh: Int64 = 120
-    /// The key's seconds of life up to the node second `at`, and never past the online cut, credited once: minted = max(minted, lived),
-    /// proven by the same step.
+    /// The key's seconds of life up to the node second `at`, and never past the online cut, credited once, proven by the same step.
+    /// THE PAST NEVER EATS THE PRESENT (fold-8; the author's words 23.10.2026 22:1x and 22:21 MSK: «Andrey's coins are not credited --
+    /// fix it in the new build»): a key that minted above its life before the cut by the doubling rule -- 28 of 96 keys on 23.10, every
+    /// living phone's -- still gets every second since its last record, never before the cut, so its present seconds are not eaten by
+    /// its past: the credit is the greater of its unminted life and those seconds.
     nonisolated static func timeStep(_ s: St, at: Int64) -> St {
-        let lived = min(at, onlineCut) - s.birth
-        guard timeCut <= at, 0 < s.height, s.minted < lived else { return s }
+        guard timeCut <= at, 0 < s.height else { return s }
+        let end = min(at, onlineCut)
+        let fresh = max(0, end - max(s.lastAt, timeCut, s.birth))
+        let credit = max(end - s.birth - s.minted, fresh)
+        guard 0 < credit else { return s }
         var n = s
-        n.proven = s.proven + lived - s.minted; n.minted = lived
+        n.proven = s.proven + credit; n.minted = s.minted + credit
         return n
     }
-    /// The seconds a MINT taken at the node second `at` may count from the online cut: what its interval holds of the last mintFresh.
-    nonisolated static func present(t0: Int64, t1: Int64, at: Int64) -> Int64 { max(0, t1 - max(t0, at - mintFresh)) }
+    /// The seconds a MINT taken at the node second `at` may count from the online cut: what its interval holds of the last mintFresh,
+    /// never a second before the cut -- the time step credited every one of those (fold-8).
+    nonisolated static func present(t0: Int64, t1: Int64, at: Int64) -> Int64 { max(0, t1 - max(t0, at - mintFresh, onlineCut)) }
     /// A BOOK'S PAST, NEVER A FRESH KEY'S WORD (18.10.2026, the critic's P-1; the node's TX_GENESIS_GATE): from this node second a
     /// GENESIS above 0 stands only on the key's own past on its chain and announces at most the time since that past began.
     nonisolated static let genesisGate: Int64 = 1_792_354_500
@@ -4008,8 +4015,11 @@ enum MTCoinChainRules {
             // THE SUM OF TIME (section 4, fold-3): all the key's MINTs together stay under A(t1 - birth), so a MINT below its
             // interval's seconds leaves the key's time to the next one (17.10.2026, P1: a MINT of 120 laid before the pay for 4.4 days
             // away had closed those days, and 2 452 406 coins stood in the book and not on the chain); from the cut 1 coin a second
-            if allowTime(t1 - s.birth, at: at) - s.minted < a { return (nil, false) }
-            if onlineCut <= at && present(t0: t0, t1: t1, at: at) < a { return (nil, false) }
+            // from the online cut the present seconds alone weigh it: the intervals never overlap, so the life's sum is not asked and a
+            // key that minted above its life before the time cut mints its present seconds like any other (fold-8)
+            if onlineCut <= at {
+                if present(t0: t0, t1: t1, at: at) < a { return (nil, false) }
+            } else if allowTime(t1 - s.birth, at: at) - s.minted < a { return (nil, false) }
             n.proven = s.proven + a; n.mintEnd = t1; n.minted = s.minted + a
         case .send?, .burn?:
             // a BURN spends as a SEND and names no one: no RECV or REFUND can name it (the open SENDs hold SENDs alone)
@@ -4599,10 +4609,8 @@ extension MTCoinTx {
             let r = await layOnHead { s in
                 guard seat.stands, 0 < s.height, MTCoinChainRules.onlineCut <= s.now else { return nil }
                 let t1 = s.now, t0 = max(s.mintEnd, t1 - MTCoinChainRules.mintFresh + presentMargin)
-                // the node folds the key's life first, credited up to the online cut (fold-6): that much stands minted already
-                let minted = max(s.minted ?? 0, MTCoinChainRules.onlineCut - s.birth)
-                let amount = min(MTCoinChainRules.present(t0: t0, t1: t1, at: t1 + presentMargin),
-                                 MTCoinChainRules.allowTime(t1 - s.birth, at: t1) - minted)
+                // the present seconds alone weigh it (fold-8): the life the node credited up to the online cut is not asked again
+                let amount = MTCoinChainRules.present(t0: t0, t1: t1, at: t1 + presentMargin)
                 guard 0 < amount, t0 + 60 <= t1 else { return nil }
                 return build3(.mint, amount: UInt64(amount), prev: s.head, nonce: fresh(), a: UInt64(t0), b: UInt64(t1))
             }
