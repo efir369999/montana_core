@@ -476,7 +476,7 @@ struct MessageContextOverlay: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 6) {
                                     ForEach(MTPiLevels.all, id: \.self) { n in
-                                        let held = n <= MTCoinBook.ledger.balance
+                                        let held = n <= MTCoinSplit.shared.available
                                         Button { MTReactClock.act = "row:coin\(n)"; onCoin(n) } label: {
                                             // USER-DATA: a box of coins to give, in its short form
                                             Text(verbatim: "+" + MTPiLevels.short(n)).font(.system(size: 15, weight: .semibold).monospacedDigit())

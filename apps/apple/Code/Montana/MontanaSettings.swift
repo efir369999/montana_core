@@ -2267,7 +2267,7 @@ struct PrivacyView: View {
             let rest = Text("Your account is deleted: this device erases your 24-word identity, and your public name leaves Montana's nodes. Your history stays here sealed and opens again only from the same 24 words — on this device, or on another one that already holds a copy. Nobody keeps the words for you: write them down first: Settings → Privacy → Seed phrase. Deleting the app erases the history as well.")
             // THE COINS ARE SAID BEFORE THE WORDS GO (the author's word 12.10.2026 15:3x MSK, No.66, after 4 105 470 coins stood on a
             // forgotten account on 11.10): an account that holds coins says how many, and that only its 24 words bring them back.
-            let coins = MTLocalCoinLedger.shared.balance
+            let coins = MTCoinSplit.shared.available
             if 0 < coins {
                 // USER-DATA: two line breaks between the coins' line and the rest
                 Text("This account holds \(MTCoinText.count(coins)) coins. They stay with its 24 words and come back only with them.") + Text(verbatim: "\n\n") + rest
@@ -2979,11 +2979,11 @@ struct WelcomeView: View {
 /// opens (MTLevelAccess) -- switches the person moves once their level reaches it, each with its contract under it (SETTINGS.md).
 struct MTLevelAccessPage: View {
     @ObservedObject private var person = MTPersonChain.shared
-    @ObservedObject private var book = MTLocalCoinLedger.shared
+    @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
     @ObservedObject private var fabric = MTFabric.shared   // the third level the Global one is the lowest of (MTFabric, 17.10)
     @AppStorage(MTCallRecordingPolicy.key) private var recordCalls = true
     @AppStorage(MTLevelAccess.keepKey) private var keepDeleted = true
-    private var level: Int { MTPersonChain.global(person: person.level, balance: book.balance) }
+    private var level: Int { MTPersonChain.global(person: person.level, balance: split.available) }
     var body: some View {
         let seven = MTLevelAccess.Feature.keepDeleted.level
         let open = MTLevelAccess.opens(.keepDeleted)
@@ -3072,7 +3072,7 @@ struct MTLevelAccessPage: View {
 struct MTKeepShield: View {
     @Environment(UIState.self) private var ui
     @ObservedObject private var person = MTPersonChain.shared
-    @ObservedObject private var book = MTLocalCoinLedger.shared
+    @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
     @ObservedObject private var fabric = MTFabric.shared   // the Global Level the rule names follows the fabric too
     @AppStorage(MTLevelAccess.keepKey) private var keepDeleted = true
     @State private var told = false
@@ -3094,7 +3094,7 @@ struct MTKeepShield: View {
     }
     private var rule: some View {
         let seven = MTLevelAccess.Feature.keepDeleted.level
-        let level = MTPersonChain.global(person: person.level, balance: book.balance)
+        let level = MTPersonChain.global(person: person.level, balance: split.available)
         return VStack(alignment: .leading, spacing: 10) {
             Label {
                 Text("Deletion is forbidden on this phone").font(.headline)

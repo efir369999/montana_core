@@ -668,7 +668,7 @@ private struct MTChessNewGame: View {
     @AppStorage(MTChessComputer.levelKey) private var level = 3
     @State private var white = true
     @State private var seconds = MTChessSend.chatClock
-    @ObservedObject private var book = MTLocalCoinLedger.shared
+    @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
     /// THE STAKE BESIDE THE OPPONENT, AS AN OFFER (the author's word 06.10.2026 23:0x MSK: «the stake, like the sum of a send, is
     /// written beside the opponent as an offer»): the coins typed beside a correspondent are what that invitation asks each side
     /// to put into the game's pot (MTChessCoins).
@@ -735,7 +735,7 @@ private struct MTChessNewGame: View {
                     if people.isEmpty { Text("No correspondents found").foregroundStyle(.secondary) }
                     ForEach(people) { chat in
                         let ref = chat.convId ?? chat.name
-                        let short = book.balance < stakeCoins(ref)
+                        let short = split.available < stakeCoins(ref)
                         HStack(spacing: 12) {
                             Button { offer(chat, ref) } label: {
                                 HStack(spacing: 12) {
@@ -997,7 +997,7 @@ struct MTChessGameScreen: View {
             // THE BALANCE AT THE STAKE (the author's word 06.10.2026 22:1x MSK): the guest asked to put a stake sees what it holds.
             if game.pooled, game.status == .invited, !game.whiteIsMine, 0 < game.stake {
                 MTBalanceCaption()
-                if MTCoinBook.ledger.balance < game.stake {
+                if MTCoinSplit.shared.available < game.stake {
                     Text("Not enough coins for the stake").font(.caption).foregroundStyle(.secondary)
                 }
             }

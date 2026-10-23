@@ -2184,7 +2184,7 @@ struct ChatConversationView: View {
             }
             Button("Cancel", role: .cancel) { chessStake = "" }
         } message: {
-            Text("\(MTCoinText.count(MTCoinBook.ledger.balance)) coins")
+            Text("\(MTCoinText.count(MTCoinSplit.shared.available)) coins")
         }
         .confirmationDialog("Call back?", isPresented: Binding(
             get: { callBackVideo != nil }, set: { if !$0 { callBackVideo = nil } }),

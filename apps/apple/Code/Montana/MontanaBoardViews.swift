@@ -1564,14 +1564,14 @@ struct MTRisingPlus: View {
 /// your number in the rating»): the box of π the person's balance fills (MTPiLevels.place), as the platform's badge; nothing
 /// below the first box. The balance itself stands on the wallet's page (the wallet's mark wears no badge, 18.10.2026).
 struct MTCoinPlaceBadge: View {
-    @ObservedObject private var book = MTLocalCoinLedger.shared
+    @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
     @ObservedObject private var board = MTCoinBoard.shared
     @ObservedObject private var top = MTTopNet.shared
     // THE NUMBER IN THE COMMON RATING (the author's word 03.10 22:25: «the coin's badge is the number in the common rating»): the
     // person's place in the one Montana top once a node keeps it (MTTopNet, 04.10) -- none while its owner hides the coins --
     // and among the people who told their balance before that (MTCoinBoard.rank).
     var body: some View {
-        MTCountBadge(top.answered ? (top.rank ?? 0) : board.rank(mine: book.balance)).offset(x: 6, y: -6).allowsHitTesting(false)
+        MTCountBadge(top.answered ? (top.rank ?? 0) : board.rank(mine: split.available)).offset(x: 6, y: -6).allowsHitTesting(false)
     }
 }
 
@@ -1580,9 +1580,9 @@ struct MTCoinPlaceBadge: View {
 /// balance fills wear the check, the person's place stands out.
 struct MTPiLevelsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var book = MTLocalCoinLedger.shared
+    @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
     var body: some View {
-        let place = MTPiLevels.place(book.balance)
+        let place = MTPiLevels.place(split.available)
         // THE LEVELS AS A TIMECHAIN, THE NEWEST ON TOP (the author's word 04.10 00:51: «every new level on top, as comments in the
         // TimeChain, revealing π as your balance; without borders, 13 always»): the next level to reach stands on top, then the
         // levels reached, the newest first -- thirteen at a time, each with π revealed to it.

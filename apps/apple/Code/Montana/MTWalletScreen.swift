@@ -34,8 +34,13 @@ struct MTWalletPage: View {
     @State private var pull: CGFloat = 0
     @State private var pullArmed = false
     @State private var pullReleased: (at: Date, angle: Double)?
-    /// Every coin the book holds; before the seed's book lands, the balance a device of the same words told in its tip (04.10 16:34).
-    private var total: Int { vault.heard ? book.balance : max(book.balance, tipNet.seen ?? 0) }
+    /// THE PERSON'S COINS ARE THE CHAIN'S (fold-7; the author's words 23.10.2026 03:27 MSK: «the phone only mirrors the chain»): once the
+    /// chain has spoken in this run, the available it holds (MTCoinSplit.available); before it, every coin the book holds, and before
+    /// the seed's book lands, the balance a device of the same words told in its tip (04.10 16:34).
+    private var total: Int {
+        if coinSplit.split != nil { return coinSplit.available }
+        return vault.heard ? book.balance : max(book.balance, tipNet.seen ?? 0)
+    }
     /// One of the three sums of the balance: the main one large and white, the others small; the whole row takes the finger and
     /// makes its sum the main one.
     private func balanceSum(_ unit: MTCoinUnit) -> some View {
@@ -116,7 +121,7 @@ struct MTWalletPage: View {
                         // THE BOX ON THE COIN (the author's word 04.10.2026 03:07 MSK: «the box's level as a badge on the coin in the wallet»):
                         // the number of the level of π the balance fills -- the minting's multiplier -- as the platform's badge, at the coin's rim,
                         // and the number of the apps minting at once beside it (MTMintLevelBadge, the author's word 04.10.2026 18:08 MSK).
-                        .overlay(alignment: .topTrailing) { MTMintLevelBadge(balance: book.balance).offset(x: -8, y: 8).allowsHitTesting(false) }
+                        .overlay(alignment: .topTrailing) { MTMintLevelBadge(balance: total).offset(x: -8, y: 8).allowsHitTesting(false) }
                         // THE COIN CATCHES FIRE AT THE TAPS (the author's word 04.10 00:19): its glow grows with the speed and dims to embers
                         // between the taps while the game burns.
                         // THE GLOW IS A STILL CIRCLE UNDER THE COIN (the author's word 04.10.2026 12:27 MSK, the heat of the minting): a
@@ -134,7 +139,7 @@ struct MTWalletPage: View {
                         // NO COUNT OF THE TAPS UNDER THE COIN (the author's word 19.10.2026 17:4x MSK: «at taps and swipes on the coin do
                         // not show 13/13 below; leave the taps, at most +1 a second»): a tap mints the second's one coin at most
                         // (MTPantheon.tap, MTLocalCoinLedger.priced) and its +1 rises only when it minted.
-                        MTLevelProgress(balance: book.balance)
+                        MTLevelProgress(balance: total)
                             .opacity(pantheon.lit || autoMint.on ? 1 : 0)
                             .accessibilityHidden(!(pantheon.lit || autoMint.on))
                         MTSecondPrice()
@@ -180,12 +185,12 @@ struct MTWalletPage: View {
                         // times one coin's worth by their own earning (MTPersonalRate), once that earning is told.
                         if let word = MTPersonalRate.read(personalRate) {
                             // USER-DATA: the balance in the person's currency at their own rate
-                            Text(MTPersonalRate.coin(word) * Decimal(book.balance), format: .currency(code: word.code).locale(MTLanguage.locale))
+                            Text(MTPersonalRate.coin(word) * Decimal(total), format: .currency(code: word.code).locale(MTLanguage.locale))
                                 .font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
                         }
                         // THE WALLET'S LEVEL IS π AS FAR AS THE BALANCE REVEALS IT (the author's word 04.10 00:51): the level and π to it.
                         // USER-DATA: the level of π the balance fills and π revealed to it
-                        Text(verbatim: "π " + MTPiLevels.revealed(MTPiLevels.place(book.balance)) + " · " + String(MTPiLevels.place(book.balance)))
+                        Text(verbatim: "π " + MTPiLevels.revealed(MTPiLevels.place(total)) + " · " + String(MTPiLevels.place(total)))
                             .font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
                         // TWO BUTTONS OF THE SYSTEM, ONE WIDTH (the author's word 03.10 16:55: «the button is white and crooked; make
                         // send and top up there»): the page's tint is the label colour, so the prominent button stood white -- the
@@ -197,7 +202,7 @@ struct MTWalletPage: View {
                                 Label { Text("Send") } icon: { MTTimeSendMark(height: 24) }
                                     .font(.headline).frame(maxWidth: .infinity, minHeight: 44)
                             }
-                            .disabled(book.balance <= 0)
+                            .disabled(total <= 0)
                             Button { toppingUp = true } label: {
                                 Label("Top up", systemImage: "plus.circle.fill").font(.headline).frame(maxWidth: .infinity, minHeight: 44)
                             }
@@ -299,7 +304,7 @@ struct MTWalletPage: View {
                     } label: { Text("Coins on reactions") }
                     LabeledContent {
                         // USER-DATA: a number, the balance in Montana (one coin is 0.000000001)
-                        Text(verbatim: MTChatMint.montana(book.balance)).monospacedDigit()
+                        Text(verbatim: MTChatMint.montana(total)).monospacedDigit()
                     } label: { Text("Coins in Montana") }
                 } header: { Text("Minting") }
                   footer: { Text("Coins are counted on this phone until the wallet opens.") }
@@ -422,7 +427,7 @@ struct MTWalletPage: View {
 /// told their balance (MTCoinBoard), each with the face and the name the chats tab draws, the most coins first. A pair whose
 /// chat is gone is not drawn.
 struct MTCoinTop13: View {
-    @ObservedObject private var book = MTLocalCoinLedger.shared
+    @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
     @ObservedObject private var board = MTCoinBoard.shared
     @ObservedObject private var top = MTTopNet.shared
     var body: some View {
@@ -464,7 +469,7 @@ struct MTCoinTop13: View {
     }
     private func rows(_ store: ChatStore?) -> some View {
         let chats = store?.listChats() ?? []
-        let places = Array(board.rating(mine: book.balance).filter { p in p.mine || chats.contains { $0.name == p.id } }.prefix(13))
+        let places = Array(board.rating(mine: split.available).filter { p in p.mine || chats.contains { $0.name == p.id } }.prefix(13))
         return ForEach(Array(places.enumerated()), id: \.element.id) { i, p in
             HStack(spacing: 12) {
                 // USER-DATA: the place in the rating, a number
@@ -1694,6 +1699,7 @@ struct MTTimeChainsPage: View {
     @ObservedObject private var person = MTPersonChain.shared
     @ObservedObject private var fabric = MTFabric.shared
     @ObservedObject private var book = MTLocalCoinLedger.shared
+    @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
     @ObservedObject private var top = MTTopNet.shared
     @ObservedObject private var node = MTNetworkNode.shared
     @State private var core: Result<MTWalletCore.Snapshot, MTWalletCore.Absence>?
@@ -1703,12 +1709,12 @@ struct MTTimeChainsPage: View {
     private static let own = MTTimeChain.sources.filter { s in s != "pi" && !talk.contains(s) }
     private var vectorsHold: Bool { MTPersonChain.levelKAT() && MTFabricRules.selfCheck() && MTTopNet.keyKAT() && MTCoinVault.keyKAT() && MTTimeChainTip.selfCheck() }
     var body: some View {
-        let place = MTPiLevels.place(book.balance)
+        let place = MTPiLevels.place(split.available)
         List {
             Section {
                 LabeledContent {
                     // USER-DATA: the Global Level of the person, a number
-                    Text(verbatim: String(MTPersonChain.global(person: person.level, balance: book.balance))).font(.title.bold().monospacedDigit())
+                    Text(verbatim: String(MTPersonChain.global(person: person.level, balance: split.available))).font(.title.bold().monospacedDigit())
                 } label: { Label("Global level", systemImage: "globe") }
             } footer: { Text("The lowest of the three levels below.") }
             Section {
@@ -1926,11 +1932,10 @@ struct MTBalanceTitle: ViewModifier {
     /// A TRANSFER'S PAGE SHOWS THE AVAILABLE (the author's word 16.10.2026 17:19 MSK: «a transfer from the chat and from any place
     /// shows only the available»): the number the send is weighed by, not the book's whole.
     var available = false
-    @ObservedObject private var book = MTLocalCoinLedger.shared
     @ObservedObject private var split = MTCoinSplit.shared
     static func line(_ coins: Int) -> Text { Text("\(MTCoinText.count(coins)) coins") }
     // USER-DATA: a count of coins beside its word
-    private var subtitle: Text { available ? Text("Available \(MTCoinText.count(split.available))") : Self.line(book.balance) }
+    private var subtitle: Text { available ? Text("Available \(MTCoinText.count(split.available))") : Self.line(split.available) }
     @ViewBuilder func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content.navigationTitle(title).navigationSubtitle(subtitle)
@@ -1950,8 +1955,8 @@ struct MTBalanceTitle: ViewModifier {
 
 /// The same balance as one caption, on the plate of an invitation that asks a stake.
 struct MTBalanceCaption: View {
-    @ObservedObject private var book = MTLocalCoinLedger.shared
-    var body: some View { MTBalanceTitle.line(book.balance).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+    @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
+    var body: some View { MTBalanceTitle.line(split.available).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
 }
 
 extension View {

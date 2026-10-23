@@ -656,13 +656,13 @@ struct MTAvatarBadgeRow: View {
 private struct MTAvatarBadgesMine: View {
     let size: CGFloat
     let coinsOn: Bool
-    @ObservedObject private var book = MTLocalCoinLedger.shared
+    @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
     @ObservedObject private var person = MTPersonChain.shared
     @ObservedObject private var fabric = MTFabric.shared   // the Global Level is the lowest of three: it follows the fabric too (17.10)
     var body: some View {
         let read = MTCoinBalance.now != nil
-        MTAvatarBadgePair(coins: coinsOn && read ? book.balance : nil,
-            level: read ? person.level.map { MTPersonChain.global(person: $0, balance: book.balance) } : nil, size: size)
+        MTAvatarBadgePair(coins: coinsOn && read ? split.available : nil,
+            level: read ? person.level.map { MTPersonChain.global(person: $0, balance: split.available) } : nil, size: size)
             .onAppear { person.prime() }
     }
 }

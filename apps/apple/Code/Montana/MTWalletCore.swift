@@ -3036,7 +3036,7 @@ struct MTCoinCounts {
         // THE CHAINS TAKE THE BOOK'S PAST ONCE (04.10): every move written before the chains stood joins its chain in the book's
         // order; a move the chain already holds is passed by its name.
         MTTimeChain.appendPast(r.moves)
-        MTCoinBalance.set(sum)
+        MTCoinSplit.shared.told()
         MTCoinVault.shared.soon("read", after: 1)
         MTCoinSend.returnUndeliverable(self)
     }
@@ -3057,7 +3057,7 @@ struct MTCoinCounts {
         guard !fresh.isEmpty else { return 0 }
         entries = all; taken = names; balance = sum; counts = c; onTarget = on
         ownPeers.formUnion(Self.own(fresh, names: names))
-        MTCoinBalance.set(sum)
+        MTCoinSplit.shared.told()
         reached(at: Date().timeIntervalSince1970)
         // A RESTORED DEVICE TAKES THE WHOLE BOOK IN ONE STROKE (15:51): nineteen thousand moves are encoded and written on the book's
         // queue, not on the screen's thread; their chains take them in one turn of their own queue.
@@ -3088,7 +3088,7 @@ struct MTCoinCounts {
         balance = next
         counts.add(e)
         if let on = e.shownOn { onTarget[on, default: 0] += e.shownCoins }
-        MTCoinBalance.set(balance)
+        MTCoinSplit.shared.told()
         reached(at: e.at)
         return true
     }
@@ -3161,7 +3161,7 @@ struct MTCoinCounts {
         balance += signed
         if burning { counts.burned = MTCoinCounts.plus(counts.burned, c) }
         else { counts.earn(c, ref: prefix) }
-        MTCoinBalance.set(balance)
+        MTCoinSplit.shared.told()
         reached(at: now)
         if !burning { MTCoinFlash.shared.born(c, ref: prefix) }
         return c
@@ -3188,6 +3188,12 @@ struct MTCoinCounts {
     private var second: (at: Int64, minted: Int) = (0, 0)
     private func priced(_ coins: Int, seconds: Int) -> Int {
         let now = Int64(Date().timeIntervalSince1970)
+        // ONLY THE CHAIN MINTS (fold-6 and fold-7; the author's words 21.10.2026 17:1x MSK «only the core mints, the client merely shows
+        // it», 23.10.2026 03:37 MSK «minting is a separate entity, and it happens if the person is online or behind the VPN; touches,
+        // calls and absence do not mint by themselves»): from the time cut the chain credits the seconds itself, so no door of the book
+        // mints -- letters, taps, the pull, the VPN wall, calls, a named mint, chess, the seconds away. The person's number is the
+        // chain's (MTCoinSplit.available).
+        guard now < MTCoinChainRules.timeCut else { return 0 }
         if second.at != now { second = (now, 0) }
         let (away, over) = MTCoinBook.price.multipliedReportingOverflow(by: max(0, seconds - 1))
         let room = max(0, MTCoinBook.price - second.minted)
@@ -3356,10 +3362,18 @@ struct MTCoinCounts {
         return true
     }
 
-    private func move(_ k: MTCoinEntry.Kind, _ coins: Int, peer: String, ref: String, on: String?) -> Bool {
+    /// A SEND THE CHAIN HOLDS STANDS IN THE BOOK WHATEVER ITS BALANCE (fold-7): the chain weighed the sum a moment before
+    /// (MTCoinTx.send3), and the book, which mints nothing after the time cut (priced), holds less than the chain -- its refusal
+    /// would keep coins the chain lets go. A book below nothing is the truth of what it no longer mints (retake).
+    func sendHeld(_ coins: Int, to peer: String, ref: String, on target: String?) -> Bool {
+        move(.send, coins, peer: peer, ref: ref, on: target, held: true)
+    }
+
+    private func move(_ k: MTCoinEntry.Kind, _ coins: Int, peer: String, ref: String, on: String?, held: Bool = false) -> Bool {
         let e = MTCoinEntry(k: k, c: coins, ref: ref, peer: peer, on: on, at: Self.moment(ref))
-        // THE REFUSAL IS THE BOOK'S (the author's word 03.10 13:40): no move leaves more coins than the balance holds.
-        guard 0 < coins, !ref.isEmpty, !taken.contains(e.id), coins <= balance else {
+        // THE REFUSAL IS THE BOOK'S (the author's word 03.10 13:40): no move leaves more coins than the balance holds -- but a move
+        // the chain already weighed (sendHeld).
+        guard 0 < coins, !ref.isEmpty, !taken.contains(e.id), held || coins <= balance else {
             MontanaTrace.mark("coin_refused", "\(k.rawValue) coins=\(coins) balance=\(balance)")
             return false
         }
@@ -4009,17 +4023,36 @@ enum MTCoinChainRules {
         if split?.proven != proven || split?.declared != declared || split?.height != height {
             split = Split(proven: proven, declared: declared, fromCopy: fromCopy, at: now, height: height)
         }
+        if flying.contains(where: { _, f in f.height < height }) { flying = flying.filter { _, f in height <= f.height } }
+        told()
         MontanaTrace.markFolded("coin_split", "proven=\(proven) declared=\(declared) copy=\(fromCopy ? 1 : 0)", window: 600)
+    }
+    /// THE SENDS ON THEIR WAY TO THE CHAIN (fold-7; the author's words 23.10.2026 03:27 MSK: «the phone only mirrors the chain»): a SEND
+    /// laid on the head of height h stands in every state of a height above h, or never will -- another record took its place on that
+    /// head. Until the chain tells a state above h, its coins are on their way and the available leaves them out. Held in memory: a new
+    /// run reads the chain after the send's road has ended.
+    @Published private var flying: [String: (height: Int, coins: Int64)] = [:]
+    func laid(_ id: String, coins: Int, on height: Int) {
+        flying[id] = (height, Int64(coins))
+        told()
     }
     /// THE AVAILABLE, ONE NUMBER EVERYWHERE (the author's word 16.10.2026 17:19 MSK: «on the coins page do not show Proven, Declared,
     /// More wait to be minted below -- it is enough to show how much is available with one owner, so that a transfer from the chat
-    /// and from any place shows only the available»): what the person's chain holds for its one owner, proven and declared, never
-    /// above the book, which has already paid the transfers still on their way; before the chain has spoken in this run, the book.
-    /// The wallet, the chat's coin plate and the send page show it, and a transfer is weighed by it (MTCoinSend.transferResult).
+    /// and from any place shows only the available»): what the person's chain holds for its one owner, proven and declared, less the
+    /// sends on their way to it; before the chain has spoken in this run, the book. The book no longer caps it (fold-7, the author's
+    /// words 23.10.2026 03:37 MSK: «minting is a separate entity»): the book mints nothing after the time cut (MTLocalCoinLedger.priced),
+    /// so as a ceiling it would freeze the number while the chain mints. The wallet, the chat's coin plate, the send page, the chess
+    /// stake and the word about oneself show it, and a transfer is weighed by it (MTCoinSend.transferResult).
     var available: Int {
-        let book = MTLocalCoinLedger.shared.balance
-        guard let s = split else { return book }
-        return min(book, Int(clamping: s.proven + s.declared))
+        guard let s = split else { return MTLocalCoinLedger.shared.balance }
+        let away = flying.values.reduce(Int64(0)) { sum, f in s.height <= f.height ? sum &+ f.coins : sum }
+        return Int(clamping: max(0, s.proven &+ s.declared &- away))
+    }
+    /// The number the readers off the main actor hear (MTCoinBalance): the available, told at every move of the book and the chain.
+    /// Before the chain has spoken the available is the book's, so its views hear every move of the book here.
+    func told() {
+        if split == nil { objectWillChange.send() }
+        MTCoinBalance.set(available)
     }
 }
 
@@ -4486,17 +4519,13 @@ extension MTCoinTx {
     /// Under the node's minute plus one beat, a MINT's interval never passes the freshness less the margin: no second here is lost.
     nonisolated static let presentBeat: UInt64 = 40
     @MainActor private static var presence: Task<Void, Never>?
-    /// The app came to the screen, the wallet opened or the tunnel rose: while the person stays here every beat asks the chain, and
-    /// before the online cut the beat sleeps toward it and asks nothing.
+    /// The app came to the screen, the wallet opened or the tunnel rose: while the person stays here every beat asks the chain --
+    /// before the online cut only to read the key's life the chain mints itself (fold-6), so the person's number grows with the chain
+    /// and never by the book, which mints nothing after the time cut (MTLocalCoinLedger.priced).
     @MainActor static func beHere() {
         guard presence == nil else { return }
         presence = Task { @MainActor in
             while !Task.isCancelled, here {
-                let wait = MTCoinChainRules.onlineCut - Int64(Date().timeIntervalSince1970)
-                if 0 < wait {
-                    try? await Task.sleep(nanoseconds: UInt64(min(wait, 600)) * 1_000_000_000)
-                    continue
-                }
                 await reconcile()
                 try? await Task.sleep(nanoseconds: presentBeat * 1_000_000_000)
             }
@@ -4678,7 +4707,7 @@ extension MTCoinTx {
             let dec = max(0, Int64(coins) - st.proven)
             guard let rec = build3(.send, amount: UInt64(coins), prev: st.head, nonce: nonce, pair: pair, to: commit, a: UInt64(dec)) else { return .failed }
             let id = name(rec)
-            guard book.send(coins, to: conv, ref: refPrefix + id, on: target) else { return .failed }
+            guard book.sendHeld(coins, to: conv, ref: refPrefix + id, on: target) else { return .failed }
             let pending = pendingURL(id)
             if let pending { try? rec.write(to: pending, options: .atomic) }
             let word = await lay(rec)
@@ -4688,6 +4717,7 @@ extension MTCoinTx {
             case .left:
                 if let pending { try? FileManager.default.removeItem(at: pending) }
                 keepOpen(openSends() + [["id": id, "conv": conv, "coins": coins, "at": st.now]])
+                MTCoinSplit.shared.laid(id, coins: coins, on: st.height)
                 return .sent(id)
             case .notLeft, .behind:
                 book.receive(coins, from: conv, ref: backPrefix + id, on: target)
@@ -4695,6 +4725,7 @@ extension MTCoinTx {
                 if word == .notLeft { return .failed }
             case .unknown:
                 keepOpen(openSends() + [["id": id, "conv": conv, "coins": coins, "at": st.now]])
+                MTCoinSplit.shared.laid(id, coins: coins, on: st.height)
                 return .pending
             }
         }

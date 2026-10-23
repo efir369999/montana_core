@@ -367,7 +367,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // before -- the reason 667e6020 left it out. The observer runs on the main queue.
         MainActor.assumeIsolated {
             let person = MTPersonChain.shared
-            person.left(level: MTPersonChain.global(person: person.level, balance: MTCoinBook.ledger.balance))
+            person.left(level: MTPersonChain.global(person: person.level, balance: MTCoinSplit.shared.available))
         }
     }
     func application(_ application: UIApplication,
