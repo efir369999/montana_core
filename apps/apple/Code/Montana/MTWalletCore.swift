@@ -1763,6 +1763,7 @@ struct MTCallCredit {
                 if vpn { MTVPNWallMint.shared.ask() } else { MTVPNWallMint.shared.settle() }
                 if MTWalletPull.shared.on { MTWalletPull.shared.mintSecond() }
                 if call { MTCallMint.mintSecond() }
+                MTCoinSplit.shared.beat()
                 try? await Task.sleep(nanoseconds: UInt64(MTCoinFlash.gather * 1_000_000_000))
                 MTCoinFlash.shared.rise()
                 try? await Task.sleep(nanoseconds: UInt64((1 - MTCoinFlash.gather) * 1_000_000_000))
@@ -3937,6 +3938,12 @@ enum MTCoinChainRules {
         n.proven = s.proven + credit; n.minted = s.minted + credit
         return n
     }
+    /// What the time step adds to a key folded at the node second `s` by the node second `t`, no record laid between: from the time cut
+    /// both sides of its credit grow by one a second up to the online cut, so the node's later word is the earlier one plus these seconds.
+    nonisolated static func since(_ s: Int64, to t: Int64) -> Int64 {
+        guard timeCut <= s else { return 0 }
+        return max(0, min(t, onlineCut) - min(s, onlineCut))
+    }
     /// The seconds a MINT taken at the node second `at` may count from the online cut: what its interval holds of the last mintFresh,
     /// never a second before the cut -- the time step credited every one of those (fold-8).
     nonisolated static func present(t0: Int64, t1: Int64, at: Int64) -> Int64 { max(0, t1 - max(t0, at - mintFresh, onlineCut)) }
@@ -4050,17 +4057,17 @@ enum MTCoinChainRules {
 /// node does (POST /tx-head), and a word of the node never stands over the copy's fresher one. Nothing before the chain opened.
 @MainActor final class MTCoinSplit: ObservableObject {
     static let shared = MTCoinSplit()
-    struct Split: Equatable { let proven: Int64; let declared: Int64; let fromCopy: Bool; let at: TimeInterval; let height: Int }
+    struct Split: Equatable { let proven: Int64; let declared: Int64; let fromCopy: Bool; let at: TimeInterval; let height: Int; let second: Int64 }
     @Published private(set) var split: Split?
     /// THE NEWEST STATE OF THE CHAIN SPEAKS, WHOEVER FOLDED IT (the author's words 12.10.2026 15:5x MSK: «the available depends on the
     /// network and the confirmed ... everything at once»): the copy's fold stood an hour over every fresher word of the node, so a RECV or
     /// a MINT the node had taken waited for the copy's next round. The chain's height says which word is newer; one height is one state.
-    func heard(proven: Int64, declared: Int64, opened: Bool, fromCopy: Bool, height: Int) {
+    func heard(proven: Int64, declared: Int64, opened: Bool, fromCopy: Bool, height: Int, second: Int64) {
         guard opened else { return }
         if let s = split, height < s.height { return }
         let now = Date().timeIntervalSince1970
         if split?.proven != proven || split?.declared != declared || split?.height != height {
-            split = Split(proven: proven, declared: declared, fromCopy: fromCopy, at: now, height: height)
+            split = Split(proven: proven, declared: declared, fromCopy: fromCopy, at: now, height: height, second: second)
         }
         if flying.contains(where: { _, f in f.height < height }) { flying = flying.filter { _, f in height <= f.height } }
         told()
@@ -4085,13 +4092,27 @@ enum MTCoinChainRules {
     var available: Int {
         guard let s = split else { return MTLocalCoinLedger.shared.balance }
         let away = flying.values.reduce(Int64(0)) { sum, f in s.height <= f.height ? sum &+ f.coins : sum }
-        return Int(clamping: max(0, s.proven &+ s.declared &- away))
+        let lived = MTCoinChainRules.since(s.second, to: s.second &+ Int64(max(0, Date().timeIntervalSince1970 - s.at)))
+        return Int(clamping: max(0, s.proven &+ s.declared &+ lived &- away))
     }
     /// The number the readers off the main actor hear (MTCoinBalance): the available, told at every move of the book and the chain.
     /// Before the chain has spoken the available is the book's, so its views hear every move of the book here.
+    private var shown: Int?
     func told() {
         if split == nil { objectWillChange.send() }
+        shown = available
         MTCoinBalance.set(available)
+    }
+    /// THE CHAIN'S SECOND ON THE SCREEN (the author's words 23.10.2026 23:2x MSK: «in the client the minting shows just as before, only
+    /// it all happens at the core's level»): the chain credits the key every second by its own step (MTCoinChainRules.since), so the
+    /// beat of the minting raises those seconds with their sum as the book's coins once rose, and never a coin the chain did not fold.
+    func beat() {
+        guard split != nil, let before = shown else { return }
+        let now = available
+        guard before < now else { return }
+        objectWillChange.send()
+        told()
+        MTCoinFlash.shared.born(now - before, ref: MTWalletPull.refPrefix)
     }
 }
 
@@ -4586,7 +4607,7 @@ extension MTCoinTx {
         guard var st = await chain3(me, door: door) else { return nil }
         // what the chain's node folds is told to the wallet's split, after every word of it
         func told(_ s: Chain3?) -> Chain3? {
-            if let s, seat.stands { MTCoinSplit.shared.heard(proven: s.proven, declared: s.declared, opened: s.v3, fromCopy: false, height: s.height) }
+            if let s, seat.stands { MTCoinSplit.shared.heard(proven: s.proven, declared: s.declared, opened: s.v3, fromCopy: false, height: s.height, second: s.now) }
             return s
         }
         guard seat.stands else { MontanaTrace.mark("coin_v3", "the seat moved -- nothing laid"); return nil }
@@ -5142,7 +5163,7 @@ enum MTCoinReplica {
             await Task.detached(priority: .utility) { save(verified) }.value
         }
         // the person's own chain as this copy folded it: the wallet's split hears it before the node's word (MTCoinSplit)
-        if f.bad == 0, let mine = f.mine { MTCoinSplit.shared.heard(proven: mine.proven, declared: mine.declared, opened: mine.v3, fromCopy: true, height: mine.height) }
+        if f.bad == 0, let mine = f.mine { MTCoinSplit.shared.heard(proven: mine.proven, declared: mine.declared, opened: mine.v3, fromCopy: true, height: mine.height, second: T) }
         var signed = 0
         if f.bad == 0, 0 < f.keys, let root = bytes(f.root) {
             var t = UInt64(T).littleEndian
