@@ -5247,6 +5247,7 @@ struct MTClientRelease: Codable, Equatable {
     private var asking = false
     private var lastAsked = Date.distantPast
     private var channel: String?
+    private var channelMiss = "channel"
     private var said: [String: String] = [:]
     nonisolated static let cacheKey = "mt.release.cache"
     var updateURL: URL? {
@@ -5271,8 +5272,20 @@ struct MTClientRelease: Codable, Equatable {
         #if DEBUG
         channel = "beta"
         #else
-        if let result = try? await AppTransaction.shared, case .verified(let app) = result {
-            channel = app.environment == .production ? "store" : "beta"
+        // THE CHANNEL IS THE ENVIRONMENT APPLE SIGNED (T1, iOS 26.7.1, builds 2288-2291: «RELEASE ask refused channel» at
+        // every launch while T2 on iOS 27 was told every build): a transaction StoreKit could not verify on this device still
+        // carries the environment Apple wrote; only a payload altered on the device itself names another, so an App Store
+        // build still never points at a TestFlight beta (2.2). A transaction that does not come at all names its error once.
+        do {
+            switch try await AppTransaction.shared {
+            case .verified(let app):
+                channel = app.environment == .production ? "store" : "beta"
+            case .unverified(let app, let error):
+                channel = app.environment == .production ? "store" : "beta"
+                MontanaLog.event("RELEASE channel unverified env=\(app.environment.rawValue) why=\(error)")
+            }
+        } catch {
+            channelMiss = "channel:" + String(String(describing: error).prefix(80))
         }
         #endif
         return channel
@@ -5287,7 +5300,7 @@ struct MTClientRelease: Codable, Equatable {
         guard Date().timeIntervalSince(lastAsked) >= 30, let client else { return }
         asking = true
         defer { asking = false }
-        guard let channel = await installedChannel() else { refuse("ask", "channel"); return }
+        guard let channel = await installedChannel() else { refuse("ask", channelMiss); return }
         if latest == nil, let data = UserDefaults.standard.data(forKey: Self.cacheKey),
            let kept = MTClientRelease.read(data, bundle: bundle, channel: channel) { accept(kept) }
         // Public metadata only; the site's release document has no account or device identifiers.
