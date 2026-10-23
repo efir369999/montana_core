@@ -187,8 +187,69 @@ enum MontanaLocalVault {
             NSLog("[Vault] write refused for \(key): no device key — nothing was stored")
             return false
         }
-        UserDefaults.standard.set(sealed, forKey: key)
+        store(key, sealed)
         return true
+    }
+
+    // THE SETTINGS HOLD A NAME, NEVER A LOAD (23.10.2026, the author's words 12:16 MSK: «I quit Montana on the Mac, and it hangs
+    // and starts by itself»). The system keeps an app's settings in one file and rewrites it whole at each change, and above 4 MB
+    // it calls the store «invalid ... a bug in Montana»: ours stood at 14.2 MB on the Mac, the wall alone 8.5 MB under one key,
+    // and one wake by a push rewrote it 45 times in 36 s (system log 12:17:45-12:18:20). A sealed value from 64 KB on lies in a
+    // file named by the hash of its bytes; the settings keep, under the value's own key, the 37 bytes that name it. The key keeps
+    // its class -- a copy, a seat and a wipe find it where it always stood -- and two values share a file only when their bytes
+    // are one. A file no key names any more leaves a minute after its key moved on, and at the launch's housekeeping.
+    private static let mark = Data("MTVF1".utf8)
+    private static let outOfLine = 64 * 1024
+    private static let loads = DispatchQueue(label: "montana.vault.loads", qos: .utility)
+    private static var loadsDir: URL? {
+        let d = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("MontanaVault", isDirectory: true)
+        guard (try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)) != nil else { return nil }
+        return d
+    }
+    private static func loadName(_ held: Data) -> String? {
+        guard held.count == mark.count + 32, held.prefix(mark.count) == mark else { return nil }
+        return held.dropFirst(mark.count).map { String(format: "%02x", $0) }.joined()
+    }
+    /// A value as the settings hold it, its load fetched where it lies: the sealed bytes; nil when the file it names is gone.
+    static func resolved(_ held: Data) -> Data? {
+        guard let name = loadName(held) else { return held }
+        return loadsDir.flatMap { d in try? Data(contentsOf: d.appendingPathComponent(name)) }
+    }
+    private static func store(_ key: String, _ sealed: Data) {
+        let ud = UserDefaults.standard
+        let before = ud.data(forKey: key).flatMap(loadName)
+        var held = sealed
+        if outOfLine <= sealed.count, let d = loadsDir {
+            let digest = Data(SHA256.hash(data: sealed))
+            let file = d.appendingPathComponent(digest.map { String(format: "%02x", $0) }.joined())
+            if (try? sealed.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])) != nil { held = mark + digest }
+        }
+        ud.set(held, forKey: key)
+        if let before, before != loadName(held) {
+            loads.asyncAfter(deadline: .now() + 60) { sweep(only: [before]) }
+        }
+    }
+    /// Every load a key names -- in the settings, and in the values of each person waiting on the shelf -- stays; the rest
+    /// leave. Nothing leaves while a seat's move runs, nor a file younger than ten minutes (its key may be on its way).
+    static func settle() { loads.async { sweep(only: nil) } }
+    private static func sweep(only: Set<String>?) {
+        guard let d = loadsDir, let named = MTSeats.heldValues() else { return }
+        let domain = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "") ?? [:]
+        var kept = Set<String>()
+        for v in Array(domain.values) + named { if let held = v as? Data, let name = loadName(held) { kept.insert(name) } }
+        let fm = FileManager.default
+        let names = only.map(Array.init) ?? ((try? fm.contentsOfDirectory(atPath: d.path)) ?? [])
+        var gone = 0
+        for name in names where !kept.contains(name) {
+            let file = d.appendingPathComponent(name)
+            if only == nil {
+                let at = (try? fm.attributesOfItem(atPath: file.path)[.modificationDate] as? Date) ?? Date()
+                guard Date().timeIntervalSince(at) > 600 else { continue }
+            }
+            if (try? fm.removeItem(at: file)) != nil { gone += 1 }
+        }
+        if 0 < gone { MontanaTrace.mark("vault_loads", "kept=\(kept.count) gone=\(gone)") }
     }
     /// THE DEFAULTS ON THE DISK, NOW (26.09). The platform's own words (UserDefaults): a written value is updated in memory
     /// «right away» and written «to disk asynchronously»; synchronize() «waits for any pending asynchronous updates to the
@@ -201,7 +262,11 @@ enum MontanaLocalVault {
     static func commit() -> Bool { UserDefaults.standard.synchronize() }
 
     static func getDecrypted(_ key: String) -> Data? {
-        guard let raw = UserDefaults.standard.data(forKey: key) else { return nil }
+        guard let held = UserDefaults.standard.data(forKey: key) else { return nil }
+        guard let raw = resolved(held) else {
+            MontanaTrace.mark("vault_load_missing", "key=\(key)")
+            return nil
+        }
         if let opened = open(raw, Data(key.utf8)) { return opened }
         if let legacy = open(raw, Data()) { setEncrypted(key, legacy); return legacy }   // migration of blobs without AAD
         // It looks like a sealed block but does not open with OUR key -- this is foreign ciphertext

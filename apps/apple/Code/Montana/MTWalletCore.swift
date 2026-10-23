@@ -4084,12 +4084,14 @@ enum MTCoinTx {
         return body + sig
     }
     static func name(_ rec: Data) -> String { hex(Data(SHA256.hash(data: rec))) }
-    /// A record read back -- version 1 or 2 -- believed only when its shape holds and the core verifies its signature.
-    static func read(_ rec: Data) -> Record? {
+    /// A record read back -- version 1 or 2 -- believed only when its shape holds and the core verifies its signature. known: the
+    /// caller already saw a record of this very name verify, and the name is the hash of every byte, the signature's among them --
+    /// the same bytes, the same answer; the caller still holds the read record's name to the one it knew.
+    static func read(_ rec: Data, known: Bool = false) -> Record? {
         let b = [UInt8](rec)
         guard 5 <= b.count, Data(b[0..<4]) == magic else { return nil }
         let v = b[4]
-        if v == 3 { return read3(rec) }
+        if v == 3 { return read3(rec, known: known) }
         let end: Int, keyAt: Int, total: Int, prefix: Data
         switch v {
         case 1: end = 2021; keyAt = 69; total = size; prefix = signed1
@@ -4100,7 +4102,7 @@ enum MTCoinTx {
         let coins = u64(b, 5)
         guard 0 < coins, coins <= UInt64(Int.max) else { return nil }
         let body = Data(b[0..<end]), pk = Data(b[keyAt..<end]), sig = Data(b[end..<total])
-        guard MontanaPQ.verify(pubkey: pk, message: prefix + body, signature: sig) else { return nil }
+        guard known || MontanaPQ.verify(pubkey: pk, message: prefix + body, signature: sig) else { return nil }
         return Record(id: name(rec), version: v, coins: Int(coins), birthMs: u64(b, 13), pair: Data(b[37..<69]),
                       prev: v == 2 ? hex(Data(b[69..<101])) : "", from: keyTag(pk), bytes: rec)
     }
@@ -4374,7 +4376,7 @@ extension MTCoinTx {
         return body + sig
     }
     /// A record of version 3 read back -- believed only when its shape holds and the core verifies its signature.
-    static func read3(_ rec: Data) -> Record? {
+    static func read3(_ rec: Data, known: Bool = false) -> Record? {
         let b = [UInt8](rec)
         guard b.count == size3, Data(b[0..<4]) == magic, b[4] == 3, let kind = Kind3(rawValue: b[5]) else { return nil }
         let amount = u64(b, 6)
@@ -4382,7 +4384,7 @@ extension MTCoinTx {
         guard MTCoinChainRules.fieldsHold(kind: kind.rawValue, amount: amount, pair: Data(b[70..<102]), to: Data(b[102..<134]), ref: Data(b[134..<166]),
                                      a: u64(b, 166), b: u64(b, 174)) else { return nil }
         let body = Data(b[0..<2134]), pk = Data(b[182..<2134]), sig = Data(b[2134..<size3])
-        guard MontanaPQ.verify(pubkey: pk, message: signed3 + body, signature: sig) else { return nil }
+        guard known || MontanaPQ.verify(pubkey: pk, message: signed3 + body, signature: sig) else { return nil }
         var r = Record(id: name(rec), version: 3, coins: Int(amount), birthMs: u64(b, 14), pair: Data(b[70..<102]),
                        prev: hex(Data(b[38..<70])), from: keyTag(pk), bytes: rec)
         r.kind = kind.rawValue; r.to = Data(b[102..<134]); r.ref = hex(Data(b[134..<166])); r.a = u64(b, 166); r.b = u64(b, 174)
@@ -4744,7 +4746,9 @@ extension MTCoinTx {
 /// whose chains it cares about. The diary says what this phone holds (coin_replica), never whose chains.
 enum MTCoinReplica {
     struct Row: Codable { let id: String; let rec: String; let at: Int64; let node: String }
-    struct Held: Codable { var seq: [String: Int] = [:]; var rows: [Row] = [] }
+    /// at: the moment of the last round, kept with the rows -- a process a push woke is born with nothing in memory. known: the
+    /// names of the rows whose signature verified here once.
+    struct Held: Codable { var seq: [String: Int] = [:]; var rows: [Row] = []; var at: Double? = nil; var known: [String]? = nil }
     typealias St = MTCoinChainRules.St
     typealias SendInfo = MTCoinChainRules.SendInfo
     @MainActor private static var running = false
@@ -4764,17 +4768,18 @@ enum MTCoinReplica {
         MTCoinChainRules.step(s, MTCoinChainRules.Rec(id: p.id, version: p.version, kind: p.kind, amount: Int64(p.coins), from: p.from, to: p.to, ref: p.ref,
                                             a: p.a, b: p.b), at, sends, settled)
     }
-    struct Folded { var keys = 0; var records = 0; var root = ""; var bad = 0; var waiting = 0; var mine: St? }
+    struct Folded { var keys = 0; var records = 0; var root = ""; var bad = 0; var waiting = 0; var mine: St?; var verified = Set<String>() }
     /// Every chain folded from its first record in its own order (prev), a RECV after the SEND it settles; then the root of the
     /// checkpoint T exactly as the node computes it (V3 section 6): for every key in ascending from, its last record and its count at T.
-    nonisolated static func fold(_ rows: [Row], at T: Int64, me: String? = nil) -> Folded {
+    nonisolated static func fold(_ rows: [Row], at T: Int64, me: String? = nil, known: Set<String> = []) -> Folded {
         var out = Folded()
         var byPrev: [String: [String: MTCoinTx.Record]] = [:]
         var atOf: [String: Int64] = [:]
         var seen = Set<String>()
         for row in rows where !seen.contains(row.id) {
             seen.insert(row.id)
-            guard let d = Data(base64Encoded: row.rec), let r = MTCoinTx.read(d), r.id == row.id else { out.bad += 1; continue }
+            guard let d = Data(base64Encoded: row.rec), let r = MTCoinTx.read(d, known: known.contains(row.id)), r.id == row.id else { out.bad += 1; continue }
+            out.verified.insert(r.id)
             if r.version == 1 { continue }   // a version 1 row stands on no chain
             guard MTCoinTx.chainNode(of: r.from) == row.node else { out.bad += 1; continue }   // a node serves only its own chains
             byPrev[r.from, default: [:]][r.prev] = r
@@ -4830,6 +4835,12 @@ enum MTCoinReplica {
         // the critic, find the cause of all the lags»): the whole network's rows, decoded and encoded on the main thread every ten
         // minutes -- T1 on 2241, 11:38:36Z, a frame of the chat list held 438 ms in JSONEncoder under MTCoinReplica.save.
         var held = await Task.detached(priority: .utility) { load() }.value
+        // ONCE IN TEN MINUTES ACROSS PROCESSES (23.10.2026, the author's words 12:16 MSK: «I quit Montana on the Mac, and it hangs and
+        // starts by itself»): ranAt lives in memory, and every process a push woke was born with it at zero -- each wake pulled and
+        // folded the whole network again, a signature verified per row (sample of a wake on the Mac 12:32:48: 5.6 s of 25 under
+        // MTCoinReplica.fold, MontanaPQ.verify on top). The round's moment stands in the file it folds.
+        guard 600 <= Date().timeIntervalSince1970 - (held.at ?? 0) else { return }
+        held.at = Date().timeIntervalSince1970
         var pulled = 0
         for n in MTCoinTx.chainNodes {
             let door = "https://" + n.host + "/pushwake"
@@ -4856,7 +4867,13 @@ enum MTCoinReplica {
             return
         }
         let rows = held.rows
-        let f = await Task.detached(priority: .utility) { fold(rows, at: T, me: me) }.value
+        let known = Set(held.known ?? [])
+        let f = await Task.detached(priority: .utility) { fold(rows, at: T, me: me, known: known) }.value
+        if f.verified != known {
+            held.known = f.verified.sorted()
+            let verified = held
+            await Task.detached(priority: .utility) { save(verified) }.value
+        }
         // the person's own chain as this copy folded it: the wallet's split hears it before the node's word (MTCoinSplit)
         if f.bad == 0, let mine = f.mine { MTCoinSplit.shared.heard(proven: mine.proven, declared: mine.declared, opened: mine.v3, fromCopy: true, height: mine.height) }
         var signed = 0

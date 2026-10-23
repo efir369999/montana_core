@@ -820,7 +820,9 @@ enum MontanaBackup {
         // or its name (without, below), and every other row -- a group's, a pin's, a name's -- travels.
         let people = scope.people
         for (k, v) in SeedScope.carried() where scope.takes(key: k) {
-            if let d = v as? Data {
+            if let held = v as? Data {
+                // a load the settings only name travels as its bytes; a name whose file is gone carries nothing
+                guard let d = MontanaLocalVault.resolved(held) else { skipped += 1; continue }
                 if let opened = MontanaLocalVault.open(d, Data(k.utf8)) ?? MontanaLocalVault.open(d, Data()) {
                     out["d:" + k] = without(people, json: opened).base64EncodedString()
                 } else {

@@ -334,13 +334,20 @@ final class MTSeats: ObservableObject {
         guard b.step == nil else { return [] }
         return b.seats.filter { $0.id != b.active }.compactMap { shelfPerson($0) }
     }
+    /// The values of every person's store on the shelf, as their parks wrote them -- what the vault's loads may still be named by
+    /// (MontanaLocalVault.settle). nil while a move runs: a store half moved names nothing for certain.
+    static func heldValues() -> [Any]? {
+        guard book().step == nil else { return nil }
+        let ids = (try? FileManager.default.contentsOfDirectory(atPath: seatsRoot.path)) ?? []
+        return ids.flatMap { id in shelfValues(id).map { Array($0.values) } ?? [] }
+    }
     private static func shelfValues(_ id: String) -> [String: Any]? {
         guard let plist = try? Data(contentsOf: valuesFile(id)) else { return nil }
         return (try? PropertyListSerialization.propertyList(from: plist, options: [], format: nil)) as? [String: Any]
     }
     /// A sealed value of a person's store opened by this device's key: their own name for the value is its seal's binding.
     private static func shelfOpen(_ values: [String: Any], _ key: String) -> Data? {
-        guard let raw = values[key] as? Data else { return nil }
+        guard let held = values[key] as? Data, let raw = MontanaLocalVault.resolved(held) else { return nil }
         return MontanaLocalVault.open(raw, Data(key.utf8)) ?? MontanaLocalVault.open(raw, Data())
     }
     private static func shelfBook(_ values: [String: Any], _ key: String) -> [String: Data] {

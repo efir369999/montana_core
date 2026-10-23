@@ -111,20 +111,42 @@ enum MontanaKeychain {
     /// one code, one behaviour on the phone, the tablet and the Mac.
     private static let sameEverywhere: [String: Any] = [kSecUseDataProtectionKeychain as String: true]
 
+    /// A WRITE THAT CHANGES NOTHING WRITES NOTHING, AND A WRITE NEVER LEAVES THE KEY ABSENT (23.10.2026, the author's words
+    /// 12:16 MSK: «I quit Montana on the Mac, and it hangs and starts by itself»). Every wake by a push walks the ninety doors
+    /// that write here, and each write was a delete and an add: 114 deletes and 111 adds in the 36 s of one background launch
+    /// on the Mac (system log 12:17:45-12:18:20), most of them the same bytes again -- and between the delete and the add an
+    /// extension reading the key found none. The same bytes under the same class: nothing is written. Otherwise the item is
+    /// updated where it stands, added only where none stands, and recreated only when the keychain refuses the update.
     @discardableResult static func set(_ key: String, _ data: Data) -> Bool {
         var base: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
                                    kSecAttrAccount as String: key,
                                    kSecAttrAccessGroup as String: group]
         base.merge(sameEverywhere) { a, _ in a }
-        SecItemDelete(base as CFDictionary)
-        var add = base
-        add[kSecValueData as String] = data
         // Readable while the device is unlocked once, for extensions running in the background;
         // never leaves this device and never reaches a backup.
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        let ok = SecItemAdd(add as CFDictionary, nil) == errSecSuccess
-        MTColdMirror.wrote(key)
-        return ok
+        let attrs: [String: Any] = [kSecValueData as String: data,
+                                    kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
+        defer { MTColdMirror.wrote(key) }
+        if stands(base, data) { return true }
+        var st = SecItemUpdate(base as CFDictionary, attrs as CFDictionary)
+        if st != errSecSuccess {
+            if st != errSecItemNotFound { SecItemDelete(base as CFDictionary) }
+            var add = base
+            add.merge(attrs) { _, new in new }
+            st = SecItemAdd(add as CFDictionary, nil)
+        }
+        return st == errSecSuccess
+    }
+
+    private static func stands(_ base: [String: Any], _ data: Data) -> Bool {
+        var q = base
+        q[kSecReturnData as String] = true
+        q[kSecReturnAttributes as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: AnyObject?
+        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let found = out as? [String: Any] else { return false }
+        return found[kSecValueData as String] as? Data == data
+            && found[kSecAttrAccessible as String] as? String == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String
     }
 
     static func get(_ key: String) -> Data? {
