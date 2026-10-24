@@ -590,8 +590,8 @@ enum MontanaWakePush {
     private static func currentPostLane() -> URLSession { baseLock.lock(); defer { baseLock.unlock() }; return postLane }
     private static func currentPostGeneration() -> Int { baseLock.lock(); defer { baseLock.unlock() }; return postGeneration }
 
-    // SSOT-CONSOLIDATE: call signals have one delivery owner, on sigQ. The existing node
-    // connection carries them; a second door is used only after failure or a missing receipt.
+    // SSOT-CONSOLIDATE: call signals have one delivery owner, on sigQ. The owned node connection
+    // carries them and every other node gets a copy at once; one receipt from any door settles it.
     // This remains the accelerator lane (SERVER-DEBT-ACK), not a claim that WebRTC media
     // already rides the full-node stream described by the network specification.
     private static var callRoutes: [String: MTCallRoute] = [:]
@@ -685,6 +685,13 @@ enum MontanaWakePush {
                 guard callRoutes[key] === route else { return }
                 route.posted(id: packet.id, door: door, accepted: code == 200, now: ProcessInfo.processInfo.systemUptime)
                 driveCallRoute(route)
+            }
+        }
+        // The copies own no route state: only a receipt from their door can settle the packet.
+        for echo in route.echoDoors {
+            sendCallPacket(route.conv, epoch: route.epoch, payload: packet.payload, door: echo, terminal: packet.terminal) { code in
+                MTCallTimeline.record(epoch: route.epoch, stage: code == 200 ? "signal.echo.ok" : "signal.echo.fail",
+                    facts: "packet=\(MTCallTimeline.diagnosticToken(packet.id)) door=\(URL(string: echo)?.host ?? echo) code=\(code)")
             }
         }
     }
@@ -3953,7 +3960,7 @@ enum MontanaWakePush {
         let routes = callRoutes.values.filter { $0.conv == conv && !($0.isEnding) && living.contains($0.epoch) }
         guard !routes.isEmpty else { return [callReadDoors[conv] ?? signalDoor(for: conv)] }
         // Receiving has no election: the peer may still use any of these existing nodes,
-        // including an older build. Sending remains one acknowledged packet on one door.
+        // including an older build. Sending owns one door and copies each packet to the rest.
         return Array(Set(routes.flatMap { $0.doors }.filter { $0 != MTCallRoute.nearDoor })).sorted()
     }
     private static func fetchSignals(_ conv: String, door: String) {
@@ -5443,6 +5450,13 @@ final class MTCallRoute {
         return doors[index]
     }
     var needsWake: Bool { legacy || !packets.isEmpty }
+    // Every other node holds the same packet at once (24.10.2026 16:17 UTC: the owned door was dead and
+    // held each packet five seconds while the peer read another node). The receiver applies a packet once
+    // by its id; the authenticated local connection is never doubled onto the nodes.
+    var echoDoors: [String] {
+        guard let door, door != Self.nearDoor else { return [] }
+        return doors.filter { $0 != door && $0 != Self.nearDoor }
+    }
 
     init(conv: String, epoch: String, doors: [String], life: TimeInterval, now: TimeInterval) {
         self.conv = conv; self.epoch = epoch; self.doors = doors; self.life = life; lastUse = now
@@ -5472,6 +5486,7 @@ final class MTCallRoute {
         // indistinguishable callback while handing the route to a node the peer proved.
         guard retiredWrite?.id != packets[i].id || retiredWrite?.door != door else { return nil }
         packets[i].sentDoors.insert(door)
+        packets[i].sentDoors.formUnion(echoDoors)
         let p = packets[i]
         busy = p.id
         sendingGeneration = generation
@@ -5509,6 +5524,8 @@ final class MTCallRoute {
               packets[i].sentDoors.contains(door) else { return false }
         packets.remove(at: i)
         if self.door == door { proven = true; misses = 0 }
+        // The copy reached the reader while the owned door never delivered: the route follows the peer.
+        else if !proven { heard(door: door, legacy: legacy) }
         return true
     }
     func heard(door: String, legacy: Bool) {

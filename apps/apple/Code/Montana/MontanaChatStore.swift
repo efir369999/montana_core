@@ -4226,7 +4226,10 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         // is read right now, not on the day the person writes into it.
         var shared = Set<String>()   // a caption several inherited at once belongs to none of them
         for c in arr where arr.filter({ $0.title == c.title }).count > 1 { shared.insert(c.title) }
-        for c in arr {
+        // AN ERASED CONVERSATION IS NOT RESOLVED (24.10.2026, Agent 468, T1 2305): the resolver writes the folder's head when the
+        // folder map lacks it, and the erasure below clears that map -- every opening T1 bore the same four erased folders anew and
+        // erased them again, 96 heads and 96 forgets a day. The one guard of every archive write holds here too ([C-1]).
+        for c in arr where archivable(c.convRef) {
             MontanaArchive.migrate(convRef: c.convRef, legacy: legacyFolderNames(c.convRef))   // the one resolver, on its queue
         }
         // Conversations a person erased are carried through on EVERY opening: the deletion

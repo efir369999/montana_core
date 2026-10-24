@@ -1568,6 +1568,20 @@ final class MontanaTelemetry {
             self?.aliveState = "terminated"; self?.writeAlive(force: true, sync: true)
             MontanaLog.event("=== TERMINATE clean ==="); MontanaTrace.mark("scene", "terminate")
         }
+        #if targetEnvironment(macCatalyst)
+        // CLOSING THE LAST WINDOW ENDS THE MAC RUN (the author's word 24.10.2026 15:5x UTC: even in 2305 closing on the Mac did
+        // not end the process, and it has no right to live on by itself beside the phone). A windowless run kept the person's
+        // pickup and rang beside the phone. The leave runs no static teardown under living threads (the exit(0) of 2011-2027).
+        NotificationCenter.default.addObserver(forName: UIScene.didDisconnectNotification, object: nil, queue: .main) { [weak self] _ in
+            DispatchQueue.main.async {
+                guard !UIApplication.shared.connectedScenes.contains(where: { $0 is UIWindowScene }) else { return }
+                self?.aliveState = "terminated"; self?.writeAlive(force: true, sync: true)
+                MontanaLog.event("=== TERMINATE last window ==="); MontanaTrace.mark("scene", "terminate last-window")
+                MontanaLog.drain()
+                _exit(0)
+            }
+        }
+        #endif
         // THE CAUSE OF A DEATH IS NAMED, NOT GUESSED (the author's word 12.09: «the diary must name
         // the cause of a death»). The sentinel carries the facts a kill leaves behind — the resident
         // footprint, a memory warning, a stalled main thread — and the judge adds what the next launch
