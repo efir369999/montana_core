@@ -25,8 +25,8 @@ Montana Core 1.0 (2308) for Mac, signed with a Developer ID and notarized by App
 | --- | --- |
 | Release | [`v1.0-2308`](https://github.com/efir369999/montana_core/releases/tag/v1.0-2308) |
 | File | [`Montana-Core-1.0-2308.dmg`](https://github.com/efir369999/montana_core/releases/download/v1.0-2308/Montana-Core-1.0-2308.dmg), the same bytes as https://montana.quest/download/mac/Montana-Core.dmg |
-| SHA-256 | `ca8da8b080d45e547b2ca431f5e1b730c565ea225da759aaac95a3ab59261e47` |
-| Source | `apps/apple` at commit `faa837844fd7` (folder tree `b9379b7ee1744271ff3e215b4a4582378602212f`), staged from commit `2d8a183d860e` of the application's repository |
+| SHA-256 | `6d558b3cf76f75ebaceb19d24ec485f44c605dbbf8d0905c15785b69cbd51cf1` |
+| Source | `apps/apple` at commit `0f25743b2e42` (folder tree `b9379b7ee1744271ff3e215b4a4582378602212f`), staged from commit `2d8a183d860e` of the application's repository |
 | Requires | A Mac with Apple silicon, macOS 14.2 or later |
 
 The Mac build carries no VPN: a packet tunnel distributed outside the Mac App Store must be a system extension, and a Mac
