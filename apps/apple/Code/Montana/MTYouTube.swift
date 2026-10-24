@@ -1,4 +1,4 @@
-// MTYouTube.swift -- YouTube inside Montana. The author's words 17.10.2026 MSK: 16:3x-16:4x, a social network that plays the music
+// MTYouTube.swift -- YouTube inside Montana. The author's words 17.10.2026 UTC: 13:3x-13:4x, a social network that plays the music
 // of a YouTube link inside itself «breaks nothing -- do it so here», «search YouTube's music at once, and a link plays inside our
 // app»; 18:0x, integrate it natively -- the mini player works, no extra windows in the chat, everything plays at once, nothing takes
 // the sound before the person's own tap and nothing cuts another app's music; 18:1x, «YouTube in our app like picture in picture»,
@@ -123,7 +123,7 @@ enum MTYouTube {
     }
 }
 
-/// THE ONE PLAYER, OUR MINI PLAYER (the author's words 18.10.2026 11:1x MSK: «the picture in picture is not alive either and nothing
+/// THE ONE PLAYER, OUR MINI PLAYER (the author's words 18.10.2026 08:1x UTC: «the picture in picture is not alive either and nothing
 /// takes a tap; the behaviour must be as in the chat everywhere, and it must load natively into our mini player»; «this must be one
 /// function, behaving always the same by the constitution»). T1 08:05:45Z: the video went into the system's picture in picture
 /// from a stage standing on the window outside every controller, and from that moment not one touch reached the app -- the main

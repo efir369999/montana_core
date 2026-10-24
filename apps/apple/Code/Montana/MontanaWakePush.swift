@@ -981,7 +981,7 @@ enum MontanaWakePush {
                 subs.append(["conv": cw, "sid": mySubId(cw)])
             }
         }
-        // THE SLOTS THIS PHONE KEEPS RING IT (MTKeeping, the author's word 08.10.2026 22:4x MSK: the restore by silent pushes): a
+        // THE SLOTS THIS PHONE KEEPS RING IT (MTKeeping, the author's word 08.10.2026 19:4x UTC: the restore by silent pushes): a
         // call in the pipe of a slot wakes this phone by a background push, and its answer leaves within the wake.
         for (_, secret) in MTKeeping.listening() {
             for w in (w0 - 1)...(w0 + 1) {
@@ -1128,7 +1128,7 @@ enum MontanaWakePush {
         let tok = SHA256.hash(data: Data(hex.utf8)).prefix(6).map { String(format: "%02x", $0) }.joined()
         return regSetPrefix + subIdFormat + regGeneration + "_" + host + "_" + tok
     }
-    /// THE MAPS OF A TOKEN THIS PHONE NO LONGER HOLDS GO (the critic B-6; the author's words 11.10.2026 20:1x MSK: «check the whole
+    /// THE MAPS OF A TOKEN THIS PHONE NO LONGER HOLDS GO (the critic B-6; the author's words 11.10.2026 17:1x UTC: «check the whole
     /// architecture of the chats' time chains, so there are no holes by the constitution», 21:5x: «carry out all 13»). A map is
     /// named by its door, the id formula, its generation and the token, and nothing ever removed one: T1's settings held 30 of
     /// them, 7.3 MB of a 26 MB plist -- 20 of earlier formulas and generations, 6 of tokens of the days before -- and every write
@@ -1172,7 +1172,7 @@ enum MontanaWakePush {
               let m = try? JSONDecoder().decode([String: Double].self, from: d) else { return [:] }
         return m
     }
-    /// WHAT A DOOR KEEPS IS ASKED, NOT REMEMBERED (the author's word 10.10.2026 12:5x MSK: «notifications reinforced concrete, not
+    /// WHAT A DOOR KEEPS IS ASKED, NOT REMEMBERED (the author's word 10.10.2026 09:5x UTC: «notifications reinforced concrete, not
     /// one error in principle»). The standing map is this phone's belief, and the belief stood a week while the door had lost the
     /// rows under it. A round with nothing to post asks the door, at most twice an hour, how many rows it keeps for this token
     /// (montana-notify answers "rows" since 10.10, re-asserting one pair); a door keeping fewer than the map believes is posted
@@ -1408,7 +1408,7 @@ enum MontanaWakePush {
               let m = try? JSONDecoder().decode([String: String].self, from: d) else { return nil }
         return m[mid]
     }
-    /// A REFERENCE LIVES AS LONG AS ITS LETTER RIDES (the critic B-6; the author's words 11.10.2026 20:1x MSK: «check the whole
+    /// A REFERENCE LIVES AS LONG AS ITS LETTER RIDES (the critic B-6; the author's words 11.10.2026 17:1x UTC: «check the whole
     /// architecture of the chats' time chains, so there are no holes by the constitution», 21:5x: «carry out all 13»). Only a
     /// letter's end took its reference (takeLongRef), and a letter that left the queue another way -- a wall's page replaced by a
     /// newer one, a state retired, a word expired -- left it for good: T1 kept 6.7 MB of them. Every write keeps only the
@@ -1695,7 +1695,7 @@ enum MontanaWakePush {
                     knockOutcome(doors[i], code: code)                       // the first answer after a failed knock drains the queue
                     MontanaTrace.mark("wakepush_tx", "code=\(code) woken=\(woken) door=\(dh) carry=\(carry) to=\(String(conv.prefix(10)))" + (code < 0 ? " err=\(errWord(err))" : ""))
                 }
-                // THE WALK STOPS AT THE FIRST DOOR THAT BOXED THE LETTER (17.10.2026; the author's words 00:19-00:20 MSK: one
+                // THE WALK STOPS AT THE FIRST DOOR THAT BOXED THE LETTER (16.10.2026; the author's words 21:19-21:20 UTC: one
                 // letter, two wakes three seconds apart under one «at»). A 200 is the letter in that node's box and in its own ring
                 // ledger, and since 10.10 the node asks its peer node itself for the persons it does not hold. Walking on past a
                 // 200 whose «woken» read 0 or -1 knocked the second node, whose ledger of rung letters had never seen this one, and
@@ -1894,7 +1894,7 @@ enum MontanaWakePush {
         return !Task.isCancelled
     }
 
-    /// THE KEEPING'S CARGO IS QUIET (the author's word 22.10.2026 23:0x MSK: on T1 at 23:01 the media loaded long). T1 rose
+    /// THE KEEPING'S CARGO IS QUIET (the author's word 22.10.2026 20:0x UTC: on T1 at 23:01 the media loaded long). T1 rose
     /// at 20:00:29Z after a crash and laid its daily light copy first -- 126 MB in pieces of half a megabyte, 471 puts and 918
     /// copies to the second machine in three and a half minutes -- on the very doors and roads the person's photos came in by.
     /// A copy waits a minute and loses nothing; a picture on screen waits in front of the person. Quiet cargo is the keeping's
@@ -2664,7 +2664,9 @@ enum MontanaWakePush {
         let subs = ear.subs, sids = ear.sids, secretOf = ear.secretOf
         let rdvLabels = ear.rdvLabels, invOf = ear.invOf, chatOf = ear.chatOf
         var stashed = 0
-        var confirmed: [String] = []   // stored letters — confirmed to the node, it removes them (the box no longer erases on yield)
+        // Stored letters -- confirmed to the node as taken BY THIS DEVICE (mid, its name under the letter's label): the letter stays
+        // for the person's other devices (24.10.2026, the Mac took T1's photos); only a funeral removes it for all (boxDel).
+        var confirmed: [[String]] = []
         // A chunk of 128 pairs — as in registration: 512 labels ≈ 69KB exceeded the node's
         // 64KiB body limit — the node answered 413 and only the tail arrived (precedent
         // labels=2, 22.08: 204 pipes -> 2050 labels -> 16 chunk receipts never collected).
@@ -2693,7 +2695,8 @@ enum MontanaWakePush {
                 let doors = boxReadDoors(bases(for: "box"))
                 guard !doors.isEmpty else { boxRested(); return stashed }
                 let page = try? JSONSerialization.data(withJSONObject:
-                    ["subs": Array(subs[start..<end]), "sids": Array(sids[start..<end])])
+                    ["subs": Array(subs[start..<end]), "sids": Array(sids[start..<end]),
+                     "devs": subs[start..<end].map { MontanaArchive.deviceSid($0) }])
                 let answers = await withTaskGroup(of: DoorAnswer.self, returning: [DoorAnswer].self) { group in
                     for b in doors {
                         group.addTask {
@@ -2785,7 +2788,7 @@ enum MontanaWakePush {
                         let f = parseLetterFields(plain)
                         guard !f[0].isEmpty, !f[1].isEmpty, let chat = chatOf[cw] else { continue }
                         if let buries, await buries(chat, f[0]) {
-                            if let m = l["m"] as? String, !m.isEmpty { confirmed.append(m) }
+                            if let m = l["m"] as? String, !m.isEmpty { confirmed.append([m, MontanaArchive.deviceSid(cw)]) }
                             continue
                         }
                         guard keep(["c": chat, "m": f[0], "t": f[1], "n": f[2], "g": f[3],
@@ -2801,7 +2804,7 @@ enum MontanaWakePush {
                                      "at": String(Int(atS) - opened.back * 60)]) else { continue }
                     }
                     stashed += 1
-                    if let m = l["m"] as? String, !m.isEmpty { confirmed.append(m) }
+                    if let m = l["m"] as? String, !m.isEmpty { confirmed.append([m, MontanaArchive.deviceSid(cw)]) }
                 }
                 // Confirmation RIGHT AFTER the page: the yield is non-destructive, and it is
                 // our placement confirmation that opens the next page. THE LETTERS DO NOT WAIT FOR
@@ -2809,10 +2812,10 @@ enum MontanaWakePush {
                 // and the drain stood ten seconds behind burials to two doors dead on that network).
                 // A burial is a cleanup — it rides beside; only a full page, which needs the box
                 // cleared to yield the next one, waits for it.
-                if letters.count >= 128 { await boxDel(confirmed); confirmed.removeAll() }
+                if letters.count >= 128 { await boxTaken(confirmed); confirmed.removeAll() }
                 else if !confirmed.isEmpty {
-                    let mids = confirmed; confirmed.removeAll()
-                    Task.detached(priority: .utility) { await boxDel(mids) }
+                    let took = confirmed; confirmed.removeAll()
+                    Task.detached(priority: .utility) { await boxTaken(took) }
                 }
                 if letters.count < 128 { break }
             }
@@ -2820,7 +2823,29 @@ enum MontanaWakePush {
         return stashed
     }
 
-    /// A letter's burial in the node box: delivered by the direct road or «delete for both» —
+    /// «This device has it in hand»: the node stops yielding these letters to this device and stops their ring; the letters stay
+    /// for the person's other devices until the box's term. Every store, as the burial: a letter lies on one of them.
+    static func boxTaken(_ took: [[String]]) async {
+        guard !took.isEmpty else { return }
+        let doors = orderedBases(for: "box")
+        let awake = doors.filter { doorAlive($0) }
+        let body = try? JSONSerialization.data(withJSONObject: ["taken": took])
+        await withTaskGroup(of: Void.self) { group in
+            for b in awake.isEmpty ? doors : awake {
+                group.addTask {
+                    guard let url = URL(string: b + "/box-del") else { return }   // SERVER-DEBT-ACK: the accelerator node (rung 4), not the delivery road
+                    var req = URLRequest(url: url); req.httpMethod = "POST"   // SERVER-DEBT-ACK: the accelerator node (rung 4)
+                    req.timeoutInterval = 5
+                    req.setValue("application/json", forHTTPHeaderField: "content-type")
+                    req.httpBody = body
+                    // SILENT-OK: a missed mark costs one more yield of a letter this device already holds; its landing is idempotent by mid.
+                    _ = try? await URLSession.shared.data(for: req)   // SERVER-DEBT-ACK: the accelerator node (rung 4)
+                }
+            }
+        }
+    }
+
+    /// A letter's burial in the node box: «delete for both» —
     /// nothing stays on the node beyond what awaits delivery. The answer names each door asked and whether it said «ok».
     @discardableResult
     static func boxDel(_ mids: [String], skipping confirmed: Set<String>? = nil) async -> [String: Bool] {
@@ -3036,7 +3061,7 @@ enum MontanaWakePush {
     }
 
     /// Registering the voip token under all conversations' windows — mirrors registerConvs, its own debounce.
-    /// A RING NO PIPE OF MINE OPENS NAMES A ROW THE DOOR SHOULD NOT HOLD (12.10.2026, the author's word 11:5x MSK: «from Montana it
+    /// A RING NO PIPE OF MINE OPENS NAMES A ROW THE DOOR SHOULD NOT HOLD (12.10.2026, the author's word 08:5x UTC: «from Montana it
     /// does not call»). Measured 07:23:31-07:24:26Z: the iPhone 17's install of 11.10 was woken eleven times for a pair of the
     /// install it replaced (wakepush_vrx peer=nil, ring_posted busy-dummy from=Montana), the old call rows standing at the door
     /// under the same call token; the node counted the person rung, asked no other app of theirs, and the caller rang 55 s into
@@ -3097,7 +3122,7 @@ enum MontanaWakePush {
         let ref = twinRef; guard !ref.isEmpty else { MontanaTrace.mark("wakepush_vreg", "skip no-addr"); return }
         guard agreesWithCanon() else { MontanaTrace.mark("wakepush_canon", "FAIL"); return }
         let refs = MTPipeBook.registrable(refusing: refused ?? ChatStore.refusedNow())
-        // THE CARD RINGS ITS OWNER FOR A CALL TOO (11.10.2026, No.63, the author's word 21:5x MSK: «check T1's call at 21:55 to the iPad,
+        // THE CARD RINGS ITS OWNER FOR A CALL TOO (11.10.2026, No.63, the author's word 18:5x UTC: «check T1's call at 21:55 to the iPad,
         // Nana, Business: the call did not go through»; «calls perfect in every scenario»). A call to a pair in first contact has no pipe
         // tag its callee listens on -- the card's owner holds no secret until the first letter's encapsulation reaches them -- and it rang
         // nobody: measured on both nodes 18:56:58-18:57:25Z, NO RECIPIENTS, the pipe's call rows held one row, the caller's own. The letters
@@ -3141,7 +3166,7 @@ enum MontanaWakePush {
         // One door per machine and one chain per door at a time (24.09): the law and the measurement stand at registerConvs.
         let now = Date().timeIntervalSince1970
         var told = false
-        // THE DOOR HEARS EACH LIFE OF THIS PHONE ONCE, WHOLE (the author's word 12.10.2026 13:4x MSK, No.65: «a call came to her and
+        // THE DOOR HEARS EACH LIFE OF THIS PHONE ONCE, WHOLE (the author's word 12.10.2026 10:4x UTC, No.65: «a call came to her and
         // dropped by itself before her eyes -- fix it and allow no such scenario by construction»). Nana's iPhone 17, 07:23:31-07:24:09Z:
         // eleven call pushes for a pair of the install this one replaced (wakepush_vrx peer=nil, ring_posted busy-dummy end=failed) --
         // the system must be shown a call for every call push, so each one flashed on her screen and fell. The cleaning above follows
@@ -3212,7 +3237,7 @@ enum MontanaWakePush {
         if let done { answered.notify(queue: .main) { done(every.value) } }
     }
 
-    /// A MAC IS RAISED BY THE PERSON'S HAND ONLY (the author's words 23.10.2026 17:4x MSK: «Montana on the Mac opened by itself
+    /// A MAC IS RAISED BY THE PERSON'S HAND ONLY (the author's words 23.10.2026 14:4x UTC: «Montana on the Mac opened by itself
     /// on a call and the call came to the wrong place -- it opens even after I closed it and quit», «I pressed quit and the
     /// Montana process hangs»). Measured on the author's Mac that minute (build 2241): 17:42:06 a silent ring launched the quit
     /// app, 17:43:53 a second launch stood on the screen within a second, took the ring of a:30a858 and answered it held by the
@@ -3735,7 +3760,7 @@ enum MontanaWakePush {
     /// the correspondent's move then rode the silent push, eight to fourteen seconds. Each holder owns its own set; the lane
     /// dies only when every set is empty.
     private static var boardConvs = Set<String>()
-    /// A GROUP ROOM'S PAIR LANES (MTGroupRoom, the author's word 07.10.2026 00:2x MSK: calls of up to 13 in a group). Two people of
+    /// A GROUP ROOM'S PAIR LANES (MTGroupRoom, the author's word 06.10.2026 21:2x UTC: calls of up to 13 in a group). Two people of
     /// a group carried by its owner hold no pipe between them, so their lane is sealed by a key the two derive from the room's key
     /// and their two seats; it is named here by the room, never written into the book of pipes, and asked only while the room lives.
     private static var roomConvs = Set<String>()
@@ -4138,7 +4163,7 @@ enum MontanaWakePush {
         answerGone(conv: conv, epoch: epoch, msgs: msgs)
     }
     /// The same answer for the pipe's words, which arrive already open (24.09: the pipe names every word's call).
-    /// AN ANSWER TO A CALL THIS DEVICE ENDED IS ANSWERED «GONE» (12.10.2026, the author's words 12:4x MSK on Nana's iPhone 17: «the
+    /// AN ANSWER TO A CALL THIS DEVICE ENDED IS ANSWERED «GONE» (12.10.2026, the author's words 09:4x UTC on Nana's iPhone 17: «the
     /// call comes and drops»): Marusya answered at 09:34:46.518Z a ring of Nana's call that Nana had ended at 42.278, and her phone
     /// stood «connecting» twelve seconds into nothing while Nana's phone read the answer as a sibling's and said nothing
     /// (call_sibling answer to a machine at rest). An answer addressed to THIS device («to», No.60) for a call whose seed this
@@ -4315,7 +4340,7 @@ enum MontanaWakePush {
                         device: device, bornAtMS: bornAtMS)
     }
 
-    /// THE RING AT THE CARD (11.10.2026, No.63, the author's word 21:5x MSK: «check T1's call at 21:55 to the iPad, Nana, Business: the
+    /// THE RING AT THE CARD (11.10.2026, No.63, the author's word 18:5x UTC: «check T1's call at 21:55 to the iPad, Nana, Business: the
     /// call did not go through»). A pair in first contact has no pipe tag its callee listens on: the card's owner holds no secret until
     /// the first letter's encapsulation reaches them, and the ring went where the caller alone stood (measured on both nodes, 18:56:58 to
     /// 18:57:25Z: NO RECIPIENTS; the pipe's call rows held one row, the caller's own). The owner listens at the card's daily tag
@@ -4540,7 +4565,7 @@ enum MontanaDiagConsent {
     static let birth = false
     #endif
     static var on: Bool { UserDefaults.standard.object(forKey: key) as? Bool ?? birth }
-    /// THE YES IS ASKED AT THE INSTALL AND AT EVERY UPDATE (the author's word 11.10.2026 15:5x MSK: «the request for diagnostics by
+    /// THE YES IS ASKED AT THE INSTALL AND AT EVERY UPDATE (the author's word 11.10.2026 12:5x UTC: «the request for diagnostics by
     /// default at installation and at updates»): a build the person has not answered for asks once, by the system's own alert,
     /// until the yes is given; the answer is the very switch Settings holds. Never over a call -- the camera's lesson of the same
     /// day: an alert standing over a ring made the call impossible to take (MontanaApp.askDiagnosticsWhenFree).
@@ -5216,7 +5241,7 @@ struct MTClientRelease: Codable, Equatable {
     let url: String
     let bundle: String
     let channel: String
-    /// THE LEAST BUILD THE NETWORK ADMITS AND THE LEVEL OF THE CORE (the author's words 19.10.2026 22:2x MSK: «on every build, at
+    /// THE LEAST BUILD THE NETWORK ADMITS AND THE LEVEL OF THE CORE (the author's words 19.10.2026 19:2x UTC: «on every build, at
     /// opening, a forced update to the new build»; «our build is Montana Core v1.0»): the release document names them (min, core);
     /// a build below the least sees the update page over everything (MTUpdateRequired). A document without them admits every build.
     let least: Int
@@ -5291,7 +5316,7 @@ struct MTClientRelease: Codable, Equatable {
         return channel
     }
     func refresh() async {
-        // THE WORD IS TOLD BEFORE ANY QUESTION IS ASKED (19.10.2026, the author's word 11:4x MSK: «the update messages must
+        // THE WORD IS TOLD BEFORE ANY QUESTION IS ASKED (19.10.2026, the author's word 08:4x UTC: «the update messages must
         // come to every user»): the launch's refresh asks the site while the history still loads, and the history's own
         // refresh, arriving mid-question, left at «asking» -- a phone whose history loads longer than the site answers was
         // never told (T1: no «RELEASE told» for 2245 nor 2246, T2 told). The release already in hand lands first, every call.

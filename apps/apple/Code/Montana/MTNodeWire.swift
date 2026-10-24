@@ -71,7 +71,7 @@ enum MTNodeWire {
     /// steps, so a forged time costs a bounded walk and opens nothing.
     static let walkAnchorDay: UInt64 = 20754   // 28.10.2026 UTC
     static let minutesPerDay: UInt64 = 1440
-    /// THE ROOT OF A CONVERSATION (21.10.2026, the author's word at 15:2x MSK: «yes»): SHA-256("mt-conv-root" ‖ 0x00 ‖ the
+    /// THE ROOT OF A CONVERSATION (21.10.2026, the author's word at 12:2x UTC: «yes»): SHA-256("mt-conv-root" ‖ 0x00 ‖ the
     /// established secret). What a pair derives afresh for every item -- the blind of a coin SEND and the author field of a
     /// letter -- stands on the root from the day after walkAnchorDay, never on the established secret, so the walk can erase
     /// that secret. The root opens no letter: it is one hash in a domain of its own, and nothing of the walk is derived from it.
@@ -140,7 +140,7 @@ enum MTNodeWire {
         guard body.count <= envelopeSize else { return nil }
         var b = body; b.append(Data(count: envelopeSize - body.count)); return b
     }
-    // ── THE LETTER'S AUTHOR IS THE PERSON, NOT THE DEVICE (the author's words 11.10.2026 16:4x and 17:13 MSK, No.61-62: «the
+    // ── THE LETTER'S AUTHOR IS THE PERSON, NOT THE DEVICE (the author's words 11.10.2026 16:4x and 14:13 UTC, No.61-62: «the
     // avatar is determined by the seed phrase, the whole chain of time»; «the whole architecture is built by the chain of the
     // person and restored by it»). A pipe's secret is held by every device of one person and by the correspondent, and a letter
     // named no author: T3 on T1's words announced its face to 36 correspondents, the same words reached T1 on the same pipes,

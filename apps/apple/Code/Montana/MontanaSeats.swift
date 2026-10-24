@@ -408,7 +408,7 @@ final class MTSeats: ObservableObject {
             return shelfSeal(m, metFile(id), metBinding)
         }
     }
-    /// THE PAIR OF TWO PERSONS OF THIS PHONE (the author's word 11.10.2026 17:13 MSK, No.62: «with several accounts, an option in a
+    /// THE PAIR OF TWO PERSONS OF THIS PHONE (the author's word 11.10.2026 14:13 UTC, No.62: «with several accounts, an option in a
     /// transfer to send to oneself on another account»): the person seated meets a person on the shelf here, on the phone that holds
     /// both -- an encapsulation to the shelf person's card, accepted by that card's own key -- so the pipe is born in the seated
     /// book and among the pipes the shelf person was met by, with no node in the meeting. It rides the box like every pipe, rings
@@ -443,7 +443,7 @@ final class MTSeats: ObservableObject {
     static func landShelf() {
         shelfIO.async {
             guard let id = book().active else { return }
-            // THE PIPES THE PERSON WAS MET BY WHILE WAITING ARE BORN IN THEIR OWN BOOK (the author's word 11.10.2026 19:0x MSK: «at
+            // THE PIPES THE PERSON WAS MET BY WHILE WAITING ARE BORN IN THEIR OWN BOOK (the author's word 11.10.2026 16:0x UTC: «at
             // 18:51 I sent an internal transfer of 4 million in Business, they did not come»). T1, 15:51:48Z: the person seated paid
             // a person on the shelf on the pipe born on this phone (pairWithShelf), which stood only among the shelf's met pipes; the
             // receiver was seated seven seconds later and never listened on it -- a pipe met by a card is born at the lift by its
@@ -681,7 +681,7 @@ final class MTSeats: ObservableObject {
 
 
 // ════════════════════════════════════════════════════════════ THE PERSONS ON THE SHELF ARE ALIVE (the author's words 07.10.2026
-// 19:1x-19:2x MSK: «so the extra accounts are dead until I enter them -- a critical error, and on our TimeChain it is solved already
+// 16:1x-16:2x UTC: «so the extra accounts are dead until I enter them -- a critical error, and on our TimeChain it is solved already
 // -- make the same one system by our constitution»; «carry it to the end and close the construction -- we are a decentralised
 // ecosystem with a constitution of 13 points»). Nothing of the person seated is read or written here: every key comes from the shelf
 // (tools/mt-live-seats-check.py). ════════════════════════════════════════════════════════════

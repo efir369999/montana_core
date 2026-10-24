@@ -188,7 +188,7 @@ enum MTChessSend {
     @MainActor static func letter(_ packet: MTChessLetter, to chat: Chat, store: ChatStore) -> Bool {
         let chat = conversation(chat, store: store)
         let conv = chat.convId ?? chat.name
-        // THE GAME'S POT (the author's words 06.10.2026 19:0x-19:1x MSK, MTChessCoins): a move of a game with a pot names the coins
+        // THE GAME'S POT (the author's words 06.10.2026 16:0x-16:1x UTC, MTChessCoins): a move of a game with a pot names the coins
         // it mints into it, and the invitation's stake and the guest's acceptance leave the book into it before the letter leaves.
         var packet = packet
         let invite = packet.kind == .invite ? packet
@@ -262,7 +262,7 @@ enum MTChessSend {
         }
         return letter(event, to: chat, store: store) ? event.id : nil
     }
-    /// AN INVITATION THAT WAITS FOR MY ANSWER (the author's word 06.10.2026 23:2x MSK: «below, two buttons -- the blue system Accept
+    /// AN INVITATION THAT WAITS FOR MY ANSWER (the author's word 06.10.2026 20:2x UTC: «below, two buttons -- the blue system Accept
     /// and the red burgundy Decline»): theirs to me, unanswered, read by the same replay the acceptance is judged by.
     static func awaitsMe(_ game: String, rows: [Message]) -> Bool {
         guard let now = state(game, rows: rows) else { return false }
@@ -280,7 +280,7 @@ enum MTChessSend {
     @MainActor static var meetingLife: Int64 { Int64(ChatStore.presenceLife * 1000) }
 }
 
-/// THE GAME'S COINS (the author's word 03.10.2026 22:35 MSK: «every move +1 coin to each, the whole sum to the winner»): read
+/// THE GAME'S COINS (the author's word 03.10.2026 19:35 UTC: «every move +1 coin to each, the whole sum to the winner»): read
 /// from the game's own letters, so both phones count alike. Every move the replay accepted pays one coin to each player -- this
 /// phone credits its own, once per move letter; a won game moves the loser's coins of that game to the winner (the loser's
 /// phone gives them up, the winner's takes them), so the winner holds the whole sum and the loser none; a draw or an ended game
@@ -289,7 +289,7 @@ enum MTChessCoins {
     static let movePrefix = "chess:"
     static let wonPrefix = "chess-won:"
     static let lostPrefix = "chess-lost:"
-    /// THE GAME'S POT (the author's words 06.10.2026 19:0x-19:1x MSK: «in chess every move x1000 to the level -- it forms the
+    /// THE GAME'S POT (the author's words 06.10.2026 16:0x-16:1x UTC: «in chess every move x1000 to the level -- it forms the
     /// winner's common pool of the game; one may set one's own stake in the offer to play»). A game invited from the word on
     /// (MTChessLetter.pooled) mints nothing into a book while it is played: every move names its coins -- its maker's level
     /// times a thousand -- into the pot, and each side's stake leaves its book into the pot as its letter leaves (put). At the
@@ -354,7 +354,7 @@ enum MTChessCoins {
         case nil: return (game.mintedMine, mineIn, mineIn)
         }
     }
-    /// WHAT THE GAME GAVE OR TOOK (the author's word 06.10.2026 23:2x MSK: «in the chat after the game show the coins' transfer or
+    /// WHAT THE GAME GAVE OR TOOK (the author's word 06.10.2026 20:2x UTC: «in the chat after the game show the coins' transfer or
     /// top-up, plainly; fix the minuses and the pluses»): this side's share against what it put -- the same reading pay books by.
     /// The pot's coins are read as the book took them, never the moves' sum the replay names: the book's second
     /// (MTLocalCoinLedger.priced, point 11 as the ceiling, 19.10.2026) mints a pot one coin at most.
@@ -374,14 +374,14 @@ enum MTChessCoins {
     }
 }
 
-/// THE TIMER (the author's word 04.10.2026 00:10 MSK: «a game Timer for offline chess: on one phone switch whose move it is; the
+/// THE TIMER (the author's word 03.10.2026 21:10 UTC: «a game Timer for offline chess: on one phone switch whose move it is; the
 /// one whose move it is does not mint, the opponent mints from the switch -- and play chess offline»): a chess clock for two at one
 /// board. Each half is one player's -- the upper one turned to the player across the table -- and a tap on one's own half ends
 /// one's move. The side to move thinks and its clock runs; the other side mints one coin a second from the moment the move passed
 /// to its opponent. The lower half is this phone's person: every second of its minting is born in the one book as it is lived,
 /// in the Timer's own window of τ1, and its count shows what the book took; the upper half's coins are the opponent's count,
 /// shown and never booked here, so they never rise at the sides.
-/// THE SECOND IS BORN WHEN IT IS LIVED (the author's word 04.10.2026 18:34 MSK: «polish by the constitution, 0, 4, 5, 6»; point 5,
+/// THE SECOND IS BORN WHEN IT IS LIVED (the author's word 04.10.2026 15:34 UTC: «polish by the constitution, 0, 4, 5, 6»; point 5,
 /// the Economy of Time): the half's seconds were kept and booked as one count when the move passed, and the book priced that count
 /// as a single second -- sixty seconds at level 5 showed 300 coins and booked 13.
 struct MTChessTimer: View {
@@ -669,7 +669,7 @@ private struct MTChessNewGame: View {
     @State private var white = true
     @State private var seconds = MTChessSend.chatClock
     @ObservedObject private var split = MTCoinSplit.shared   // the available, the one number of the person's coins (fold-7)
-    /// THE STAKE BESIDE THE OPPONENT, AS AN OFFER (the author's word 06.10.2026 23:0x MSK: «the stake, like the sum of a send, is
+    /// THE STAKE BESIDE THE OPPONENT, AS AN OFFER (the author's word 06.10.2026 20:0x UTC: «the stake, like the sum of a send, is
     /// written beside the opponent as an offer»): the coins typed beside a correspondent are what that invitation asks each side
     /// to put into the game's pot (MTChessCoins).
     @State private var stakes: [String: String] = [:]
@@ -729,7 +729,7 @@ private struct MTChessNewGame: View {
                         ForEach(MTChessLetter.timeControls, id: \.self) { Text(MTChessWords.control($0)).tag($0) }
                     }
                 }
-                // THE STAKE (the author's word 06.10.2026 19:1x MSK: «one may set one's own stake in the offer to play»): typed beside
+                // THE STAKE (the author's word 06.10.2026 16:1x UTC: «one may set one's own stake in the offer to play»): typed beside
                 // each correspondent, as the coins of a send are (MTCoinSendSheet); the winner takes the whole pot (MTChessCoins).
                 Section {
                     if people.isEmpty { Text("No correspondents found").foregroundStyle(.secondary) }
@@ -767,7 +767,7 @@ private struct MTChessNewGame: View {
                 }
             }
             .searchable(text: $query)
-            // THE KEYBOARD GOES WITH THE FINGER (the author's word 06.10.2026 23:0x MSK: «let the keyboard fold normally on the page
+            // THE KEYBOARD GOES WITH THE FINGER (the author's word 06.10.2026 20:0x UTC: «let the keyboard fold normally on the page
             // of a new game»): the number pad has no return key; a drag of the list folds it, as on the send (MTCoinSendSheet).
             .scrollDismissesKeyboard(.interactively)
             .montanaBalanceTitle("New game")
@@ -841,7 +841,7 @@ struct MTChessGameScreen: View {
     /// A NEW GAME BEGINS WHEN THE PAIR'S GAME IS OVER (30.09 -- the plate and the menu read this one rule): a game that stands
     /// keeps the pair, so its end comes first (End game); the training game begins anew at any moment.
     private var nextGame: Bool { isComputer || pairOver }
-    // THE SIDES' COINS STAND ON THE TIME COINS PAGE ALONE (the author's word 06.10.2026 19:0x MSK: «in chess take away the auto
+    // THE SIDES' COINS STAND ON THE TIME COINS PAGE ALONE (the author's word 06.10.2026 16:0x UTC: «in chess take away the auto
     // animation of minting -- it is only on the page of Time Coins»): the board shows no minting that happens elsewhere. The body
     // stays apart from the board, so the board's own long expression keeps the length the compiler types in reasonable time.
     var body: some View { board }
@@ -994,7 +994,7 @@ struct MTChessGameScreen: View {
             if game.pooled, 0 < game.pot {
                 Text("Pot: \(MTCoinText.count(game.pot))").font(.subheadline.monospacedDigit()).lineLimit(1).minimumScaleFactor(0.75)
             }
-            // THE BALANCE AT THE STAKE (the author's word 06.10.2026 22:1x MSK): the guest asked to put a stake sees what it holds.
+            // THE BALANCE AT THE STAKE (the author's word 06.10.2026 19:1x UTC): the guest asked to put a stake sees what it holds.
             if game.pooled, game.status == .invited, !game.whiteIsMine, 0 < game.stake {
                 MTBalanceCaption()
                 if MTCoinSplit.shared.available < game.stake {
@@ -1204,7 +1204,7 @@ struct MTChessGameScreen: View {
             if !next.status.finished { sawLive = true } else if sawLive { leave(id) }
         }
         if let pending, next?.acceptedIDs.contains(pending) == true || next?.status.finished == true { self.pending = nil }
-        // THE ACCEPTANCE IS THE PERSON'S PRESS ALONE (the author's words 06.10.2026 23:5x MSK: «accept or not -- the buttons in the
+        // THE ACCEPTANCE IS THE PERSON'S PRESS ALONE (the author's words 06.10.2026 20:5x UTC: «accept or not -- the buttons in the
         // chat come before the chess board is shown»; «the last game began with no request at all: first the request is
         // confirmed, then the decision»): the board accepts nothing by appearing. An invitation it holds unanswered shows its
         // plate's marks (statePlate), and the chat's Accept is the other door (MTChessSend.join).
@@ -1288,7 +1288,7 @@ struct MTChessGameScreen: View {
 
 /// The plate a game's state stands on over the board: the app's own glass where the native skin runs (MTGlassPlate, one
 /// owner of a plate's glass), the bar's material elsewhere -- as the posts' plates are drawn (MTBoardPostPlate).
-/// THE POT'S TWO PARTS AT THE GAME'S NAME (the author's word 06.10.2026 23:1x MSK: «left of the chess title show the total stake,
+/// THE POT'S TWO PARTS AT THE GAME'S NAME (the author's word 06.10.2026 20:1x UTC: «left of the chess title show the total stake,
 /// right of the word chess the moves' pool, so it is plain how many coins of which kind are at play; fit any sums into these
 /// bubbles»): the stakes left of «Chess» and the moves' pool right of it, a bubble each, seen through the whole game. A bubble
 /// writes the whole count where it fits and the short form where it does not (ViewThatFits), so no sum is ever cut.

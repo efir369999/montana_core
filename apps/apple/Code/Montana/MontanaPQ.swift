@@ -542,7 +542,7 @@ enum MontanaArchive {
             }}
         }}}
         if n > 0 { return Data(out.prefix(Int(n))) }
-        // A FACE IS ITS OWN FOLDER'S OR NONE (04.10, T1 03.10 23:49 MSK: one portrait on most of the book): every folder names its
+        // A FACE IS ITS OWN FOLDER'S OR NONE (04.10, T1 03.10 20:49 UTC: one portrait on most of the book): every folder names its
         // face by the one word «face», so the search below handed the first folder's face to every correspondent without one.
         guard blobId != faceBlob else { return nil }
         // The folder could have been named otherwise yesterday -- by callsign, by link, by a word common
@@ -702,7 +702,7 @@ extension MontanaArchive {
 
     /// No conversation means no trace of it on disk: letters, sealed attachments, the folder itself.
     /// Deleting for oneself and deleting for both erase the SAME local storage.
-    /// A FOLDER ALREADY GONE IS NOT FORGOTTEN AGAIN (12.10.2026, T1 during the 12:30 MSK call: the pass over the erased conversations,
+    /// A FOLDER ALREADY GONE IS NOT FORGOTTEN AGAIN (12.10.2026, T1 during the 09:30 UTC call: the pass over the erased conversations,
     /// run at every opening (sealArchiveFolderNames), cleared the marks of the same ninety-six folders three times in two seconds --
     /// 276 archive_forget lines, five sealed records read and written again for every folder each time). A folder's marks are
     /// forgotten once in a run; a folder that stands on the disk again -- an assembly that caught up after the erasure -- is removed
@@ -725,7 +725,7 @@ extension MontanaArchive {
             UserDefaults.standard.set(forgottenFolders.sorted(), forKey: forgottenKey)
         }
     }
-    /// THE FOLDER'S MARKS GO WITH THE FOLDER (the critic B-3, 11.10.2026; the author's word 11.10.2026 20:1x MSK: «check the whole
+    /// THE FOLDER'S MARKS GO WITH THE FOLDER (the critic B-3, 11.10.2026; the author's word 11.10.2026 17:1x UTC: «check the whole
     /// architecture of the chats' time chains, so there are no holes by the constitution»): the head, name-head, folder-map and
     /// cursor marks are economies that say «this folder already holds it», and they outlived the directory -- a folder born again
     /// for the same conversation never got its pipe head again (writeHeadIn: heads[folder] == form; rememberFolder: the map
@@ -808,7 +808,7 @@ extension MontanaArchive {
         return rc >= 0
     }
 
-    /// THE BLOCKS OF A DELETED CONVERSATION ARE NOT FILED AGAIN (the critic B-4; the author's words 11.10.2026 20:1x MSK: «check the
+    /// THE BLOCKS OF A DELETED CONVERSATION ARE NOT FILED AGAIN (the critic B-4; the author's words 11.10.2026 17:1x UTC: «check the
     /// whole architecture of the chats' time chains, so there are no holes by the constitution»). The other device's blocks, laid
     /// before it heard of the deletion, came back by the twin's road and stood the conversation again -- in a folder named by the
     /// hash, the map's mark gone with the old folder (forgetFolderMarks), as «Recovered history». The deleted set is the
@@ -869,7 +869,7 @@ extension MontanaArchive {
         return rc == 0 ? seq : nil
     }
 
-    // ── the person's other devices through the box (the author's word 11.10.2026 12:1x MSK, No.60: «do it») ──
+    // ── the person's other devices through the box (the author's word 11.10.2026 09:1x UTC, No.60: «do it») ──
     // Nana's iPhone 17 and iPad 9 hold one seed; the road above reached the twin only at a public address, and a phone behind a
     // carrier's NAT has none: a week of every diary on Lauterbourg holds no «HISTORY → own device» line. A sleeping iPhone is woken
     // by Apple's push alone and cannot hold a letter for another, so the node holds it: the blocks, already sealed under the
@@ -891,6 +891,9 @@ extension MontanaArchive {
     nonisolated static var twinDeviceRef: String { (MontanaSeed.twin ?? "") + "#" + E2E.deviceTag() }
     /// The one place a label of the seed's own pipe is signed: by this device, never by the person (P-118.1's one exception).
     nonisolated static func twinSid(_ cw: String) -> String { MontanaWakePush.subId(cw, ref: twinDeviceRef) }
+    /// This device's name under any label of the box -- what it took is marked by it, never by the person (24.10.2026): the same
+    /// derivation as the pipe's sid, one per label, so the node links no two labels of one device.
+    nonisolated static func deviceSid(_ cw: String) -> String { twinSid(cw) }
     nonisolated static func twinListening() -> [String: Data] {
         guard let s = twinSecret() else { return [:] }
         return [twinPipe: s]
@@ -982,7 +985,7 @@ extension MontanaArchive {
         MontanaTrace.mark("twin_hist", "taken blocks=\(filed)")
     }
 
-    // ── THE TWIN MIRROR (the author's words 18.10.2026 10:3x-10:4x MSK: «on T1 the letters of 10:07 are not seen, on the Mac with the
+    // ── THE TWIN MIRROR (the author's words 18.10.2026 07:3x-07:4x UTC: «on T1 the letters of 10:07 are not seen, on the Mac with the
     // same person they are»; «on the Mac, in my own groups and channels, what I posted from the phone is not seen -- it does not
     // sync as the chats do»; «read on the phone -- read on every device, not hanging as a banner on the computer») ──
     // Measured on T1 18.10.2026 07:05Z (archive_gap): chat a:f91e4b held 53 rows against 63 in the archive, all 12 missing ones the
@@ -1073,7 +1076,7 @@ extension MontanaArchive {
         }
         MontanaTrace.mark("twin_mirror", "laid words=\(batch.count) left=\(left)")
     }
-    // ── THE PAST THE TWIN MISSED (the author's words 18.10.2026 10:3x MSK: «on T1 there is no media of yesterday 17:33 in the chat, on
+    // ── THE PAST THE TWIN MISSED (the author's words 18.10.2026 07:3x UTC: «on T1 there is no media of yesterday 17:33 in the chat, on
     // the Mac there is»; 12:1x «finish and close every item»): the mirror carries what lands from now on; what one device took before
     // it stands in that device's archive, which the other files (twin_hist) and measures against its feed (archive_gap) but never
     // lays into a conversation it holds -- an archive row carries no letter's name, so no tombstone could be asked of it. So the
@@ -1096,7 +1099,7 @@ extension MontanaArchive {
         guard !fresh.isEmpty, let d = try? JSONSerialization.data(withJSONObject: ["i": fresh.map { i in [i.s, i.m ? 1 : 0, i.h] as [Any] }]),
               let js = String(data: d, encoding: .utf8) else { return }
         for i in fresh { asked.insert(chat + "/" + String(i.s) + "/" + i.h) }
-        // A SLICE IS NO PROPERTY LIST (the author's word 18.10.2026 14:0x MSK: «check why the app crashes on T1 and fix it urgently»):
+        // A SLICE IS NO PROPERTY LIST (the author's word 18.10.2026 11:0x UTC: «check why the app crashes on T1 and fix it urgently»):
         // T1 on 2240 died on screen every half minute from 11:08:52Z -- NSInvalidArgumentException «Attempt to insert non-property list
         // object ArraySlice([...]) for key mt.twin.asked»: suffix hands back an ArraySlice, and the settings store takes only arrays.
         UserDefaults.standard.set(Array(Array(asked).suffix(5000)), forKey: askedKey)

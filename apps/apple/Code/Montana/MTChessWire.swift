@@ -63,7 +63,7 @@ struct MTChessLetter: Codable, Equatable, Sendable {
     var spent: Int64? = nil
     /// THE LETTER THAT ENDS THE GAME SAYS HOW (29.09, MTChessEnd): set by the sender's replay, read by the banner doors.
     var end: MTChessEnd? = nil
-    /// THE COINS A MOVE MINTS INTO THE GAME'S POT (the author's words 06.10.2026 19:0x-19:1x MSK: «every move x1000 to the level
+    /// THE COINS A MOVE MINTS INTO THE GAME'S POT (the author's words 06.10.2026 16:0x-16:1x UTC: «every move x1000 to the level
     /// -- it forms the winner's common pool of the game»): its maker's minting level times a thousand, named by the maker's phone
     /// so both phones count one pot (MTChessCoins). Absent in the letters of earlier builds and of games before the pot.
     var coins: Int? = nil

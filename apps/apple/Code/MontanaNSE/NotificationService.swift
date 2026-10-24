@@ -189,7 +189,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 return
             }
             if Self.serveMissedLetter(rawText, mid: mid, conv: conv, name: envName, handler: contentHandler) { return }
-            // A TRANSFER LETTER RINGS NOTHING HERE (the author's word 10.10.2026 15:3x MSK: «transfers do not touch Montana at all»;
+            // A TRANSFER LETTER RINGS NOTHING HERE (the author's word 10.10.2026 12:3x UTC: «transfers do not touch Montana at all»;
             // T1 12:24:29Z: an older build's transfer letter showed «New message» and its chat stood empty -- the app buries it
             // unread, MTRowLetter.retiredLetter): it is stashed for the app without a face and turns no badge.
             if MTRowLetter.retiredLetter(text) {
@@ -491,7 +491,7 @@ final class NotificationService: UNNotificationServiceExtension {
     // bytes inside the intent, since the extension has no App Group and INImage(url:) to a
     // private temp is unreadable to the renderer. Did not work (no entitlement) — degrade to
     // the attachment thumbnail.
-    /// THE WHOLE WAKE HAS ONE BUDGET (the author's word 06.10.2026 23:5x MSK; T1 20:51Z on 2143: the box gave 26 letters, the diary
+    /// THE WHOLE WAKE HAS ONE BUDGET (the author's word 06.10.2026 20:5x UTC; T1 20:51Z on 2143: the box gave 26 letters, the diary
     /// held no line after it, the phone no crash and no memory event, and the banner went out as the bare composed plate without its
     /// person): every walk of the network ends by 22 s from the wake, whatever its own seconds.
     /// This process's processor time over every thread it had, in microseconds (the kernel's rusage) -- the app's twin is
@@ -506,7 +506,7 @@ final class NotificationService: UNNotificationServiceExtension {
     private static func within(_ seconds: TimeInterval, of began: Date) -> Date {
         min(Date().addingTimeInterval(seconds), began.addingTimeInterval(wakeBudgetS))
     }
-    /// THE BANNER FIRST, THE REST AFTER (17.10.2026; the author's words 00:19-00:20 MSK: «two empty messages on T1 ... close such
+    /// THE BANNER FIRST, THE REST AFTER (16.10.2026; the author's words 21:19-21:20 UTC: «two empty messages on T1 ... close such
     /// errors at the root»). T1 on 2222 (16.10): 37 wakes wrote «banner shown», 6 wrote «cost» -- the box walk, the outgoing knock
     /// (a queue of 78-85 letters) and the cargo stood between the composed banner and the hand-over; the process died there, by time
     /// or by the extension's memory ceiling (unproven which), and the system showed the node's bare push with no sender, twice. The
@@ -765,7 +765,7 @@ final class NotificationService: UNNotificationServiceExtension {
 
     /// A first-meeting envelope: [encapsulation 1088][mid\0 text\0 name\0 glyph\0 padding] =
     /// 1536, the key derived from the live card's invite (mirror «rdv:<invite>»).
-    /// THE MINUTES A SEAL IS TRIED UNDER (the author's word 10.10.2026 12:5x MSK: «notifications reinforced concrete»). The seal's
+    /// THE MINUTES A SEAL IS TRIED UNDER (the author's word 10.10.2026 09:5x UTC: «notifications reinforced concrete»). The seal's
     /// minute is the sender's; a push Apple held for a phone that was away arrives minutes or hours later, and tried only around
     /// this phone's own minute its envelope never opened -- the banner fell back to the box and, the box's newest letter being an
     /// old one, said nothing new. The push names the moment the node sent it ("at"); the seal stands at it or a few minutes
@@ -1103,7 +1103,7 @@ final class NotificationService: UNNotificationServiceExtension {
     private static let liveIso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; return f
     }()
-    /// THE BELL IS HEARD (the author's word 10.10.2026 12:5x MSK: «notifications reinforced concrete»). Apple keeps one stored
+    /// THE BELL IS HEARD (the author's word 10.10.2026 09:5x UTC: «notifications reinforced concrete»). Apple keeps one stored
     /// push per app for a phone that is away, and a silent push sent after the letter's bell took its place. The node keeps this
     /// token's last bell loud until this word reaches it -- every door at once, since the bell came from one of them.
     private static func tellHeard(_ mid: String) {

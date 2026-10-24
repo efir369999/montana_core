@@ -5,7 +5,7 @@ import UIKit
 import UserNotifications
 import MontanaBindings
 
-// THE COPY KEPT BY THE PEOPLE ONE WRITES TO (the author's words 08.10.2026, 19:2x-20:3x MSK: «restore by the words fully, byte
+// THE COPY KEPT BY THE PEOPLE ONE WRITES TO (the author's words 08.10.2026, 16:2x-17:3x UTC: «restore by the words fully, byte
 // for byte», «restore over the network from the phones, as it should be», «the orchestra builds the restore by the contacts, in
 // their nodes, their phones», «build it»). The set states it -- Network «A copy kept by the people one speaks with», Canon «The
 // keeping of a copy» -- and this file is its one owner on the phone.
@@ -308,7 +308,7 @@ enum MTKeepDerive {
     nonisolated static let mineKey = "mt.keep.mine"           // NOT-UI: my copy is kept by the people I write to
     nonisolated static let othersKey = "mt.keep.others"       // NOT-UI: this phone keeps parts for the people who write to me
     nonisolated static let budgetKey = "mt.keep.budget.mb"    // NOT-UI: what this phone keeps for others, in megabytes
-    /// ON BY DEFAULT, ASKED AT THE OPENING (the author's word 08.10.2026 23:2x MSK: «on by default, and a question at the
+    /// ON BY DEFAULT, ASKED AT THE OPENING (the author's word 08.10.2026 20:2x UTC: «on by default, and a question at the
     /// opening; when it is off, a crossed glyph like the muted sound, with the way to the settings»). Nothing leaves before the
     /// person has been told what each keeper learns (App: «before a person keeps a copy with correspondents, they are told»):
     /// the question at the opening, or the switch in Data and Storage under its own explanation, is that telling.
@@ -345,7 +345,7 @@ enum MTKeepDerive {
         var short = false                          // the last asking found nobody
         var lightGen: UInt64? = nil                // the light copy last named in the pipe of light
         var lightAt: Double? = nil
-        /// THE ATTEMPT IS THE MOMENT THE RHYTHM COUNTS FROM (the author's words 18.10.2026 14:1x-14:4x MSK: «on T1 check why my
+        /// THE ATTEMPT IS THE MOMENT THE RHYTHM COUNTS FROM (the author's words 18.10.2026 11:1x-11:4x UTC: «on T1 check why my
         /// phone heats up -- a deep closure at the root»; «at launch T1 lags at first»; «the chats lag»). Only a renewal that
         /// came to its end wrote renewedAt, so one refused on the way -- no room, the cut refused, a run killed while it laid its
         /// shares -- left the renewal due, and the next tick asked again: T1 began fourteen copies of its whole store on 17.10
@@ -578,7 +578,7 @@ enum MTKeepDerive {
         MontanaTrace.mark("keep_hand", "g=\(g) keepers=\(sent.count) parts=\(parts) laid=\(roads.count) bytes=\(cut.length)")
     }
 
-    // ── the light copy (Network «The light copy»; the author's word 08.10.2026 23:5x MSK: «the person, the face, the name and
+    // ── the light copy (Network «The light copy»; the author's word 08.10.2026 20:5x UTC: «the person, the face, the name and
     // everything else back by the words, down to the chess games») ──
     /// THE COPY WITHOUT ITS ATTACHMENTS -- every letter, every room, the profile, the faces and the head of every
     /// correspondence -- sealed as every copy is, laid on the nodes and named by one letter in the pipe of light, once a day while
@@ -809,7 +809,7 @@ enum MTKeepDerive {
         guard Self.others, var h = held[conv], let url = Self.partURL(conv), FileManager.default.fileExists(atPath: url.path) else { return }
         let now = Date().timeIntervalSince1970
         guard now - h.answeredAt >= 600 else { return }   // a call repeats every two minutes; one answer serves ten
-        // THE CALL CAME BY A PUSH (the author's word 08.10.2026 22:4x MSK: «the whole restore by silent pushes»): the phone is
+        // THE CALL CAME BY A PUSH (the author's word 08.10.2026 19:4x UTC: «the whole restore by silent pushes»): the phone is
         // awake for seconds, and the system is asked for the time the answer takes.
         let task = UIApplication.shared.beginBackgroundTask(withName: "keep-answer")
         defer { if task != .invalid { UIApplication.shared.endBackgroundTask(task) } }
@@ -840,7 +840,7 @@ enum MTKeepDerive {
         return k.boxed
     }
 
-    // ── the correspondence given back (Network «The correspondence given back»; the author's word 08.10.2026 23:5x MSK: «by
+    // ── the correspondence given back (Network «The correspondence given back»; the author's word 08.10.2026 20:5x UTC: «by
     // default every correspondent keeps the conversation with their correspondent and, if it is saved, gives it to the one who
     // restores») ──
     nonisolated static let askedBackKey = "mt.keep.back.asked"   // NOT-UI: the correspondences this phone asked to give back, and when (SeedScope.deviceKeys)
@@ -893,7 +893,7 @@ enum MTKeepDerive {
     }
     /// THE CORRESPONDENCE TAKEN BACK: only an answer to this phone's own request, only the letters later than the last one in that
     /// correspondence here -- a letter erased before the copy stays erased -- each on the side of the one who wrote it.
-    /// WHICH LETTER IS MINE IS SAID BY MY OWN WORDS (the critic R-6; the author's words 11.10.2026 20:1x MSK: «check the whole
+    /// WHICH LETTER IS MINE IS SAID BY MY OWN WORDS (the critic R-6; the author's words 11.10.2026 17:1x UTC: «check the whole
     /// architecture of the chats' time chains, so there are no holes by the constitution», 21:5x: «carry out all 13»): the side
     /// was the correspondent's flag alone, and a correspondent could lay words on this phone as the person's own. A letter they
     /// name as theirs is theirs; one they name as mine stands as mine only when the author field it rode with is made again
@@ -971,7 +971,7 @@ enum MTKeepDerive {
                 for s in secrets { if await Self.knock(s, ["w": "call"]) { boxed += 1 } }
                 MontanaTrace.mark("keep_call", "slots=\(secrets.count) boxed=\(boxed)")
             }
-            // IF NEEDED, A LOUD PUSH (the author's word 08.10.2026 22:4x MSK): six minutes of silence from a slot, and the call
+            // IF NEEDED, A LOUD PUSH (the author's word 08.10.2026 19:4x UTC): six minutes of silence from a slot, and the call
             // in its pipe rings the keeper's screen with the owner's name, every ten minutes -- a phone whose app the person
             // closed hears no silent push at all. The slots that answered the newest copy are rung no more.
             if now - began >= 360, now - lastLoud >= 600 {
@@ -1042,8 +1042,8 @@ enum MTKeepDerive {
     }
 }
 
-/// THE RING OF KEEPERS (Network «The keepers are correspondents, and they stand on a ring»; the author's word 08.10.2026 23:5x
-/// MSK: «not 4, 8 and so on ... between contacts in a ring, so that if someone is offline the restore is full»): every
+/// THE RING OF KEEPERS (Network «The keepers are correspondents, and they stand on a ring»; the author's word 08.10.2026 20:5x
+/// UTC: «not 4, 8 and so on ... between contacts in a ring, so that if someone is offline the restore is full»): every
 /// correspondent that allows keeping, two at each position at most, and every share at two neighbouring positions.
 enum MTKeepRing {
     static let most = 2 * MTKeepCode.group

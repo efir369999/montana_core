@@ -70,7 +70,7 @@ enum MTWalletCore {
     }
 }
 
-/// EVERY SERVER AND PHONE OF OURS IS A NODE (the author's word 06.10.2026 17:2x MSK: «every server and phone of ours is a node»):
+/// EVERY SERVER AND PHONE OF OURS IS A NODE (the author's word 06.10.2026 14:2x UTC: «every server and phone of ours is a node»):
 /// this phone opens its own machine of the core -- born once, its secret drawn here and never carried to a second phone -- and
 /// reaches the machines of the Global TimeChain's genesis, every server of ours, by the post-quantum handshake of the set. It
 /// answers on this phone alone and lives no window: the genesis cohort is the servers, which never sleep, and a machine joining
@@ -79,7 +79,7 @@ enum MTWalletCore {
 /// would need it.
 @MainActor final class MTNetworkNode: ObservableObject {
     static let shared = MTNetworkNode()
-    /// The machines of the genesis (06.10.2026 17:28 MSK) -- Lauterbourg, Moscow, Amsterdam -- each as its operator handed it
+    /// The machines of the genesis (06.10.2026 14:28 UTC) -- Lauterbourg, Moscow, Amsterdam -- each as its operator handed it
     /// over: the endpoint and the key it answers with. The old Frankfurt left on 23.10.2026: that address is a colleague's
     /// server now, and a phone that dialed it would hand a stranger its address; the new Frankfurt joins with the core's stage
     /// fourteen.
@@ -222,11 +222,11 @@ enum MTWalletCore {
         UserDefaults.standard.set(since, forKey: Self.sinceKey)
     }
 
-    /// A GROUP'S AND A CHANNEL'S LETTER EARNS WHEN ITS BUBBLE HOLDS MORE THAN THIRTEEN (the author's word 05.10.2026 21:4x MSK:
+    /// A GROUP'S AND A CHANNEL'S LETTER EARNS WHEN ITS BUBBLE HOLDS MORE THAN THIRTEEN (the author's word 05.10.2026 18:4x UTC:
     /// «in groups and channels credit coins for the messages by the user's level when the text bubble is more than 13
     /// characters with spaces»): the count is the bubble's characters, spaces included; the level's rate is the book's.
     static let groupLetterFloor = 13
-    /// A TEXT BUBBLE (the author's word 05.10.2026 22:41 MSK: «x100 is credited only for a text, and more than 13 characters in
+    /// A TEXT BUBBLE (the author's word 05.10.2026 19:41 UTC: «x100 is credited only for a text, and more than 13 characters in
     /// it»): words alone -- no picture, video, voice, file, coin letter or chess step, no row of the phone's own. A floor passes
     /// only these, in a group's or a channel's feed and in the Money Flow alike, and counts their characters.
     static func isText(_ m: Message) -> Bool {
@@ -262,7 +262,7 @@ enum MTWalletCore {
         }
         guard !fresh.isEmpty else { return }
         coins = earned.count
-        // THE CHAT SHOWS THE LEVEL'S COINS (the author's word 04.10.2026 12:23 MSK: «one function of the level's multiplier
+        // THE CHAT SHOWS THE LEVEL'S COINS (the author's word 04.10.2026 09:23 UTC: «one function of the level's multiplier
         // everywhere»): the rising «+N» is what the book paid at the level's rate, not the count of the letters.
         lastBatch = mint(fresh, times: times, peer: key, oneEach: oneEach)
         minted += 1
@@ -310,7 +310,7 @@ enum MTWalletCore {
     }
 }
 
-/// BIG NUMBERS PART THEIR THOUSANDS WITH COMMAS (the author's word 04.10.2026 04:20 MSK: «the separators of big numbers are
+/// BIG NUMBERS PART THEIR THOUSANDS WITH COMMAS (the author's word 04.10.2026 01:20 UTC: «the separators of big numbers are
 /// commas»): in every language of the phone, the one owner of how a count of coins reads -- 1,234,567.
 enum MTCoinText {
     static func count(_ n: Int) -> String {
@@ -329,7 +329,7 @@ enum MTCoinText {
 /// «a table of the top thirteen in the wallet by a button»). Box n holds the first n digits of π as whole coins -- 3, 31,
 /// 314 … 3 141 592 653 589 -- each a share of a Montana (a Montana is a billion coins). A balance's place is the number of
 /// boxes it fills, read on this phone from its own book; the same boxes are the amounts a person gives.
-/// LEVELS BY PI (the author's word 04.10.2026 12:23 MSK: «call them levels by pi instead of boxes; if I am of level 5, all my
+/// LEVELS BY PI (the author's word 04.10.2026 09:23 UTC: «call them levels by pi instead of boxes; if I am of level 5, all my
 /// minting everywhere is counted by one function of the level's multiplier»): the boxes of 03.10 are the levels of π, and
 /// `multiplier` is the one function every minting asks -- the book applies it to every earning and every minting.
 enum MTPiLevels {
@@ -341,7 +341,7 @@ enum MTPiLevels {
     static let shown = 13
     /// The number of levels the balance fills: 0 below the first.
     static func place(_ balance: Int) -> Int { all.filter { $0 <= balance }.count }
-    /// THE LEVEL IS A READING, NEVER A RATE (the constitution of the chain, point 11; the author's words 19.10.2026 15:3x MSK: «this
+    /// THE LEVEL IS A READING, NEVER A RATE (the constitution of the chain, point 11; the author's words 19.10.2026 12:3x UTC: «this
     /// is the ceiling, the invariant -- nothing else can mint or accelerate it, no music, no VPN and so on»; «the Global Level is
     /// untied from the minting»; 16:4x: «bring it all to one owner of the function 1 coin = 1 second, and that is all»): the one
     /// owner of a second's coin is the book (MTCoinBook.price, MTLocalCoinLedger.priced); a level multiplies nothing.
@@ -357,11 +357,11 @@ enum MTPiLevels {
     }
 }
 
-/// THE COINS RISE AT THE SIDES (the author's words 04.10.2026 00:11 MSK: «auto minting one coin a second with an animation at
+/// THE COINS RISE AT THE SIDES (the author's words 03.10.2026 21:11 UTC: «auto minting one coin a second with an animation at
 /// the sides»; «at a chess move the coins' animation too»): the one owner of the minting's sign. The book tells it at the birth of
 /// every coin it mints (MTLocalCoinLedger: mintInWindow, earn) -- a coin rises only when it is born, with what the book took -- and
 /// every screen that wears the sides (MTCoinSides) shows the same coins rising at both edges with the count.
-/// ONE RISE, THE SUM (the author's word 04.10.2026 18:08 MSK, T2: «the minting's animation must not double, only give the sum in
+/// ONE RISE, THE SUM (the author's word 04.10.2026 15:08 UTC, T2: «the minting's animation must not double, only give the sum in
 /// the plus animation»; T2's diary 15:10Z: the pull's +5 and the VPN wall's +5 rose apart every second -- the first coin rose at
 /// once and the coins after it rose again half a second later): while the minting by the second beats (MTMintBeat), the beat
 /// alone raises the coins, once a second, with the sum of everything minted in that second; without it the coins gather a fifth
@@ -420,7 +420,7 @@ enum MTPiLevels {
     }
 }
 
-/// PANTHEON ON FIRE (the author's word 03.10.2026 22:25 MSK: «a tap on the coin in the wallet is +1 too, quick taps all count;
+/// PANTHEON ON FIRE (the author's word 03.10.2026 19:25 UTC: «a tap on the coin in the wallet is +1 too, quick taps all count;
 /// the coin spins at a speed from 1 to 13 and the speed is shown; the game is called Pantheon on Fire, the first tap on the
 /// wallet's coin lights it»). Every tap mints one coin into the one book. The speed is the taps of the last second, and a tap
 /// past thirteen in one second mints nothing -- time bounds the coins, not a quicker finger ([I-15]). The speed falls to zero
@@ -434,7 +434,7 @@ enum MTPiLevels {
     @Published private(set) var speed = 0
     private var taps: [Double] = []
     private var holding = false
-    /// THE FIRE RESTS AFTER A MINUTE (the author's word 04.10.2026 13:38 MSK: «at the Pantheon on Fire's activation, under the level's
+    /// THE FIRE RESTS AFTER A MINUTE (the author's word 04.10.2026 10:38 UTC: «at the Pantheon on Fire's activation, under the level's
     /// progress, a progress of the minting's unbroken run too; when it runs unbroken over 60 seconds, the next 60 the minting
     /// pauses»): a burn counts its seconds from its lighting; at sixty the fire goes out and the coin rests sixty -- no tap mints --
     /// and the next burn counts anew. The quiet that puts the fire out breaks the count (MTPantheonStreak draws both).
@@ -471,12 +471,12 @@ enum MTPiLevels {
     }
     private var settling: Task<Void, Never>?
     private var going: Task<Void, Never>?
-    /// THE FIRE GOES OUT IN THREE SECONDS OF QUIET (the author's word 04.10.2026 03:13 MSK: «if you do not mint for 3 seconds, switch the
+    /// THE FIRE GOES OUT IN THREE SECONDS OF QUIET (the author's word 04.10.2026 00:13 UTC: «if you do not mint for 3 seconds, switch the
     /// Pantheon on Fire off»; before it, a minute, 04.10 00:19): while it burns the wallet's page does not scroll at all.
     static let quiet: UInt64 = 3
 
     /// A finger landed on the coin: the game lights at the touch itself, so the page stands from the first finger, before its coin.
-    /// THE FIRE BURNS WHILE A FINGER HOLDS THE COIN (the author's word 04.10.2026 13:06 MSK: «if I press and hold the coin in the
+    /// THE FIRE BURNS WHILE A FINGER HOLDS THE COIN (the author's word 04.10.2026 10:06 UTC: «if I press and hold the coin in the
     /// wallet, do not switch the Pantheon on Fire off, and after the seconds switch the auto minting on»): on T1 the fire went out
     /// at the third second of a held finger, the finger left at the fourth and the ninth never came. The quiet counts from the
     /// last finger's lift.
@@ -535,8 +535,8 @@ enum MTPiLevels {
     }
 }
 
-/// THE BURNS OF THE BUILDS BEFORE (the author's words 04.10.2026 00:51-01:01 MSK): up to build 2111 a call burned its seconds and a
-/// letter one coin. The author's words 05.10.2026 01:21-01:31 MSK turned the burn into a payment to the person -- «the one who calls
+/// THE BURNS OF THE BUILDS BEFORE (the author's words 03.10.2026 21:51-22:01 UTC): up to build 2111 a call burned its seconds and a
+/// letter one coin. The author's words 04.10.2026 22:21-22:31 UTC turned the burn into a payment to the person -- «the one who calls
 /// pays the one called, the one who writes pays the one written to» (MTCoinSend.pay; a call mints its seconds to both since 07.10.2026,
 /// MTCallMint). The names stay to read
 /// the burns the books already hold.
@@ -558,7 +558,7 @@ enum MTCoinBalance {
     }
 }
 
-/// THE PEOPLE IN THE APP HEAR MY BALANCE MOVE (the author's words 04.10.2026 03:03 and 04:19 MSK: «the update instant, as by a web
+/// THE PEOPLE IN THE APP HEAR MY BALANCE MOVE (the author's words 04.10.2026 03:03 and 01:19 UTC: «the update instant, as by a web
 /// socket»): a move of the book says the balance again to the correspondents in the app now, in the app word (E2E.coinBeacon) --
 /// one round in two seconds however fast the coins come, so a minute of minting is thirty rounds to the people online, not one a coin.
 /// A TALKING CALL TELLS AT THE PULL'S PACE (12.10.2026, the critic's finding 10 of helper 65): a call mints every second, so the
@@ -592,7 +592,7 @@ enum MTCoinBalance {
     }
 }
 
-/// THE PEOPLE'S COINS (the author's words 03.10.2026 22:23 and 22:25 MSK: «in the wallet, under the add-account button, the
+/// THE PEOPLE'S COINS (the author's words 03.10.2026 22:23 and 19:25 UTC: «in the wallet, under the add-account button, the
 /// top thirteen balances by coins, beautifully, with avatars and names, as in a social network»; «the coin's badge is the
 /// number in the common rating»). Balances are public ([I-2]): every phone tells its pairs its own balance in its word about
 /// itself (the key c beside the bio and the link), and this book keeps what each pair last told -- the newest word wins. The
@@ -603,7 +603,7 @@ enum MTCoinBalance {
     struct Place: Identifiable { let id: String; let coins: Int; let mine: Bool }
     @Published private(set) var told: [String: Told] = [:]
     private static let key = "coinBoard.told"
-    /// THE PEOPLE'S LEVELS (the author's word 11.10.2026 21:2x MSK, MTLevelShow): the Global Level each pair last told in its
+    /// THE PEOPLE'S LEVELS (the author's word 11.10.2026 18:2x UTC, MTLevelShow): the Global Level each pair last told in its
     /// presence words, the newest word wins, and a word that names none takes it away. The book is drawn again only when a level
     /// moves: the moment of every word is kept beside it unpublished, so the faces are not drawn again at every beat.
     struct Level: Codable { var level: Int; var at: Double }
@@ -650,7 +650,7 @@ enum MTCoinBalance {
     }
     private func keepCoins(_ conv: String, _ t: Told) {
         guard let cap = chain[conv]?.coins else { return }
-        // THE CHAIN'S NUMBER, NEVER THE TOLD ONE (P-4 of Agent 95, the author's word 19.10.2026 12:2x MSK «put it in»): the lower of the two
+        // THE CHAIN'S NUMBER, NEVER THE TOLD ONE (P-4 of Agent 95, the author's word 19.10.2026 09:2x UTC «put it in»): the lower of the two
         // still let a build of one's own say 0 and draw every levelling's gift (MTCoinSendPage.levelPlan); the pair's word now only says
         // that it shows its coins, and the number is its chain's
         let coins = cap
@@ -715,13 +715,13 @@ enum MTCoinBalance {
     func rank(mine: Int) -> Int { 1 + others.values.filter { mine < $0.coins }.count }
 }
 
-/// THE MONEY FLOW IS A CHAT'S OWN (the author's word 04.10.2026 12:23 MSK: «if my chat is turned with one correspondent, it concerns
+/// THE MONEY FLOW IS A CHAT'S OWN (the author's word 04.10.2026 09:23 UTC: «if my chat is turned with one correspondent, it concerns
 /// only the chat with them, not all -- part the states»). The flow's coin turned one switch for the whole phone: the moment one chat
 /// turned, every chat stood turned, spoke its live words and minted. Now each conversation keeps its own -- the turn of its feed,
 /// its live words both ways, its minting. Read from any thread; the screens observe the change.
 @MainActor final class MTMoneyFlow: ObservableObject {
     static let shared = MTMoneyFlow()
-    /// A BUBBLE OF THE FLOW IS ONE COIN TIMES THE LEVEL (the author's words 07.10.2026 21:3x and 21:4x MSK: «one coin for one
+    /// A BUBBLE OF THE FLOW IS ONE COIN TIMES THE LEVEL (the author's words 07.10.2026 21:3x and 18:4x UTC: «one coin for one
     /// message bubble -- any bubble: +1 in the money flow and -1 in an ordinary chat»; «the minting in the money flow's chats is one
     /// coin multiplied by the level: for the 7th level 7 coins a message and 7 coins a second of talk; a level 1 on the call -- x1
     /// for him»; it replaces the hundred levels a long text minted, 05.10): every bubble of a chat whose flow is on -- words, a
@@ -762,11 +762,11 @@ enum MTPersonLevel {
     static func set(_ v: Int?) { lock.lock(); held = v; lock.unlock() }
 }
 
-/// ACCESS BY LEVEL (the author's words 16.10.2026 18:2x MSK: «both functions of level 7 must be made, and in the settings a path
+/// ACCESS BY LEVEL (the author's words 16.10.2026 15:2x UTC: «both functions of level 7 must be made, and in the settings a path
 /// Access by level -- where they open for each»; «we have the gamification of access to Montana's functions»): every function a level
 /// opens is named here once, with its level. The person's level is the Global Level the avatar shows (MTPersonChain.global); before
 /// this life has read it, the last one this phone knew stands, so a launch's first second never drops a choice the level opened.
-/// LEVEL 8 (the author's word 17.10.2026 18:1x MSK: «add to the accesses that only from level 8 can one connect one's own node to
+/// LEVEL 8 (the author's word 17.10.2026 15:1x UTC: «add to the accesses that only from level 8 can one connect one's own node to
 /// the Montana network through the client»): a machine the person owns joins the network through this app -- set up from here
 /// (MontanaNodeSetup), its daily copies and a copy sent at a tap (HomeNodeWatch) -- once the level opens it; taking one's own
 /// copy back from it asks no level.
@@ -881,7 +881,7 @@ enum MTLevelAccess {
     }
 }
 
-/// THE MONTANA TOP (the author's words 04.10.2026 03:03, 05:40 and 05:47 MSK: «a live set as by a web socket, the update instant from
+/// THE MONTANA TOP (the author's words 04.10.2026 03:03, 05:40 and 02:47 UTC: «a live set as by a web socket, the update instant from
 /// the nodes»; «everyone has one source of all data»; «who does not show is not in the top»). One public table of the game's coins,
 /// the same on every node (/top-put, /top-get): this phone puts its own row and the table comes back whole. A row is named by sha256
 /// of a token only the words derive -- HKDF of the entropy under one label, then one HMAC, as the shelf of one's own node
@@ -928,13 +928,13 @@ enum MTLevelAccess {
     func put() {
         guard MTCoinShow.on else { withdrawUnasked(); return }
         guard UserDefaults.standard.bool(forKey: MTCoinShow.toldKey), let t = Self.myToken(), let coins = MTCoinBalance.now else { return }
-        // THE ROW TELLS THE SEED'S UNION, NEVER ONE DEVICE'S SHARE (the author's word 04.10.2026 15:51 MSK: «check the sync over the
+        // THE ROW TELLS THE SEED'S UNION, NEVER ONE DEVICE'S SHARE (the author's word 04.10.2026 12:51 UTC: «check the sync over the
         // network as a pendulum»): a device of the seed that has not gathered the others' moves in half a minute would pull the seed's
         // row down to its own share and the next device would lift it again; it gathers first, and the gathering puts the row.
         guard MTCoinVault.shared.fresh else { MTCoinVault.shared.soon("put", after: 1); return }
         let body: [String: Any] = ["token": MontanaHomeNode.hex(t), "name": String(E2E.myDisplayName().prefix(64)), "coins": coins]
         Task {
-            // THE ROW PROVES ITS COIN KEY (P-4 of Agent 95, the author's word 19.10.2026 12:2x MSK «put it in»): the node shows that key's
+            // THE ROW PROVES ITS COIN KEY (P-4 of Agent 95, the author's word 19.10.2026 09:2x UTC «put it in»): the node shows that key's
             // chain as it folds it, never the number told here -- a build of one's own once stood first by saying a billion
             let proof = await Task.detached(priority: .utility) { Self.keyProof(t) }.value
             var b = body
@@ -1031,7 +1031,7 @@ enum MTLevelAccess {
 }
 
 
-/// THE BOOK RIDES THE SEED (the author's words 04.10.2026 13:36-13:42 MSK: «I must log in by my seed on another device and my
+/// THE BOOK RIDES THE SEED (the author's words 04.10.2026 10:36-10:42 UTC: «I must log in by my seed on another device and my
 /// balance must surely be kept -- the critical part»; the choice 13:40: «the book by the seed on the nodes»; «build by constitution 6
 /// fully» -- the phone is a full node). Every move of the book is sealed under a key only the words derive (ChaCha20-Poly1305, the
 /// vault's own cipher [I-1]) and laid on every node in pieces; any device with the same words gathers the union of all of them -- a
@@ -1089,7 +1089,7 @@ enum MTLevelAccess {
     nonisolated static func ownTagHolds(_ tag: Data, entropy: Data, conv: String) -> Bool {
         HMAC<SHA256>.isValidAuthenticationCode(tag, authenticating: ownLabel + Data(conv.utf8), using: ownerKey(entropy))
     }
-    /// EVERY NODE HOLDS THE BOOK UNDER A ROW OF ITS OWN (the author's words 06.10.2026 12:3x-12:4x MSK: «close the double spends»; «the safety of the restore by the seed»): the one
+    /// EVERY NODE HOLDS THE BOOK UNDER A ROW OF ITS OWN (the author's words 06.10.2026 09:3x-09:4x UTC: «close the double spends»; «the safety of the restore by the seed»): the one
     /// token the seed sent to every node named the same row on all of them, and a put deletes the pieces it names -- one node that
     /// read the token from a request could empty the book on every other node, and the words restored nothing. A node's row is
     /// HMAC-SHA-256 under the owner key over this label and the node's host: a node learns its own row and no other. The common row
@@ -1195,7 +1195,7 @@ enum MTLevelAccess {
         let ledger = MTLocalCoinLedger.shared.whole
         let joined = ledger.join(fresh)
         let book = ledger.entries
-        // WHAT EACH ROW LACKS IS RECKONED OFF THE MAIN THREAD (the author's words 23.10.2026 18:0x MSK: «on T1, build 2296, the chats
+        // WHAT EACH ROW LACKS IS RECKONED OFF THE MAIN THREAD (the author's words 23.10.2026 15:0x UTC: «on T1, build 2296, the chats
         // page stutters when I enter and use it -- check it and make it clean, without stalls»). Measured on T1 that minute: this
         // reckoning -- the union of every piece's moves and the book filtered by it, 30 089 moves for each of four rows -- held the
         // main thread 84 ms at a chat's opening, 101 ms in the chats list and 72 ms at the drawer (frame_stack, MTCoinVault.gather
@@ -1212,7 +1212,7 @@ enum MTLevelAccess {
             var replace = plan.replace
             for start in stride(from: 0, to: lacking.count, by: Self.span) {
                 let part = Array(lacking[start..<min(start + Self.span, lacking.count)])
-                // THE OLD PIECES GO WITH THE LAST NEW ONE (the coin audit's sixth point, 05.10.2026 21:4x MSK): the first part
+                // THE OLD PIECES GO WITH THE LAST NEW ONE (the coin audit's sixth point, 05.10.2026 18:4x UTC): the first part
                 // carried the replace, so a refusal or an ended process after it left the node a part of the book, and «full»
                 // repeated that same part. Every part is laid first; the last one takes the old pieces away.
                 let last = lacking.count <= start + Self.span
@@ -1249,7 +1249,7 @@ enum MTLevelAccess {
             let anew = fold <= ids.count || full.contains(slot)
             let lacking = anew ? book : book.filter { !carried.contains($0.id) }
             guard !lacking.isEmpty else { continue }
-            // ONLY A PIECE READ HERE IS REPLACED (the coin audit's third point, 05.10.2026 21:4x MSK): a piece that would not open
+            // ONLY A PIECE READ HERE IS REPLACED (the coin audit's third point, 05.10.2026 18:4x UTC): a piece that would not open
             // -- a book of a later build, a broken blob -- or whose moves the book did not take was skipped above but stood in the
             // replace list, and its moves left every node. It stays on the node now, beside the whole.
             var replace: [String] = []
@@ -1289,7 +1289,7 @@ enum MTLevelAccess {
     }
 }
 
-/// THE TIMECHAIN'S TIP RIDES ONE ROUND TRIP (the author's words 04.10.2026 16:30-16:34 MSK: «find the lightest record of the
+/// THE TIMECHAIN'S TIP RIDES ONE ROUND TRIP (the author's words 04.10.2026 13:30-13:34 UTC: «find the lightest record of the
 /// TimeChain, so the sync tends to the speed of a ping -- a special file and only the last 13 records; by the constitution, points 0 4 5
 /// 6 8 10»; «right, fix it and build it in 2105»). Every device of the words writes its own lane -- one writer, so two phones never
 /// contend for one link -- and every link carries, beside its move, the lane's running balance: the last link says the lane's coins.
@@ -1366,7 +1366,7 @@ enum MTLevelAccess {
         soonPut()
     }
 
-    /// THE LANE CARRIES WHAT THE DEVICE BORE (the author's «yes» 04.10.2026 17:16 MSK to variant (a)): a letter's coin and a coin
+    /// THE LANE CARRIES WHAT THE DEVICE BORE (the author's «yes» 04.10.2026 14:16 UTC to variant (a)): a letter's coin and a coin
     /// letter reach every device of the words by the letter itself and the book counts each once by its name, so they ride no lane
     /// -- a sum of lanes would count them once a device; the lane carries what this device alone bore: the Pantheon, the VPN wall,
     /// chess and its Timer, the pull, spending, sending, burning.
@@ -1555,7 +1555,7 @@ enum MTLevelAccess {
     }
 }
 
-/// VPN WALL, THE LIVING TUNNEL MINTS (the author's words 04.10.2026 17:13-17:24 MSK: «while the VPN tunnel is on and alive, the same
+/// VPN WALL, THE LIVING TUNNEL MINTS (the author's words 04.10.2026 14:13-14:24 UTC: «while the VPN tunnel is on and alive, the same
 /// auto minting as in the wallet -- alive it mints, not alive it does not, by the level each second»; «minting on the VPN and in the
 /// wallet, the common counter doubles the auto minting and shows it on the screen where you mint»; «every minting's TimeChain stands
 /// by itself: sitting with the VPN is x1, minting with the VPN is x2»): the tunnel is the one witness of its life and counts its
@@ -1647,7 +1647,7 @@ struct MTCallCredit {
     nonisolated static let refPrefix = "callmint:"   // read by the history's fold off the screen's thread (MTTimeChain.source)
     nonisolated static let burnPrefix = "call:"
     static var wanted: Bool { !MontanaCall.shared.talkWindows.isEmpty || MTGroupRoom.shared.talkElapsed != nil }
-    /// THE SECONDS ARE THE CALL'S CLOCK, NOT THE BEAT'S (12.10.2026, the author's word 11:5x MSK: «for calls coins must be credited
+    /// THE SECONDS ARE THE CALL'S CLOCK, NOT THE BEAT'S (12.10.2026, the author's word 08:5x UTC: «for calls coins must be credited
     /// to both correspondents by their level for every second»): a beat minted one second, and a beat is a second plus its own
     /// work -- B9F26F54 minted 2169 seconds of the 2223 it talked 07:24-08:01Z, while the iPhone 17 at the other end minted 2224.
     /// Each beat mints the seconds the call has talked since the last second it minted. The first beat of a call in this run
@@ -1700,15 +1700,15 @@ struct MTCallCredit {
     }
 }
 
-/// THE PULL SWITCHES THE AUTO MINTING ON (the author's words 04.10.2026 03:52 and 04:18 MSK: «pulling the wallet's page, as the time
+/// THE PULL SWITCHES THE AUTO MINTING ON (the author's words 04.10.2026 03:52 and 01:18 UTC: «pulling the wallet's page, as the time
 /// panel does, calls the coin for a forced refresh of the tops and the activation of the auto minting once a second»; «at such a
 /// refresh switch the auto minting on: every second coins by the box's level»): a pull let go past the coin's trigger mints at once
 /// and goes on minting every second -- the second's one coin, the book's (MTCoinBook.price) -- while the wallet
 /// stands open. Time bounds it, not a quicker hand.
-/// THE PERSON ENDS IT, NO CLOCK (the author's word 04.10.2026 13:33 MSK: «it must not stop until I touch the coin myself or leave
+/// THE PERSON ENDS IT, NO CLOCK (the author's word 04.10.2026 10:33 UTC: «it must not stop until I touch the coin myself or leave
 /// the wallet's page -- it mints only while the wallet's screen is active, without taps on it, and deactivates at any action; all
 /// three ran auto and stopped by themselves»; T2 10:29:49-10:30:49Z: on, then off by its window of sixty seconds): the page leaving and the
-/// screen locked stop it; nothing else does -- no touch (the author's word 05.10.2026 00:53 MSK: «I did not touch; only leaving the
+/// screen locked stop it; nothing else does -- no touch (the author's word 04.10.2026 21:53 UTC: «I did not touch; only leaving the
 /// page or locking the screen, touches do not reset the auto minting»; T2 and T3 21:45Z stopped why=touch by a tap on a row). The pull tells the person's pairs the balance now, at most once in fifteen seconds, so their tops move and a
 /// hand that pulls on does not flood the queue. The coins are the Pantheon's, the wallet's game.
 @MainActor final class MTWalletPull: ObservableObject {
@@ -1744,7 +1744,7 @@ struct MTCallCredit {
     }
 }
 
-/// ONE BEAT FOR THE MINTING BY THE SECOND (the author's word 04.10.2026 18:08 MSK, T2: «the minting's animation must not double,
+/// ONE BEAT FOR THE MINTING BY THE SECOND (the author's word 04.10.2026 15:08 UTC, T2: «the minting's animation must not double,
 /// only give the sum in the plus animation»): the wallet's pull and the living VPN tunnel each beat a second of their own, and
 /// on T2 their coins rose apart -- the pull at .546 of its second, the tunnel at .625 of another (15:10Z). One beat asks both at
 /// the same instant, waits a fifth of a second for the tunnel's answer and raises the second's coins once (MTCoinFlash.rise); any
@@ -1775,7 +1775,7 @@ struct MTCallCredit {
     }
 }
 
-/// THE TIMECHAINS OF THE MINTING (the author's words 04.10.2026 00:25 MSK: «in chess too its own TimeChain of the minting for
+/// THE TIMECHAINS OF THE MINTING (the author's words 03.10.2026 21:25 UTC: «in chess too its own TimeChain of the minting for
 /// every move, put in order»; the chain's constitution, points 4 and 5: «build by the Architecture of TimeChains», «build the
 /// Economy of Time»). Every source of coins keeps its own chain on this phone -- chess, the Pantheon, the VPN wall, the Timer, the
 /// chats' letters, the coins received, given and sent: one link per move of coins, numbered, stamped in milliseconds and sealed
@@ -1786,7 +1786,7 @@ enum MTTimeChain {
     struct Link: Codable { let n: Int; let at: Int64; let k: String; let c: Int; let ref: String; let prev: String; let hash: String }
     struct Head: Equatable { let n: Int; let hash: String; let whole: Bool }
     static let genesis = String(repeating: "0", count: 64)
-    /// ONE MOMENT, THE SAME ON EVERY DEVICE TO THE MILLISECOND (the author's word 06.10.2026 11:2x MSK: «everything to the millisecond,
+    /// ONE MOMENT, THE SAME ON EVERY DEVICE TO THE MILLISECOND (the author's word 06.10.2026 08:2x UTC: «everything to the millisecond,
     /// exact on all nodes, the sender and the receivers above all»): a move is born at a whole millisecond, and every road writes that
     /// millisecond as it is -- the lane, the chains, the book of another device of the words. `Int64(at * 1000)` cut the fraction:
     /// 5 185 of the iPhone 17's 15 331 moves reached the seed's other devices a millisecond earlier than their owner wrote them.
@@ -1813,7 +1813,7 @@ enum MTTimeChain {
         if MTBoardCoins.owns(r) { return "comments" }
         switch kind {
         case .earn:
-            // A GROUP'S AND A CHANNEL'S COINS STAND IN THEIR OWN CHAINS (the author's words 06.10.2026 11:5x-12:0x MSK: «their own
+            // A GROUP'S AND A CHANNEL'S COINS STAND IN THEIR OWN CHAINS (the author's words 06.10.2026 08:5x-09:0x UTC: «their own
             // TimeChain and their own app»): the letter's conversation names its chain.
             guard let p = peer, MTGroup.isKey(p) else { return "chats" }
             return channel(p) ? "channels" : "groups"
@@ -1869,7 +1869,7 @@ enum MTTimeChain {
     static func note(_ chain: String, kind: String, coins: Int, ref: String, at moment: Double = Date().timeIntervalSince1970) {
         q.async { write(chain, kind: kind, coins: coins, ref: ref, at: moment) }
     }
-    /// THE WALL'S CHAIN (the author's word 04.10.2026 02:38 MSK): my wall's posts as they stand -- a post not yet chained joins as
+    /// THE WALL'S CHAIN (the author's word 03.10.2026 23:38 UTC): my wall's posts as they stand -- a post not yet chained joins as
     /// born (post), one whose words or files moved as changed (edit), one chained and no longer standing as taken down (gone); the
     /// births in the order the posts were born. One queue, so every link keeps its place.
     static func wall(_ posts: [(id: String, sig: String, at: Double)]) {
@@ -1905,7 +1905,7 @@ enum MTTimeChain {
             let hash = seal(n: n, at: at, k: kind, c: coins, ref: ref, prev: h.hash)
             guard var line = try? JSONEncoder().encode(Link(n: n, at: at, k: kind, c: coins, ref: ref, prev: h.hash, hash: hash)) else { return }
             line.append(0x0A)
-            // THE LINKS OF A SECOND RIDE ONE WRITE (the author's word 04.10.2026 12:27 MSK, the heat of the minting): the seal is
+            // THE LINKS OF A SECOND RIDE ONE WRITE (the author's word 04.10.2026 09:27 UTC, the heat of the minting): the seal is
             // made at once and the link waits a second for its file with the others. A write that fails leaves the link out of the
             // file, and the next reading of the book appends it again by its name (MTLocalCoinLedger.load).
             waiting[u, default: Data()].append(line)
@@ -1959,9 +1959,9 @@ enum MTTimeChain {
     }
 }
 
-// MARK: - THE CHAIN OF THE PERSON (the author's words 10.10.2026 13:4x, 15:0x and 15:2x MSK)
+// MARK: - THE CHAIN OF THE PERSON (the author's words 10.10.2026 13:4x, 15:0x and 12:2x UTC)
 
-/// THE CHAIN OF THE PERSON COUNTS THE SECONDS THE WORDS WERE ON THE NETWORK (the author's word 10.10.2026 13:4x MSK: «in this
+/// THE CHAIN OF THE PERSON COUNTS THE SECONDS THE WORDS WERE ON THE NETWORK (the author's word 10.10.2026 10:4x UTC: «in this
 /// section the first TimeChain is called Person: it shows the levels of the person, and the count goes only for the seconds this
 /// seed was actually online on any device»; App, «The chains of time a client shows»). A second counts while the wallet stands on
 /// the screen and a node answers its exchanges: the seconds are the node's own, read from the answer's Date header, never this
@@ -2002,8 +2002,8 @@ enum MTTimeChain {
         for k in 1...62 where level(Int64(1) << k) != k || level((Int64(1) << k) - 1) != k - 1 { return false }
         return level(Int64.max) == 62
     }
-    /// THE GLOBAL LEVEL OF THE PERSON, THE ONE READING OF IT (the author's words 10.10.2026 15:0x MSK: «the lowest level among the
-    /// chain of the person and the chain of the wallet becomes the Global Level of the person»; 17.10.2026 22:24 and 22:41 MSK: the
+    /// THE GLOBAL LEVEL OF THE PERSON, THE ONE READING OF IT (the author's words 10.10.2026 12:0x UTC: «the lowest level among the
+    /// chain of the person and the chain of the wallet becomes the Global Level of the person»; 17.10.2026 22:24 and 19:41 UTC: the
     /// third level, the Fabric of Time, «bears on the Global level by the rule of the minimum», «under the word level we mean only the
     /// global one»; Canon, «The level of a person»: min(p, w, f)): the lowest of the person's level, the wallet's level of π and the
     /// level of the fabric of time this turn (MTFabricLevel). A fabric this life has not read yet adds no third term -- an unknown
@@ -2105,7 +2105,7 @@ enum MTTimeChain {
         keepSoon()
     }
 
-    /// THE MINTING GOES ON WHILE THE APP IS AWAY (the author's word 10.10.2026 15:0x MSK: «when any of our apps is minimized, the
+    /// THE MINTING GOES ON WHILE THE APP IS AWAY (the author's word 10.10.2026 12:0x UTC: «when any of our apps is minimized, the
     /// minting must go on at the lowest level among the chain of the person and the chain of the wallet -- the levels of π»): the app
     /// leaving the screen keeps the node second of its last answer and the Global Level of that moment; the first answer after its
     /// return names the second it came back, and every second between mints the second's one coin (MTCoinBook.price; point 11
@@ -2206,9 +2206,9 @@ enum MTTimeChain {
     }
 }
 
-// MARK: - THE FABRIC OF TIME (the author's words 17.10.2026 22:24, 22:41, 22:50 and 23:18 MSK)
+// MARK: - THE FABRIC OF TIME (the author's words 17.10.2026 22:24, 22:41, 22:50 and 20:18 UTC)
 
-/// THE RULES OF THE FABRIC OF TIME, AS THE CORE STATES THEM (the author's words 17.10.2026 22:24 MSK: «the 3rd level is the count of
+/// THE RULES OF THE FABRIC OF TIME, AS THE CORE STATES THEM (the author's words 17.10.2026 19:24 UTC: «the 3rd level is the count of
 /// levels of the chats real with regular calls over the last 14 days -- t2 -- and it bears on the Global level by the rule of the
 /// minimum»; 22:41: «one's own is one's own global level»; 22:50: «a new level that sets the global one, named Fabric of Time»;
 /// 18.10.2026 00:4x: «not tied to the turns of t2 -- the current result of a sliding window of t2 over live activity: chats, calls,
@@ -2633,7 +2633,7 @@ struct MTWeave {
     }
 }
 
-// MARK: - THE COIN CORE OF THE APP (the author's words 03.10 13:40, 13:52 and 13:53 MSK)
+// MARK: - THE COIN CORE OF THE APP (the author's words 03.10 13:40, 13:52 and 10:53 UTC)
 
 /// ONE MOVE OF COINS on this phone's book: a coin earned by a letter of the ribbon, coins received in a chat or on a letter,
 /// coins given on a letter or a post, coins sent to a person. The amount is whole coins (one coin is one billionth of a
@@ -2650,7 +2650,7 @@ struct MTCoinEntry: Codable, Hashable, Identifiable {
     var at: Double
     var id: String { k.rawValue + ":" + ref }
     var signed: Int { (k == .earn || k == .receive) ? c : -c }
-    /// A NAME A RESTORE GIVES A LETTER NAMES NO MOVE (the author's words 09.10.2026 11:3x-11:4x MSK: "the balance swelled, this person
+    /// A NAME A RESTORE GIVES A LETTER NAMES NO MOVE (the author's words 09.10.2026 08:3x-08:4x UTC: "the balance swelled, this person
     /// never had 5 million -- check it, it is a hole"; "we have a cryptographic TimeChain: only unambiguous mathematics, and the
     /// restore must bring back the incomes and the expenses right"). A coin letter moves its coins once, under its wire name, the one
     /// name both phones hold. A restore names its copy of the letter anew (MTRestoredMid: the archive's "arc:", the keepers' "given:"),
@@ -2661,7 +2661,7 @@ struct MTCoinEntry: Codable, Hashable, Identifiable {
     var restoredName: Bool { MTRestoredMid.holds(ref) }
     /// THE LETTER THE COINS STAND UNDER (MTLocalCoinLedger.coins(on:)), or nil. A bubble's own coin of the builds before the burning
     /// (MTCoinSend.pay) -- paid by the writer to the reader as a reaction word -- stands under no bubble: the author's word
-    /// 05.10.2026 22:29 MSK, «in ordinary chats take away the coin under every message as a reaction», takes it from the bubbles
+    /// 05.10.2026 19:29 UTC, «in ordinary chats take away the coin under every message as a reaction», takes it from the bubbles
     /// sent before too, on both phones; the coins stay where the book moved them.
     var shownOn: String? {
         ref.hasPrefix(MTCoinSend.bubblePrefix) || ref.hasPrefix(MTCoinSend.receivedPrefix + MTCoinSend.bubblePrefix) ? nil : on
@@ -2714,7 +2714,7 @@ extension MTCoinLedger {
     @discardableResult func earn(_ names: [String], times: Int) -> Int { earn(names, times: times, peer: nil) }
 }
 
-/// THE TIMECHAIN FOLDER (the author's words 04.10.2026 13:42 MSK: «in the Montana folder make a folder TimeChain, so I see it on all
+/// THE TIMECHAIN FOLDER (the author's words 04.10.2026 10:42 UTC: «in the Montana folder make a folder TimeChain, so I see it on all
 /// devices, with the wallet's TimeChain of each device in it»; «TimeChain is written so, exactly, everywhere»): the one folder the
 /// Files app shows as On My iPhone, Montana, TimeChain -- the comment chains a person wrote (MTBoardSeen, the author's word 02.10
 /// 15:09) and the wallet's chains, one file a source (wallet-pantheon.jsonl, wallet-chats.jsonl ...). The folder is the seated
@@ -2773,22 +2773,22 @@ enum MTCoinBook {
     /// THE SMALL SPEND (the wallet's history folds them, MTWalletScreen): a coin on a letter or a post carries at most thirteen.
     /// Not a rate: since 19.10.2026 a second of life mints one coin, all minting together (price, below).
     static let smallSpend = 13
-    /// THE PRICE OF A SECOND, THE ONE OWNER OF THE FUNCTION «1 COIN = 1 SECOND» (point 11; the author's words 05.10.2026 14:17 MSK:
+    /// THE PRICE OF A SECOND, THE ONE OWNER OF THE FUNCTION «1 COIN = 1 SECOND» (point 11; the author's words 05.10.2026 11:17 UTC:
     /// «a second = 1 coin everywhere»; 19.10.2026 15:3x: «the ceiling, the invariant -- nothing else can mint or accelerate it»;
     /// 16:4x: «one owner of the function 1 coin = 1 second, and that is all»): one coin, the most a second mints, every door
     /// together (MTLocalCoinLedger.priced) -- a person's hour is 3 600 coins and their personal rate is read by it (MTHourWorth, MTPersonalRate);
     /// a second of a connected call mints it times each side's level in a Money Flow chat and burns it on each side in an ordinary
-    /// one (MTCallMint, 07.10.2026 21:3x-21:4x MSK).
+    /// one (MTCallMint, 07.10.2026 18:3x-18:4x UTC).
     static let price = 1
-    /// THE TICKER OF THE MONTANA TIME COIN (the constitution of the chain, point 12, the author's word 04.10.2026 17:31 MSK): one
+    /// THE TICKER OF THE MONTANA TIME COIN (the constitution of the chain, point 12, the author's word 04.10.2026 14:31 UTC): one
     /// symbol in every language, beside the balance.
     static let ticker = "$TCM"
-    /// THE BOOK'S GENERATION (the author's word «fix all points in order» 05.10.2026 21:4x MSK, the coin audit's second point): one
+    /// THE BOOK'S GENERATION (the author's word «fix all points in order» 05.10.2026 18:4x UTC, the coin audit's second point): one
     /// more at every seat's move, before anything is read again. A gather begun under the person who left took their key, waited on
     /// the nodes, and then read the book of the person seated -- laying it over every piece of the old seed (the whole book lost
     /// to a restore on another phone). A gather compares this after every wait and writes nothing once it moved.
     @MainActor static private(set) var generation = 0
-    /// A PERSON LIFTED INTO THE SEAT READS THEIR OWN COINS (the author's word 04.10.2026 03:38 MSK): every owner of coins on this phone
+    /// A PERSON LIFTED INTO THE SEAT READS THEIR OWN COINS (the author's word 04.10.2026 00:38 UTC): every owner of coins on this phone
     /// lets the person who left go and reads the folder of the person seated (MTCoinPlace) -- the chains first, so the book's past
     /// joins the seated person's chains.
     @MainActor static func reread() {
@@ -2826,7 +2826,7 @@ enum MTCoinBook {
 /// THE LOCAL BOOK: one line of JSON per move, appended, in Application Support (protected until the first unlock, as the
 /// chat coins' names are). The balance and the totals are the sum of the lines, recounted at launch -- the file is the one
 /// truth, the numbers are its reading.
-/// THE PERSON'S COINS LIVE IN THE PERSON'S FOLDER (the author's word 04.10.2026 03:38 MSK: «I came in with another account on T1,
+/// THE PERSON'S COINS LIVE IN THE PERSON'S FOLDER (the author's word 04.10.2026 00:38 UTC: «I came in with another account on T1,
 /// another seed, and the wallet's balance of the other account is here -- a gross violation»). The book, its TimeChains and the
 /// chats' tally lay among the phone's own files, so a seat's move (MTSeats) parked the person and left their coins to the next
 /// one. They live in Montana/Coins, a folder of the person seated (SeedScope.seatFolders): parked with the person, lifted with
@@ -2839,7 +2839,7 @@ enum MTCoinPlace {
         .appendingPathComponent("Montana", isDirectory: true)
     static let dir: URL? = settle(montana?.appendingPathComponent("Coins", isDirectory: true))
     static func file(_ name: String) -> URL? { dir?.appendingPathComponent(name) }
-    /// THE BOOK OF A PERSON FORGOTTEN LEAVES WITH THEM (the author's word «fix all points in order» 05.10.2026 21:4x MSK, the coin
+    /// THE BOOK OF A PERSON FORGOTTEN LEAVES WITH THEM (the author's word «fix all points in order» 05.10.2026 18:4x UTC, the coin
     /// audit's eighth point): «Forget the device» with no other seat left this folder in place, and the next seed's book was the
     /// forgotten one's -- read, shown and laid on the nodes under the new seed. The folder's files are set aside whole, under the
     /// moment of the forgetting, and nothing reads them again: the coins ride their own seed on the nodes (MTCoinVault), and this
@@ -2871,7 +2871,7 @@ enum MTCoinPlace {
         let first = firstMove(montana.appendingPathComponent(book))
         let seats = MTSeats.book()
         let owner = seats.seats.filter { s in first.map { at in s.born <= at } ?? true }.min { a, b in a.born < b.born }?.id
-        // A BOOK WHOSE OWNER IS NOT KNOWN STAYS WHERE IT STANDS (the author's word «fix all points in order» 05.10.2026 21:4x MSK,
+        // A BOOK WHOSE OWNER IS NOT KNOWN STAYS WHERE IT STANDS (the author's word «fix all points in order» 05.10.2026 18:4x UTC,
         // the coin audit's seventh point): born is written at a seat's first move -- after the book's first move -- so with two
         // seats or more the filter found nobody and the book went to whoever sat. It moves only to a person the seats name.
         if owner == nil, 1 < seats.seats.count {
@@ -2914,7 +2914,7 @@ struct MTCoinCounts {
     var received = 0
     var spent = 0
     var sent = 0
-    /// The tallies saturate, never trap (the coin audit's ninth point, 05.10.2026 21:4x MSK): a sum past the integer is shown at
+    /// The tallies saturate, never trap (the coin audit's ninth point, 05.10.2026 18:4x UTC): a sum past the integer is shown at
     /// its edge, and the app lives.
     static func plus(_ a: Int, _ b: Int) -> Int {
         let (s, over) = a.addingReportingOverflow(b)
@@ -2967,7 +2967,7 @@ struct MTCoinCounts {
     private init() {
         begin()
         // What waits for the second's write is on disk the moment the app leaves the screen, in that same turn, and the seed's
-        // nodes are asked for it at once (the author's word «fix all points in order» 05.10.2026 21:4x MSK, the coin audit's
+        // nodes are asked for it at once (the author's word «fix all points in order» 05.10.2026 18:4x UTC, the coin audit's
         // fifth point: an asynchronous write and an upload a minute later lost the open windows to a process ended in the
         // background, and to a phone lost after it, what no node held yet).
         NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
@@ -2987,7 +2987,7 @@ struct MTCoinCounts {
         begin()
     }
 
-    /// THE BOOK IS READ ONCE, OFF THE SCREEN'S THREAD, AND SHOWN AT ONCE (the author's words 04.10.2026 13:04-13:10 MSK: «at 13:04
+    /// THE BOOK IS READ ONCE, OFF THE SCREEN'S THREAD, AND SHOWN AT ONCE (the author's words 04.10.2026 10:04-10:10 UTC: «at 13:04
     /// on T1 I open the wallet and it opens long, from a hang -- close it by construction»; «build by constitution 0»). T1's book
     /// of 19 358 moves was read on the main thread the first time anything asked for it -- the wallet's opening, 3.7 s of a still
     /// screen: a decoder made anew for every line, every move appended to a published array that copied itself whole, and a task
@@ -3022,7 +3022,7 @@ struct MTCoinCounts {
     }
     /// A line cut short by an ended process is no move: only a whole line counts, once by its name, while the sum still fits.
     nonisolated private static func decode(_ file: URL?) -> ([MTCoinEntry], Set<String>) {
-        // ONE BAD BYTE COSTS ONE LINE, NEVER THE BOOK (the author's word «fix all points in order» 05.10.2026 21:4x MSK, the coin
+        // ONE BAD BYTE COSTS ONE LINE, NEVER THE BOOK (the author's word «fix all points in order» 05.10.2026 18:4x UTC, the coin
         // audit's tenth point): the book was read as one UTF-8 text, and a single invalid byte read it as nothing -- an empty book
         // until the nodes filled it again. It is read as bytes, and every line is decoded alone.
         guard let file, let data = try? Data(contentsOf: file) else { return ([], []) }
@@ -3098,7 +3098,7 @@ struct MTCoinCounts {
         return fresh.count
     }
 
-    /// THE BALANCE NEVER WRAPS (the author's word «fix all points in order» 05.10.2026 21:4x MSK, the coin audit's ninth point): a
+    /// THE BALANCE NEVER WRAPS (the author's word «fix all points in order» 05.10.2026 18:4x UTC, the coin audit's ninth point): a
     /// coin letter of Int.max less the balance passed fits, and every later earning trapped on the sum -- the app died at any
     /// minting. Every move of the hand and the minting passes this one door; a move the integer cannot hold is refused here,
     /// before it is written.
@@ -3122,7 +3122,7 @@ struct MTCoinCounts {
         reached(at: e.at)
         return true
     }
-    /// THE BOOK SAYS WHICH PAIRS HOLD THESE WORDS (the author's words 06.10.2026 11:1x-11:2x MSK, MTOwnWords): one move of coins seen
+    /// THE BOOK SAYS WHICH PAIRS HOLD THESE WORDS (the author's words 06.10.2026 08:1x-08:2x UTC, MTOwnWords): one move of coins seen
     /// from both its ends -- a coin letter sent and credited under its one name, a paid reaction given and credited under its one
     /// name -- lies in one book only when both ends hold the same words, for the book is the union of one seed's devices; the pair of
     /// such a move is the words' own. The book of the iPhone 17 says it of the iPad from the first coin letter between them, 08:13:24Z.
@@ -3151,7 +3151,7 @@ struct MTCoinCounts {
         }
     }
 
-    /// THE MINTING WINDOW (the author's word 04.10.2026 12:52 MSK: «put time windows of 60 seconds at the minting's activation»): the
+    /// THE MINTING WINDOW (the author's word 04.10.2026 09:52 UTC: «put time windows of 60 seconds at the minting's activation»): the
     /// coins of a game -- the Pantheon's taps, the pull's seconds -- gather in an open window of τ1 and join the book as ONE move when
     /// it closes: one line of the book, one link of its TimeChain, one line of the diary, never one per tap (T1 had tens of thousands
     /// of moves read and held at every launch). The balance and the game's count show every coin at once; the window's end, the app
@@ -3218,8 +3218,8 @@ struct MTCoinCounts {
     private var second: (at: Int64, minted: Int) = (0, 0)
     private func priced(_ coins: Int, seconds: Int) -> Int {
         let now = Int64(Date().timeIntervalSince1970)
-        // ONLY THE CHAIN MINTS (fold-6 and fold-7; the author's words 21.10.2026 17:1x MSK «only the core mints, the client merely shows
-        // it», 23.10.2026 03:37 MSK «minting is a separate entity, and it happens if the person is online or behind the VPN; touches,
+        // ONLY THE CHAIN MINTS (fold-6 and fold-7; the author's words 21.10.2026 14:1x UTC «only the core mints, the client merely shows
+        // it», 23.10.2026 00:37 UTC «minting is a separate entity, and it happens if the person is online or behind the VPN; touches,
         // calls and absence do not mint by themselves»): from the time cut the chain credits the seconds itself, so no door of the book
         // mints -- letters, taps, the pull, the VPN wall, calls, a named mint, chess, the seconds away. The person's number is the
         // chain's (MTCoinSplit.available).
@@ -3235,12 +3235,12 @@ struct MTCoinCounts {
     /// Every open window into the book now (the app leaves the screen, a person leaves the seat).
     func closeWindows() { for prefix in Array(windows.keys) { close(prefix) } }
     /// THE PERSON LEAVING THE SEAT KEEPS EVERY COIN OF THEIR LAST MINUTE (the author's word «fix all points in order» 05.10.2026
-    /// 21:4x MSK, the coin audit's fourth point): the windows close and the book and its chains are on disk in this turn, while the
+    /// 18:4x UTC, the coin audit's fourth point): the windows close and the book and its chains are on disk in this turn, while the
     /// person's folder still stands -- the seat's park moves the folder, and the lines that waited for their second then found no
     /// folder, or the next person's (MTSeats.parkThenLift asks this before it parks).
     func writeWhole() { closeWindows(); writeNow() }
 
-    /// THE BOOK IS WRITTEN ONCE A SECOND, NOT ONCE A COIN (the author's word 04.10.2026 12:27 MSK: «check why the phone heats while
+    /// THE BOOK IS WRITTEN ONCE A SECOND, NOT ONCE A COIN (the author's word 04.10.2026 09:27 UTC: «check why the phone heats while
     /// minting actively, and do it by constitution 0»; the iPhone 15 Pro Max on 04.10: twenty thousand coins in a day, every one a
     /// file opened, written and closed twice -- the book and its TimeChain -- and a line of the diary). The moves of a second ride one
     /// write, in the file of the person they belong to; the app leaving the screen and a change of person write what waits at once.
@@ -3264,7 +3264,7 @@ struct MTCoinCounts {
         flushDue = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.flush() }
     }
-    /// A MOVE BETWEEN PEOPLE IS ON DISK BEFORE ANYONE HEARS OF IT (the author's word 04.10.2026 23:57 MSK: «sent 123 thousand coins
+    /// A MOVE BETWEEN PEOPLE IS ON DISK BEFORE ANYONE HEARS OF IT (the author's word 04.10.2026 20:57 UTC: «sent 123 thousand coins
     /// from T3, they did not appear for her, and T3 was debited -- a gross breach of the constitution; close it by construction»).
     /// The iPhone 15 Pro Max credited them at 20:54:30Z in a background wake, and the process ended inside the second the book waits
     /// before it writes; the next launch read the book without them (209 216, then 86 216). A coin sent, received or given is
@@ -3367,7 +3367,7 @@ struct MTCoinCounts {
         move(.send, coins, peer: peer, ref: ref, on: target)
     }
 
-    /// A COIN LETTER PROVEN DELIVERED TAKES ITS COINS AGAIN, WHATEVER THE BALANCE (the author's words 06.10.2026 12:3x-12:4x MSK: «close the double spends»; «the safety of the restore by the seed»): its
+    /// A COIN LETTER PROVEN DELIVERED TAKES ITS COINS AGAIN, WHATEVER THE BALANCE (the author's words 06.10.2026 09:3x-09:4x UTC: «close the double spends»; «the safety of the restore by the seed»): its
     /// coins came back while it was red (MTCoinSend.hold), the receiver credited it all the same, and its late receipt asks them
     /// again. A refusal on a short balance left them in two books for ever -- the sender had spent them meanwhile. This move stands
     /// whatever the balance: a book may stand below nothing, the truth of a debt, the sum of every book keeps the coins there were,
@@ -3413,7 +3413,7 @@ struct MTCoinCounts {
         return true
     }
 
-    /// A COIN LETTER STANDS AT ITS OWN BIRTH IN EVERY BOOK (the author's word 06.10.2026 11:2x MSK: «the sender and the receivers above
+    /// A COIN LETTER STANDS AT ITS OWN BIRTH IN EVERY BOOK (the author's word 06.10.2026 08:2x UTC: «the sender and the receivers above
     /// all»): its name carries the millisecond the sender's phone gave it (ChatStore.mintMid), so the sender's transfer and the
     /// receiver's credit stand at that one millisecond -- as a letter's coin does (earn) -- not at two clocks' readings of two moments.
     /// Every other move stands at the millisecond it is made.
@@ -3443,7 +3443,7 @@ struct MTCoinLetter: Codable, Hashable {
     static var born: String?
     var c: Int
     var id: String
-    /// THE LETTER NAMES ITSELF (the author's words 06.10.2026 12:3x-12:4x MSK: «close the double spends»; «the safety of the restore by the seed»): its id is the UUID of its own
+    /// THE LETTER NAMES ITSELF (the author's words 06.10.2026 09:3x-09:4x UTC: «close the double spends»; «the safety of the restore by the seed»): its id is the UUID of its own
     /// wire name, so a copy carried under another name -- pasted from a bubble, shared in, typed -- names a letter that is not
     /// itself (MTCoinSend.credits).
     func bound(to mid: String) -> Bool {
@@ -3475,7 +3475,7 @@ extension Message {
     }
 }
 
-/// A PAIR WHOSE OTHER END HOLDS MY WORDS PAYS NOTHING (the author's words 06.10.2026 11:1x-11:2x MSK: «from the tablet I sent more than
+/// A PAIR WHOSE OTHER END HOLDS MY WORDS PAYS NOTHING (the author's words 06.10.2026 08:1x-08:2x UTC: «from the tablet I sent more than
 /// 700 thousand to the iPhone 17, and in the end they were debited from her, not credited»; «check that the TimeChain does not allow
 /// this»). The iPad (iPad12,1) and the iPhone 17 hold the same 24 words -- one book -- and the three coin letters between them took the
 /// coins out of that book and laid them back: the receiver took the sender's debit by the seed's lane before the letter's credit
@@ -3521,8 +3521,8 @@ enum MTCoinSend {
         return !chat.isGroup && !ChatStore.isLocalRoom(chat.name) && chat.convId != nil && MontanaConv.holds(conv)
             && !store.refuses(conv) && !store.closedChats.contains(conv) && !MTOwnWords.mine(conv)
     }
-    /// WHERE COINS CAN GO: EVERY OPEN PAIR, FOR A PERSON IS THEIR SEED AND THE WALLET IS IN IT (the author's words 11.10.2026 19:5x
-    /// MSK: «why does it say Andrey has no wallet and not let me send -- he has a seed, so he has a wallet»; «a gross error -- the seed
+    /// WHERE COINS CAN GO: EVERY OPEN PAIR, FOR A PERSON IS THEIR SEED AND THE WALLET IS IN IT (the author's words 11.10.2026 16:5x
+    /// UTC: «why does it say Andrey has no wallet and not let me send -- he has a seed, so he has a wallet»; «a gross error -- the seed
     /// is already there, what has a wallet to do with it -- the person is the seed and everything is in it»). A pair had to say it held
     /// coins before it could take them, and on T1 24 of 29 pairs stood dimmed «no wallet yet» (coin_send_page pairs=29 holders=5,
     /// 11.10 15:40Z) -- people on builds with coins who had not yet sent the word that carried the mark. The coins are the seed's:
@@ -3557,7 +3557,7 @@ enum MTCoinSend {
         }
         var result = await MTCoinTx.sendResult(coins, conv: conv)
         if case .noKey = result {
-            // THE KEY IS ASKED, AND THE SAME SEND GOES WHEN IT COMES (the author's word 21.10.2026 12:41 MSK: «if there is a chat
+            // THE KEY IS ASKED, AND THE SAME SEND GOES WHEN IT COMES (the author's word 21.10.2026 09:41 UTC: «if there is a chat
             // there is everything -- the tunnel, the key -- and it must work at once and instantly»): nothing left the book, the
             // correspondent's phone answers the ask with its key (the about word's «q»), a live one within seconds -- T1's diary
             // 09:39:18Z, Petros's receipts in 4 s.
@@ -3572,7 +3572,7 @@ enum MTCoinSend {
         }
         switch result {
         case .sent(let id):
-            // USER-DATA: the coin glyph, the number of coins and the time they are (the author's word 19.10.2026 17:44 MSK: «1 Coin
+            // USER-DATA: the coin glyph, the number of coins and the time they are (the author's word 19.10.2026 14:44 UTC: «1 Coin
             // = 0.000000001 TCM = 1 second; in transfers both the time and the coins» -- coins, never TCM), the time in the sender's
             // language as the words of the letter are; the link is the transfer's own address
             let text = "🪙 " + MTCoinText.count(coins) + " · " + MTCoinText.time(coins) + "\n" + MTCoinTx.link + id
@@ -3582,7 +3582,7 @@ enum MTCoinSend {
             MontanaTrace.mark("coin_pending", "transfer coins=\(coins) balance=\(balance)")
             return .pending
         case .refused:
-            // NOTHING LEFT, AND THE PERSON IS TOLD SO (the author's word 20.10.2026 22:0x MSK: «on T1 it does not let me send a
+            // NOTHING LEFT, AND THE PERSON IS TOLD SO (the author's word 20.10.2026 19:0x UTC: «on T1 it does not let me send a
             // transfer, it says it is being confirmed /// fix it -- everything must work at once and instantly»): every refused road
             // of send and send3 either never debited the book or
             // gave the coins back before it answered, so «being confirmed» over a refusal was a false gauge. The book already proved
@@ -3594,7 +3594,7 @@ enum MTCoinSend {
             return .noKey
         }
     }
-    /// COINS GIVEN ON THE CORRESPONDENT'S LETTER ARE A SEND OF THE CHAIN (the author's words 23.10.2026 03:27 and 03:37 MSK: the
+    /// COINS GIVEN ON THE CORRESPONDENT'S LETTER ARE A SEND OF THE CHAIN (the author's words 23.10.2026 03:27 and 00:37 UTC: the
     /// reactions «each a SEND record in the chain, the phone only the chain's mirror»): the coins leave by the pair's version 3 SEND
     /// under the letter's name, and the reaction word only names that SEND («op»: «coin3», «tx») -- the reader's book takes the
     /// coins from the chain alone (MTCoinTx.receive3), never from the word. An older build reads an unknown op as nothing at all.
@@ -3631,8 +3631,8 @@ enum MTCoinSend {
             return false
         }
     }
-    /// THE BUBBLE BURNS ITS COIN (the author's words 05.10.2026 01:21-01:31 MSK: «every bubble -1 coin»; «any bubble in an ordinary
-    /// chat with the feed at the bottom»; and 22:29-22:32 MSK: «in ordinary chats take away the coin under every message as a
+    /// THE BUBBLE BURNS ITS COIN (the author's words 04.10.2026 22:21-22:31 UTC: «every bubble -1 coin»; «any bubble in an ordinary
+    /// chat with the feed at the bottom»; and 19:29-19:32 UTC: «in ordinary chats take away the coin under every message as a
     /// reaction; the burning in an ordinary chat at both players -- a simple burning without a transfer»; «1 coin»): a bubble of
     /// mine in a pair's ordinary chat -- the Money Flow off; there the letters mint -- burns one coin of my book by the bubble's
     /// name, and nothing goes to the correspondent: no reaction word, no coin under the bubble; their phone burns its own for their
@@ -3645,7 +3645,7 @@ enum MTCoinSend {
     static let fresh: Double = 86_400
     /// The name a reaction word's coins are credited under on the reader's book: this prefix and the name the word carries.
     static let receivedPrefix = "rc:"   // NOT-UI: the book's own name
-    /// EVERY LETTER OF A PAIR'S CHAT MINTS THE LEVEL'S COINS TO EACH OF ITS PEOPLE (the author's word 11.10.2026 21:2x MSK: «coins
+    /// EVERY LETTER OF A PAIR'S CHAT MINTS THE LEVEL'S COINS TO EACH OF ITS PEOPLE (the author's word 11.10.2026 18:2x UTC: «coins
     /// must be credited x1 to the level ... and in chats»): a letter of mine or of my correspondent, standing in a pair's own
     /// conversation, mints my level's coins once by its name on this phone -- the correspondent's phone mints its own for the same
     /// letter, whatever the chat's Money Flow; nothing burns any more (the bubble's burn of 05.10 is gone). It mints when the letter
@@ -3655,7 +3655,7 @@ enum MTCoinSend {
         guard !MTGroup.isKey(key), !ChatStore.isLocalRoom(key), MontanaConv.holds(key) else { return }
         MTChatMint.shared.credit([m], oneEach: true)
     }
-    /// A COIN LETTER THAT DID NOT GO GIVES ITS COINS BACK (the author's word 05.10.2026 01:40 MSK: «I sent Narine 60 000 coins from
+    /// A COIN LETTER THAT DID NOT GO GIVES ITS COINS BACK (the author's word 04.10.2026 22:40 UTC: «I sent Narine 60 000 coins from
     /// T1, the letter did not go and they were taken from me; while the retry mark hangs, return them to the sender's balance with
     /// the mark not delivered»): a coin letter of mine holds its coins exactly while it is not red. Red, they come back by one move
     /// (back) and the bubble says so; on its way again under the hand's retry, or proven delivered after all -- the carriage goes on
@@ -3665,7 +3665,7 @@ enum MTCoinSend {
     /// reading asks it of every one (settle) -- a letter red before this build gives its coins back at the first launch.
     static let backPrefix = "back:"
     static let againPrefix = "again:"
-    /// A COIN LETTER NOT DELIVERED IN A DAY GIVES ITS COINS BACK (the author's words 10.10.2026 23:3x MSK: «a rule common to every
+    /// A COIN LETTER NOT DELIVERED IN A DAY GIVES ITS COINS BACK (the author's words 10.10.2026 20:3x UTC: «a rule common to every
     /// wallet: if it did not arrive in 24 hours -- it comes back»): T2's 727 639 coins to an account whose phone is gone rode 44 hours
     /// without a receipt and stayed taken, for a letter of mine rides to its receipt (MTRefusal) and only red gave coins back. The
     /// coins follow the letter's proof as well as its rung: delivered or read, they are the receiver's; on its way and born within
@@ -3704,7 +3704,7 @@ enum MTCoinSend {
             }
         }
     }
-    /// THE LETTERS THE AUTHOR NAMED UNDELIVERABLE (the author's words 10.10.2026 23:2x-23:3x MSK: «there was a transfer from T2 to a
+    /// THE LETTERS THE AUTHOR NAMED UNDELIVERABLE (the author's words 10.10.2026 20:2x-20:3x UTC: «there was a transfer from T2 to a
     /// dead account on Android, the coins were not received, they got stuck somewhere -- find them and return them to the sender»;
     /// «and return them to the sender now»): T2's coin letter of 08.10 18:18:19Z rode 44 hours without a receipt, no device of the
     /// account waking (woken=0), and the Montana build that took the coins out of the chats ended its row and its queue item
@@ -3732,7 +3732,7 @@ enum MTCoinSend {
         MTTimeChain.note("system", kind: "back", coins: c, ref: ref)
         MontanaTrace.mark("coin_back", "coins=\(c) letter=\(why)")
     }
-    /// A COIN LETTER OF MINE ON ITS WAY IS NOT DELETED (the author's word «fix all points in order» 05.10.2026 21:4x MSK, the coin
+    /// A COIN LETTER OF MINE ON ITS WAY IS NOT DELETED (the author's word «fix all points in order» 05.10.2026 18:4x UTC, the coin
     /// audit's first point): a row deleted by the hand while it said «sending» or «sent» took its letter out of the queue and the
     /// node box (the queue's mirror law, cargoGone, clearChat) and left its coins taken -- the receiver never had them and the
     /// sender never got them back. Giving them back at the deletion would pay twice whenever the receiver had already opened the
@@ -3774,7 +3774,7 @@ enum MTCoinSend {
         guard book.holds(.send, m.mid) else { return true }
         return moves(book, .send, againPrefix + m.mid) == moves(book, .receive, backPrefix + m.mid) || coin.c <= book.balance
     }
-    /// A COIN LETTER IS CREDITED WHEN IT NAMES ITSELF (the author's words 06.10.2026 12:3x-12:4x MSK: «close the double spends»; «the safety of the restore by the seed»): the
+    /// A COIN LETTER IS CREDITED WHEN IT NAMES ITSELF (the author's words 06.10.2026 09:3x-09:4x UTC: «close the double spends»; «the safety of the restore by the seed»): the
     /// first letter of a pair that names itself (MTCoinLetter.bound) notes its birth; from then on a letter of that pair born later
     /// under another name is a copy -- pasted, shared in, typed -- and credits nothing. A letter born before it, of a build that named
     /// none of its letters, stands as such letters always did.
@@ -3796,7 +3796,7 @@ enum MTCoinSend {
         guard 0 < c, !ref.isEmpty, !sid.isEmpty else { return }
         MTCoinBook.ledger.receive(c, from: chat, ref: receivedPrefix + ref, on: sid)
     }
-    /// THE BOOK HOLDS EVERY COIN LETTER THE CHATS HOLD (the author's word 04.10.2026 23:57 MSK: «close it by construction»): once the
+    /// THE BOOK HOLDS EVERY COIN LETTER THE CHATS HOLD (the author's word 04.10.2026 20:57 UTC: «close it by construction»): once the
     /// history stands, a correspondent's coin letter the book never credited is credited now by its wire name -- the 123 000 coins
     /// the iPhone 15 Pro Max lost with an ended process come back at its next launch; a letter credited before is passed by its name.
     @MainActor static func settle(_ store: ChatStore) {
@@ -3812,7 +3812,7 @@ enum MTCoinSend {
                 guard MTChatMint.wireName(wire), !book.received(wire) else { continue }
                 guard let coin = m.coinLetter, !MTGroup.isKey(chat), credits(coin, mid: wire, from: chat),
                       book.receive(coin.c, from: chat, ref: wire, on: nil) else { continue }
-                // THE SYSTEM'S OWN BRANCH OF THE TIMECHAIN (the author's word 05.10.2026 00:22 MSK: «repair it by a system branch in the
+                // THE SYSTEM'S OWN BRANCH OF THE TIMECHAIN (the author's word 04.10.2026 21:22 UTC: «repair it by a system branch in the
                 // TimeChain, as the diary»): the credit stands in the received chain as any other, and the system chain says why --
                 // a coin letter the book had lost, restored by its wire name, its coins and its moment.
                 MTTimeChain.note("system", kind: "restore", coins: coin.c, ref: MTCoinSend.restorePrefix + wire)
@@ -3826,7 +3826,7 @@ enum MTCoinSend {
     }
 }
 
-/// AUTO-REACTIONS OF CHOSEN PEOPLE (the author's word 06.10.2026 17:3x MSK: «in the Money Flow's settings, on a long press, open a
+/// AUTO-REACTIONS OF CHOSEN PEOPLE (the author's word 06.10.2026 14:3x UTC: «in the Money Flow's settings, on a long press, open a
 /// page where I choose whom and how much I want to auto-react to, from my contacts»): a person chosen with a number of coins is paid
 /// that many on every letter of theirs born after the choice, within a day of its birth, by the paid reaction's own road
 /// (MTCoinSend.autoGive) -- once a letter, whichever door brings it. A short balance pays nothing and the letter stands as any other.
@@ -3859,7 +3859,7 @@ enum MTAutoReact {
     }
 }
 
-/// THE COINS I PAID, SEEN IN THE CHAT (the author's word 05.10.2026 01:24 MSK: «in the chat the same way, an animation of a red
+/// THE COINS I PAID, SEEN IN THE CHAT (the author's word 04.10.2026 22:24 UTC: «in the chat the same way, an animation of a red
 /// minus coin»): the one owner of the payment's sign -- what the book just burned from me for a bubble or paid for a call, and in which chat;
 /// that chat shows it (MTPayPop).
 @MainActor final class MTCoinPaid: ObservableObject {
@@ -3883,9 +3883,9 @@ enum MTAutoReact {
 /// (montana-node-store.py _tx_step) and the Explorer (foldChain), each reading the one document on its own. The phone's sends, its
 /// receipts and its copy of the chains ask them here.
 enum MTCoinChainRules {
-    static let v2Cut: Int64 = 1_792_443_600       // NOT-UI: 20.10.2026 00:00 MSK, the node's TX_V2_CUT (COIN-TX-V3 section 8)
-    static let coinEpoch: Int64 = 1_788_210_000   // NOT-UI: 01.09.2026 00:00 MSK, the node's TX_COIN_EPOCH (section 3)
-    /// τ1, THE MINTING'S WINDOW (the author's word 12.10.2026 15:5x MSK: «once in τ1 -- 60 seconds must be the window of time»): the
+    static let v2Cut: Int64 = 1_792_443_600       // NOT-UI: 19.10.2026 21:00 UTC, the node's TX_V2_CUT (COIN-TX-V3 section 8)
+    static let coinEpoch: Int64 = 1_788_210_000   // NOT-UI: 31.08.2026 21:00 UTC, the node's TX_COIN_EPOCH (section 3)
+    /// τ1, THE MINTING'S WINDOW (the author's word 12.10.2026 12:5x UTC: «once in τ1 -- 60 seconds must be the window of time»): the
     /// shortest interval a MINT covers (sections 3, 7) and how often the phone asks its chain to take what the book holds above it.
     static let window: Int64 = 60
     static let zero = String(repeating: "0", count: 64)
@@ -3907,24 +3907,24 @@ enum MTCoinChainRules {
         return 2 * total
     }
     nonisolated static var genesisCap: Int64 { timeA(v2Cut - coinEpoch) }
-    /// 1 SECOND -- 1 COIN (section 4; the constitution, article 11; the author's words 19.10.2026 15:3x MSK: «the ceiling, an invariant --
+    /// 1 SECOND -- 1 COIN (section 4; the constitution, article 11; the author's words 19.10.2026 12:3x UTC: «the ceiling, an invariant --
     /// nothing else can mint or speed it up»): from this node second a MINT is weighed by A(x) = x over the key's whole life less all
     /// it minted; one taken before stands by the doubling rule. The node's TX_SECOND_CUT, the same second as the v2 cut.
     nonisolated static let secondCut: Int64 = v2Cut
     /// What the seconds 1..x of a key's life may mint by a MINT its node takes at the second `at`: chosen by at, never by the interval.
     nonisolated static func allowTime(_ x: Int64, at: Int64) -> Int64 { secondCut <= at ? max(0, x) : timeA(x) }
-    /// THE CHAIN MINTS THE KEY'S TIME ITSELF (section 4, fold-6; the author's words 21.10.2026 17:1x MSK: «only the core mints», «1 coin --
+    /// THE CHAIN MINTS THE KEY'S TIME ITSELF (section 4, fold-6; the author's words 21.10.2026 14:1x UTC: «only the core mints», «1 coin --
     /// 1 second, the client merely shows it»): from this node second every v3 record first folds the seconds its key has lived, so no
-    /// phone lays a MINT for its time. The node's TX_TIME_CUT, 23.10.2026 00:00 MSK.
+    /// phone lays a MINT for its time. The node's TX_TIME_CUT, 22.10.2026 21:00 UTC.
     nonisolated static let timeCut: Int64 = 1_792_702_800
-    /// MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 03:27 and 03:37 MSK: «minting is a separate entity, and it happens
+    /// MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 03:27 and 00:37 UTC: «minting is a separate entity, and it happens
     /// if the person is online or behind the VPN» -- «right, do it»): from this node second the key's life mints nothing by itself, and a
     /// MINT counts only what its interval holds of the last mintFresh seconds before its node took it -- the seconds the key was present.
-    /// A BURN is taken from the same second. The node's TX_ONLINE_CUT, 26.10.2026 00:00 MSK.
+    /// A BURN is taken from the same second. The node's TX_ONLINE_CUT, 25.10.2026 21:00 UTC.
     nonisolated static let onlineCut: Int64 = 1_792_962_000
     nonisolated static let mintFresh: Int64 = 120
     /// The key's seconds of life up to the node second `at`, and never past the online cut, credited once, proven by the same step.
-    /// THE PAST NEVER EATS THE PRESENT (fold-8; the author's words 23.10.2026 22:1x and 22:21 MSK: «Andrey's coins are not credited --
+    /// THE PAST NEVER EATS THE PRESENT (fold-8; the author's words 23.10.2026 22:1x and 19:21 UTC: «Andrey's coins are not credited --
     /// fix it in the new build»): a key that minted above its life before the cut by the doubling rule -- 28 of 96 keys on 23.10, every
     /// living phone's -- still gets every second since its last record, never before the cut, so its present seconds are not eaten by
     /// its past: the credit is the greater of its unminted life and those seconds.
@@ -4003,7 +4003,7 @@ enum MTCoinChainRules {
         if s.height == 0 { n.birth = at; n.mintEnd = at }
         let a = p.amount
         if p.version == 2 {
-            // EVERY TRANSFER MOVES ITS BALANCE (section 3, fold-2; the author's words 12.10.2026 12:1x MSK: «all transfers must be
+            // EVERY TRANSFER MOVES ITS BALANCE (section 3, fold-2; the author's words 12.10.2026 09:1x UTC: «all transfers must be
             // simply correct, not versions»): after the chain opened, a send that names no receiver spends as a SEND, proven first
             guard s.v3 else { return (n, false) }
             guard let d = v2Spent(s, amount: a) else { return (nil, false) }
@@ -4059,7 +4059,7 @@ enum MTCoinChainRules {
     static let shared = MTCoinSplit()
     struct Split: Equatable { let proven: Int64; let declared: Int64; let fromCopy: Bool; let at: TimeInterval; let height: Int; let second: Int64 }
     @Published private(set) var split: Split?
-    /// THE NEWEST STATE OF THE CHAIN SPEAKS, WHOEVER FOLDED IT (the author's words 12.10.2026 15:5x MSK: «the available depends on the
+    /// THE NEWEST STATE OF THE CHAIN SPEAKS, WHOEVER FOLDED IT (the author's words 12.10.2026 12:5x UTC: «the available depends on the
     /// network and the confirmed ... everything at once»): the copy's fold stood an hour over every fresher word of the node, so a RECV or
     /// a MINT the node had taken waited for the copy's next round. The chain's height says which word is newer; one height is one state.
     func heard(proven: Int64, declared: Int64, opened: Bool, fromCopy: Bool, height: Int, second: Int64) {
@@ -4073,7 +4073,7 @@ enum MTCoinChainRules {
         told()
         MontanaTrace.markFolded("coin_split", "proven=\(proven) declared=\(declared) copy=\(fromCopy ? 1 : 0)", window: 600)
     }
-    /// THE SENDS ON THEIR WAY TO THE CHAIN (fold-7; the author's words 23.10.2026 03:27 MSK: «the phone only mirrors the chain»): a SEND
+    /// THE SENDS ON THEIR WAY TO THE CHAIN (fold-7; the author's words 23.10.2026 00:27 UTC: «the phone only mirrors the chain»): a SEND
     /// laid on the head of height h stands in every state of a height above h, or never will -- another record took its place on that
     /// head. Until the chain tells a state above h, its coins are on their way and the available leaves them out. Held in memory: a new
     /// run reads the chain after the send's road has ended.
@@ -4082,11 +4082,11 @@ enum MTCoinChainRules {
         flying[id] = (height, Int64(coins))
         told()
     }
-    /// THE AVAILABLE, ONE NUMBER EVERYWHERE (the author's word 16.10.2026 17:19 MSK: «on the coins page do not show Proven, Declared,
+    /// THE AVAILABLE, ONE NUMBER EVERYWHERE (the author's word 16.10.2026 14:19 UTC: «on the coins page do not show Proven, Declared,
     /// More wait to be minted below -- it is enough to show how much is available with one owner, so that a transfer from the chat
     /// and from any place shows only the available»): what the person's chain holds for its one owner, proven and declared, less the
     /// sends on their way to it; before the chain has spoken in this run, the book. The book no longer caps it (fold-7, the author's
-    /// words 23.10.2026 03:37 MSK: «minting is a separate entity»): the book mints nothing after the time cut (MTLocalCoinLedger.priced),
+    /// words 23.10.2026 00:37 UTC: «minting is a separate entity»): the book mints nothing after the time cut (MTLocalCoinLedger.priced),
     /// so as a ceiling it would freeze the number while the chain mints. The wallet, the chat's coin plate, the send page, the chess
     /// stake and the word about oneself show it, and a transfer is weighed by it (MTCoinSend.transferResult).
     var available: Int {
@@ -4103,7 +4103,7 @@ enum MTCoinChainRules {
         shown = available
         MTCoinBalance.set(available)
     }
-    /// THE CHAIN'S SECOND ON THE SCREEN (the author's words 23.10.2026 23:2x MSK: «in the client the minting shows just as before, only
+    /// THE CHAIN'S SECOND ON THE SCREEN (the author's words 23.10.2026 20:2x UTC: «in the client the minting shows just as before, only
     /// it all happens at the core's level»): the chain credits the key every second by its own step (MTCoinChainRules.since), so the
     /// beat of the minting raises those seconds with their sum as the book's coins once rose, and never a coin the chain did not fold.
     func beat() {
@@ -4116,7 +4116,7 @@ enum MTCoinChainRules {
     }
 }
 
-/// THE COIN TRANSFER IS ONE RECORD ON THE NODES (Audit/COIN-TX-V1.md; the author's words 11.10.2026 19:5x-20:2x MSK: «a person is
+/// THE COIN TRANSFER IS ONE RECORD ON THE NODES (Audit/COIN-TX-V1.md; the author's words 11.10.2026 16:5x-17:2x UTC: «a person is
 /// their seed and everything is in it»; «so I can pay them in any scenario»; «either the coins left or not -- there is no third»;
 /// «professional, in the TimeChain, for auditors»). A coin letter carried the coins inside a letter, so their fate was the letter's:
 /// a build that buries the coin link (2162-2179) dropped it and the coins stood a day nowhere (the critic 11.10, B-1). The record is
@@ -4307,7 +4307,7 @@ enum MTCoinTx {
         }
         return .unknown
     }
-    /// THE HEAD IS BELIEVED ONLY AS MY OWN SIGNED RECORD (the chairman's finding 11.10.2026 23:2x MSK: a node that took a record of my
+    /// THE HEAD IS BELIEVED ONLY AS MY OWN SIGNED RECORD (the chairman's finding 11.10.2026 20:2x UTC: a node that took a record of my
     /// key signed by no one handed it out as my head, and the next honest record stood on it for ever): the head's record is read
     /// from the same chain node, its bytes must be its name, the core must verify it, and it must be of my own key. Anything else --
     /// no record, another key, a forgery -- and nothing is built on it: the coins stay.
@@ -4335,7 +4335,7 @@ enum MTCoinTx {
         case .pending: return .pending
         case .failed: return .refused
         case .notApplicable(let why):
-            // the reason a version 3 SEND could not go, said: 11:59:58 MSK of 12.10 laid a v2 record and nothing told why
+            // the reason a version 3 SEND could not go, said: 08:59:58 UTC of 12.10 laid a v2 record and nothing told why
             MontanaTrace.mark("coin_v3", "v2 road why=\(why) coins=\(coins)")
             if v2Cut <= Int64(Date().timeIntervalSince1970) { return why == noReceiverKey ? .noKey : .refused }
         }
@@ -4480,7 +4480,7 @@ enum MTCoinTx {
 
 
 // MARK: - version 3 (Audit/COIN-TX-V3.md): every move of a key's balance is a signed record of its chain
-/// THE BALANCE IS THE FOLD OF THE KEY'S CHAIN (the author's words 11.10.2026 22:5x MSK: "balances must be proven ... the Explorer
+/// THE BALANCE IS THE FOLD OF THE KEY'S CHAIN (the author's words 11.10.2026 19:5x UTC: "balances must be proven ... the Explorer
 /// shows the proof of it locally and globally"; 23:5x: "take the proven balance yourself, check it as the critic and do it
 /// yourself"). The book stays the phone's ledger; the chain is what anyone can fold: the key's first v3 record announces the book
 /// (GENESIS, declared, never called proven), what the book holds above the chain is laid as a MINT within the time of its interval,
@@ -4559,7 +4559,7 @@ extension MTCoinTx {
     }
     @MainActor private static var mintedAt: TimeInterval = 0
     @MainActor private static var mintDue = false
-    /// THE BOOK'S MOVE ASKS ITS CHAIN WITHIN ONE WINDOW (the author's words 12.10.2026 15:5x MSK: «the minting has its own chain of time
+    /// THE BOOK'S MOVE ASKS ITS CHAIN WITHIN ONE WINDOW (the author's words 12.10.2026 12:5x UTC: «the minting has its own chain of time
     /// and as it is confirmed it releases the available»; «once in τ1»): one ask a window, however many coins the window holds.
     @MainActor static func mintSoon() {
         guard !mintDue else { return }
@@ -4622,7 +4622,7 @@ extension MTCoinTx {
         // ONLY THE CHAIN MINTS (section 4, fold-6): from the node's TX_TIME_CUT the chain credits the key's seconds itself, so the phone
         // lays no MINT and shows the fold /tx-head answers -- until the node's TX_ONLINE_CUT, past which a key's life mints nothing by itself
         guard st.now < MTCoinChainRules.timeCut else {
-            // MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 03:27 and 03:37 MSK: «minting is a separate entity, and it
+            // MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 03:27 and 00:37 UTC: «minting is a separate entity, and it
             // happens if the person is online or behind the VPN»): the node counts of a MINT only what its interval holds of the last
             // mintFresh seconds before it takes it, so while the person is here the phone lays the seconds since the last MINT, never
             // older than the freshness less the road's margin; the node's minute between two MINTs is the pace
@@ -4693,7 +4693,7 @@ extension MTCoinTx {
         o["told"] = m
         save("coin3-peers.json", o)
     }
-    /// THE KEY DERIVED FOR THE WORD ABOUT ONESELF (the author's word 21.10.2026 12:41 MSK, E2E.sendAboutIfNeeded): once at a time,
+    /// THE KEY DERIVED FOR THE WORD ABOUT ONESELF (the author's word 21.10.2026 09:41 UTC, E2E.sendAboutIfNeeded): once at a time,
     /// off the main thread; when it stands, every correspondent not yet told hears it.
     private static var deriving = false
     static func deriveForTheWord() {
@@ -4744,7 +4744,7 @@ extension MTCoinTx {
         save(onceFile, ["n": o])
     }
     private static let onceFile = "coin3-once.json"
-    /// AN UNRECORDED CALL BURNS ON THE CHAIN (the author's words 23.10.2026 03:27 and 03:37 MSK: every spend is a record of the chain,
+    /// AN UNRECORDED CALL BURNS ON THE CHAIN (the author's words 23.10.2026 03:27 and 00:37 UTC: every spend is a record of the chain,
     /// the phone only its mirror): from the online cut, the first second the node takes a BURN (V14), the seconds MTCallMint burns are
     /// owed in the person's folder and laid as one BURN on my chain's head -- once a window while the call talks and at its end. The
     /// BURN waits on disk until its node's word decides it, and the owed falls only by a BURN taken, so no second burns twice; what
@@ -4892,7 +4892,7 @@ extension MTCoinTx {
         MontanaTrace.mark("coin_v3", "recv code=\(r.code) word=\(r.word) taken=\(taken ? 1 : 0) id=\(s.id.prefix(12))")
         return taken && seat.book?.receive(s.coins, from: conv, ref: refPrefix + s.id, on: heardOn(s.id)) == true
     }
-    /// A TRANSFER TO ONE'S OWN OTHER ACCOUNT IS ONE PAIR, SENT AND RECEIVED IN THE SAME STEP (the author's words 12.10.2026 13:2x MSK:
+    /// A TRANSFER TO ONE'S OWN OTHER ACCOUNT IS ONE PAIR, SENT AND RECEIVED IN THE SAME STEP (the author's words 12.10.2026 10:2x UTC:
     /// «either the coins left or not -- there is no third -- this is point 0»; 15:3x, No.66: «a transfer to oneself in Montana must
     /// become one pair of records, sent and received»). The phone holds both seeds -- the person seated and the person on its shelf --
     /// so the SEND names the other key (knowOwn), and the RECV is laid at once on the other key's own chain with that key, the chain
@@ -4975,7 +4975,7 @@ extension MTCoinTx {
 
 
 extension MTCoinTx {
-    /// A V2 RECORD THAT SPENT COMES BACK AFTER ITS DAY (fold-4, P-3 of Agent 95; the author's words 19.10.2026 12:2x MSK «put it in» and
+    /// A V2 RECORD THAT SPENT COMES BACK AFTER ITS DAY (fold-4, P-3 of Agent 95; the author's words 19.10.2026 09:2x UTC «put it in» and
     /// «at 19:23 I sent 1898535 from T1 to the Android»): a v2 record laid on my opened chain names no receiver, so no chain could ever take
     /// its coins -- 18.10 T1 sent 1 369 000 and 2 000 000 that way to an Android phone, which reads no chain, and they stood for no one.
     /// My chain's node names my unsettled sends (/tx-unsettled); a v2 one a day old is taken back by a REFUND, and the book receives it
@@ -5025,7 +5025,7 @@ extension MTCoinTx {
 }
 
 // MARK: - the phone's copy of the network's coin chains (COIN-TX-V3 section 6)
-/// EVERY PHONE THAT KEEPS A COPY IS A NODE OF THE COIN CHAINS (the author's words 11.10.2026 22:5x MSK: "the core and the nodes are
+/// EVERY PHONE THAT KEEPS A COPY IS A NODE OF THE COIN CHAINS (the author's words 11.10.2026 19:5x UTC: "the core and the nodes are
 /// every device ... agreeing to keep a copy they keep a copy of the chain of time of the coins"; 23:3x: "check as the critic that
 /// globally on every device the node is with the new build"). With the person's consent to keep for others (MTKeeping.others) the
 /// phone pulls what each chain node took, verifies every signature with the core, folds every chain by the nodes' own rules,
@@ -5119,11 +5119,11 @@ enum MTCoinReplica {
         running = true
         ranAt = Date().timeIntervalSince1970
         defer { running = false }
-        // THE BOOK IS READ AND WRITTEN OFF THE SCREEN'S THREAD (the author's words 18.10.2026 14:3x-14:4x MSK: «the chats lag»; «as
+        // THE BOOK IS READ AND WRITTEN OFF THE SCREEN'S THREAD (the author's words 18.10.2026 11:3x-11:4x UTC: «the chats lag»; «as
         // the critic, find the cause of all the lags»): the whole network's rows, decoded and encoded on the main thread every ten
         // minutes -- T1 on 2241, 11:38:36Z, a frame of the chat list held 438 ms in JSONEncoder under MTCoinReplica.save.
         var held = await Task.detached(priority: .utility) { load() }.value
-        // ONCE IN TEN MINUTES ACROSS PROCESSES (23.10.2026, the author's words 12:16 MSK: «I quit Montana on the Mac, and it hangs and
+        // ONCE IN TEN MINUTES ACROSS PROCESSES (23.10.2026, the author's words 09:16 UTC: «I quit Montana on the Mac, and it hangs and
         // starts by itself»): ranAt lives in memory, and every process a push woke was born with it at zero -- each wake pulled and
         // folded the whole network again, a signature verified per row (sample of a wake on the Mac 12:32:48: 5.6 s of 25 under
         // MTCoinReplica.fold, MontanaPQ.verify on top). The round's moment stands in the file it folds.

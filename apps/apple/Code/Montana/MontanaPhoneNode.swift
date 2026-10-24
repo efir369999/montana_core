@@ -545,7 +545,7 @@ final class MontanaPhoneNode: ObservableObject {
         let callPeer: String? = MontanaCall.stateSnapshot == "idle" ? nil : MontanaCall.peerSnapshot
         // An IPv6 door of theirs is dialled only from an IPv6 of our own: without one the dial
         // dies with «Network is down» before it leaves, and says so once a minute per address.
-        // AND ONLY WHILE THE SYSTEM'S PATH CARRIES IPv6 (12.10.2026, the iPhone 17 during the 11:00 MSK call: dial_waiting «Network is
+        // AND ONLY WHILE THE SYSTEM'S PATH CARRIES IPv6 (12.10.2026, the iPhone 17 during the 08:00 UTC call: dial_waiting «Network is
         // down» path=unsatisfied every five to sixty seconds, 07:58:45-08:01:40Z): an address of our own the list still names is no
         // route; the path monitor's own word is, and a change of the path asks again.
         let v6Here = Self.pathCarriesV6 && MontanaSelfEndpoint.candidates().contains { $0.contains(":") }

@@ -394,7 +394,7 @@ final class MTGroup {
     func canWrite(_ key: String) -> Bool {
         state(key)?.canWrite == true
     }
-    /// WHETHER THE FIELD OF THIS GROUP HOLDS THE COIN (the author's word 18.10.2026 00:14 MSK): a group's every person who writes;
+    /// WHETHER THE FIELD OF THIS GROUP HOLDS THE COIN (the author's word 17.10.2026 21:14 UTC): a group's every person who writes;
     /// never a channel -- its owner alone posts and its subscribers have no field.
     func takesCoins(_ key: String) -> Bool { state(key).map { g in g.kind == .group && g.canWrite } == true }
     /// Whether this phone is out of the group -- it left, or the owner took it out (the chat says so instead of a field).
@@ -429,7 +429,7 @@ final class MTGroup {
         return [shownName(pipe: g.owner, said: g.names[Self.ownerSeat])]
     }
 
-    /// WHOM A COIN OF THE GROUP REACHES FROM THIS PHONE (the author's word 18.10.2026 00:14 MSK, asked whether a coin in a group is a
+    /// WHOM A COIN OF THE GROUP REACHES FROM THIS PHONE (the author's word 17.10.2026 21:14 UTC, asked whether a coin in a group is a
     /// transfer to one chosen member or no coin at all: «yes, with a choice by check marks among the members, as on the Send page of
     /// the time coin»). A transfer is one record on the nodes for one receiver, named by the pair's tag under the pipe's secret
     /// (MTCoinTx.pairTag, send3) and found by the receiver through its own pipes' tags alone -- so a person is reached only through a
@@ -451,7 +451,7 @@ final class MTGroup {
             return MTGroupPayee(seat: p.seat, name: p.name, chat: MTCoinSend.canPay(chat, store: store) ? chat : nil, held: true)
         }
     }
-    /// THE GROUP IS TOLD, IT IS NEVER PAID (the author's word 18.10.2026 00:14 MSK): the coins went to each person picked by the pair's
+    /// THE GROUP IS TOLD, IT IS NEVER PAID (the author's word 17.10.2026 21:14 UTC): the coins went to each person picked by the pair's
     /// own transfer (MTCoinSendSheet, MTCoinSend.transfer); the group's feed gets the sender's plain words of how many were paid -- no
     /// sum, no name, no transfer's link and no coin letter's machine line, so no phone of the group credits anything by it (carries
     /// refuses a coin letter in a group, and ChatStore credits a coin letter only outside one). A right the group took from its
@@ -549,7 +549,7 @@ final class MTGroup {
     }
 
     /// ONE MEMBER'S INVITATION AS THE GROUP'S ROAD CARRIES IT (a call of two growing into a room, MTGroupRoom.grow, the author's word
-    /// 18.10.2026 13:3x MSK: «adding to a call must not interrupt it»): the same word, handed to the call's own road, so the peer
+    /// 18.10.2026 10:3x UTC: «adding to a call must not interrupt it»): the same word, handed to the call's own road, so the peer
     /// stands the group the moment the call says so instead of the minutes the box takes. The word is the owner's alone.
     func invitationText(_ key: String, seat: String) -> String? {
         guard let g = state(key), g.mine, g.members.contains(where: { m in m.seat == seat }) else { return nil }
@@ -592,10 +592,10 @@ final class MTGroup {
         return row
     }
 
-    /// EVERY GROUP THIS PHONE HOLDS STANDS ON A SHELF (the author's word 17.10.2026 16:0x MSK: «groups and channels did not come
+    /// EVERY GROUP THIS PHONE HOLDS STANDS ON A SHELF (the author's word 17.10.2026 13:0x UTC: «groups and channels did not come
     /// back»). A group has no pipe, so no builder derives its row from the feed: the row lived on the saved shelf alone, and a
     /// copy that did not carry the shelf -- or a shelf written over -- left the group's state and its feed on the phone with no
-    /// row to open them by (the Mac 17.10 16:03 MSK: feed_no_row=grp:9cf40d,grp:3d8826). The group is its row's owner: at every
+    /// row to open them by (the Mac 17.10 13:03 UTC: feed_no_row=grp:9cf40d,grp:3d8826). The group is its row's owner: at every
     /// load and after every copy laid, a held group with no row on either shelf stands one, in its place by its newest letter,
     /// unless the person deleted it; a face only the old row knew is taken into the group once.
     @MainActor
@@ -732,7 +732,7 @@ final class MTGroup {
         return row
     }
 
-    /// A MEDIA LETTER OF MINE INTO A GROUP (ChatStore.sendMediaToPeer, the author's words 06.10.2026 14:2x-14:3x MSK: «groups and channels with the whole of a chat, every kind of data»): its row
+    /// A MEDIA LETTER OF MINE INTO A GROUP (ChatStore.sendMediaToPeer, the author's words 06.10.2026 11:2x-11:3x UTC: «groups and channels with the whole of a chat, every kind of data»): its row
     /// stands in the feed already under its one name, its file's sealed pieces lie on the nodes for every receiver -- the node's term
     /// keeps them, no single receipt takes them away -- and its manifest leaves to everyone this phone carries to, as a word does.
     @MainActor
@@ -754,7 +754,7 @@ final class MTGroup {
     /// A group of its owner alone (A.2): nobody to carry to, so a letter is held where it was written, never red.
     static func alone(_ g: MTGroupState) -> Bool { g.mine && g.kind == .group && g.members.isEmpty }
 
-    /// THE CARD OF A LETTER OF MINE, TO EVERYONE THIS PHONE CARRIES TO (the author's word 17.10.2026 22:3x MSK: «everything as in chats,
+    /// THE CARD OF A LETTER OF MINE, TO EVERYONE THIS PHONE CARRIES TO (the author's word 17.10.2026 19:3x UTC: «everything as in chats,
     /// one to one»): the card the person saw above the field, and its picture when it catches up (MTLinkCards), ride as the group's own
     /// word «lp» under the letter's name -- the pair's same-name copy that carries the card (MontanaDeliveryEngine.attachPreview), said
     /// the group's way. An older build buries a word of a kind it does not know.
@@ -778,7 +778,7 @@ final class MTGroup {
         MontanaTrace.mark("group_tx", mid: letter, "passport copies=\(n)")
     }
 
-    /// A CHANNEL'S POST LEAVES TO EVERY SUBSCRIBER (the author's words 06.10.2026 14:2x-14:4x MSK: «in channels posts as on the Wall of Thoughts; everything the wall publishes is published in a channel», MTBoard.lay): the wall's own word «cpost» with the post as the channel's page
+    /// A CHANNEL'S POST LEAVES TO EVERY SUBSCRIBER (the author's words 06.10.2026 11:2x-11:4x UTC: «in channels posts as on the Wall of Thoughts; everything the wall publishes is published in a channel», MTBoard.lay): the wall's own word «cpost» with the post as the channel's page
     /// shows it, carried as the channel's letter; no row of the feed is born of it (ChatStore.append hands a wall's word to MTBoard).
     @MainActor
     func carryWallPost(_ post: MTBoardSeen, in key: String) {
@@ -871,7 +871,7 @@ final class MTGroup {
         return .held
     }
 
-    /// A ROOM'S WORD INTO THE GROUP (MTGroupRoom, the author's word 07.10.2026 00:2x MSK: calls of up to 13 in a group): carried like
+    /// A ROOM'S WORD INTO THE GROUP (MTGroupRoom, the author's word 06.10.2026 21:2x UTC: calls of up to 13 in a group): carried like
     /// an answer -- to everyone this phone carries to, the owner passing it on -- and never a row.
     /// An invitation (ask) goes to the seats chosen alone and rings there; the owner of a group it carries passes it on to them only.
     @MainActor
@@ -1868,7 +1868,7 @@ final class MTGroup {
         lay(came, store: store)
         tellEvent(came, in: g)
         // A SUBSCRIBER ADDED LATER READS THE CHANNEL'S NEWEST POSTS (the reference shows a channel's history to whoever comes in;
-        // the author's words 17.10.2026 18:4x MSK: «channels ... 1 to 1»): the newest ten posts of words, each under its own one name
+        // the author's words 17.10.2026 15:4x UTC: «channels ... 1 to 1»): the newest ten posts of words, each under its own one name
         // and so at its own moment, as every subscriber was carried it. A post with a file stays: its sealed pieces were laid for
         // the receivers of its day.
         // CHAT HISTORY FOR NEW MEMBERS (G.4, the reference's «Visible»): one added reads the group's newest words -- fifty letters of
@@ -2042,7 +2042,7 @@ final class MTGroup {
         var verdict = Verdict.refused
         if let d = String(text.dropFirst(mark.count)).data(using: .utf8),
            let w = try? JSONDecoder().decode(MTGroupWord.self, from: d), MontanaArchive.isLabel(w.g) {
-            // THE PERSON'S OWN WORD, HEARD ON A PIPE ITS DEVICES SHARE (the author's word 18.10.2026 13:3x MSK: «check what the errors of
+            // THE PERSON'S OWN WORD, HEARD ON A PIPE ITS DEVICES SHARE (the author's word 18.10.2026 10:3x UTC: «check what the errors of
             // sending into channels on T1 are, and fix everything»). Measured: T1 and the Mac refused each other's group words without
             // end -- 292 «a member's letter in a channel is not carried» and 219 «invitation of a group held by another owner» on T1
             // from 17.10 16:18 on: the Mac, the same person, carried its channel's posts and invitations to a member, and T1, holding the
@@ -2101,7 +2101,7 @@ final class MTGroup {
         return w.t != "ty"
     }
 
-    /// THE SEED'S OWN GROUP WORD FROM ANOTHER OF ITS DEVICES (the author's words 18.10.2026 10:3x-10:4x MSK: «on the Mac, in my own
+    /// THE SEED'S OWN GROUP WORD FROM ANOTHER OF ITS DEVICES (the author's words 18.10.2026 07:3x-07:4x UTC: «on the Mac, in my own
     /// groups and channels, what I posted from the phone is not seen -- it does not sync as the chats do»; «on T1 and on the Mac one
     /// and the same person»). A group was its owner's PHONE: a seed's second device stood in no group the first made, heard none of
     /// its letters (handle buries a word of the person's own), and judged a member's letter by another state -- T1 18.10.2026
@@ -2496,7 +2496,7 @@ final class MTGroup {
         return .held
     }
 
-    /// A WORD OF A CHANNEL'S WALL (the author's words 06.10.2026 14:2x-14:4x MSK: «in channels posts as on the Wall of Thoughts»): a subscriber's mark -- a like, the posts
+    /// A WORD OF A CHANNEL'S WALL (the author's words 06.10.2026 11:2x-11:4x UTC: «in channels posts as on the Wall of Thoughts»): a subscriber's mark -- a like, the posts
     /// seen, a comment -- reaches the owner, who applies it by the subscriber's seat (MTBoard.applyChannel); the owner's counts and
     /// deletions reach a subscriber, who lays them on the channel's page (MTBoard.handle).
     @MainActor
@@ -2660,7 +2660,7 @@ final class MTGroup {
     }
 
     /// WHAT A GROUP CARRIES IN THIS BUILD: a person's words, a sticker, and a media letter -- the manifest of a picture, a video, a
-    /// round note, a voice or a file, whose sealed pieces lie on the nodes for every receiver (the author's words 06.10.2026 14:2x-14:3x MSK: «groups and channels with the whole of a chat, every kind of data»). Never another service word, a long letter's reference, a coin, a game's letter or a row of a
+    /// round note, a voice or a file, whose sealed pieces lie on the nodes for every receiver (the author's words 06.10.2026 11:2x-11:3x UTC: «groups and channels with the whole of a chat, every kind of data»). Never another service word, a long letter's reference, a coin, a game's letter or a row of a
     /// phone's own -- a coin landing in a group would be credited from nobody. A GROUP'S COIN (18.10.2026) is no letter of the group:
     /// each person picked gets the pair's own transfer, and the group gets plain words of how many were paid (tellCoins).
     static func carries(_ text: String) -> Bool {

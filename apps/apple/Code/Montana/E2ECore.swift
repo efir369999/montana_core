@@ -191,7 +191,7 @@ enum MontanaLocalVault {
         return true
     }
 
-    // THE SETTINGS HOLD A NAME, NEVER A LOAD (23.10.2026, the author's words 12:16 MSK: «I quit Montana on the Mac, and it hangs
+    // THE SETTINGS HOLD A NAME, NEVER A LOAD (23.10.2026, the author's words 09:16 UTC: «I quit Montana on the Mac, and it hangs
     // and starts by itself»). The system keeps an app's settings in one file and rewrites it whole at each change, and above 4 MB
     // it calls the store «invalid ... a bug in Montana»: ours stood at 14.2 MB on the Mac, the wall alone 8.5 MB under one key,
     // and one wake by a push rewrote it 45 times in 36 s (system log 12:17:45-12:18:20). A sealed value from 64 KB on lies in a

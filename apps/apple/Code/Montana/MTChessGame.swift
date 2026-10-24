@@ -30,7 +30,7 @@ struct MTChessGame: Sendable {
     private(set) var repetitions: [String: Int] = [:]
     private(set) var waitingForHistory = false
     private(set) var acceptedIDs: Set<String> = []
-    /// THE GAME'S POT (the author's words 06.10.2026 19:0x-19:1x MSK): the stake the invitation names, whether the guest accepted
+    /// THE GAME'S POT (the author's words 06.10.2026 16:0x-16:1x UTC): the stake the invitation names, whether the guest accepted
     /// it, and the coins the accepted moves minted -- this phone's moves and the correspondent's apart -- read from the letters,
     /// so both phones hold one pot (MTChessCoins.settle). A game invited before the pot keeps the coins of before.
     private(set) var pooled = false

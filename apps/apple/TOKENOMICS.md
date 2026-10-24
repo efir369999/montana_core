@@ -106,15 +106,15 @@ to how much is your hour now»). Section 6.4 computes what one Montana is in liv
 
 ### 2.4 The author's words that fix the reading of A1
 
-- 19.10.2026 15:3x MSK, as `Audit/COIN-TX-V3.md:137-139` quotes them: «this is the ceiling, an
+- 19.10.2026 12:3x UTC, as `Audit/COIN-TX-V3.md:137-139` quotes them: «this is the ceiling, an
   invariant, the constitution — nothing else can mint or speed it up, no music, VPN and so on: VPN on,
   the app active, the person online — 1 second, 1 coin», and 16:4x: «bring everything to one owner of
   the function 1 coin = 1 second, and that is all».
-- 21.10.2026 16:5x MSK, chain link 3897: «the rule in Rust for the node, and with us 1 coin = 1 second,
+- 21.10.2026 13:5x UTC, chain link 3897: «the rule in Rust for the node, and with us 1 coin = 1 second,
   no 13 billion for a coin any more».
-- 21.10.2026 17:1x MSK, chain link 3898: «only the core mints // 1 coin - 1 second, the client merely
+- 21.10.2026 14:1x UTC, chain link 3898: «only the core mints // 1 coin - 1 second, the client merely
   shows it, it does not mint».
-- 19.10.2026 17:4x MSK, chain link 3008: «the rate 1 Coin = 0.000000001 TCM = 1 s». This word reads TCM as the billion-coin unit. Article 12 reads
+- 19.10.2026 14:4x UTC, chain link 3008: «the rate 1 Coin = 0.000000001 TCM = 1 s». This word reads TCM as the billion-coin unit. Article 12 reads
   TCM as the ticker of the Coin. Section 11, question 2, names the difference.
 
 ### 2.5 The axioms of the consensus set that carry A1
@@ -200,7 +200,7 @@ for any of them.
 
 ### 4.1 The allowance under one second, one coin (fold-5)
 
-From `TX_SECOND_CUT` = 1 792 443 600 (20.10.2026 00:00 MSK), `Audit/COIN-TX-V3.md:142-144`:
+From `TX_SECOND_CUT` = 1 792 443 600 (19.10.2026 21:00 UTC), `Audit/COIN-TX-V3.md:142-144`:
 
 ```
 A(x) = x                       for x ≥ 0, A(0) = 0
@@ -226,7 +226,7 @@ COIN-TX-V3). ∎
 
 ### 4.2 The chain mints the key's time itself (fold-6)
 
-From `TX_TIME_CUT` = 1 792 702 800 (23.10.2026 00:00 MSK), the fold credits the seconds of a key's life
+From `TX_TIME_CUT` = 1 792 702 800 (22.10.2026 21:00 UTC), the fold credits the seconds of a key's life
 at every record it takes, before the record's kind is folded (`Audit/COIN-TX-V3.md`, section 3, «THE
 KEY'S TIME»; `Code/crates/mt-coin/src/lib.rs:418-430`):
 
@@ -826,7 +826,7 @@ that opened its chain early and did nothing mints the same as a key that did eve
   that minted 3 000 000 in its first seven days (604 800 seconds) mints nothing more until its life
   reaches its 3 000 000th second, about 34.7 days (COIN-TX-V3, section 4). The excess over lived time
   at the cut is measured on the nodes, not assumed (section 12 of the same document).
-- **A GENESIS above 0 taken before TX_GENESIS_GATE** (18.10.2026 23:15 MSK) could announce up to
+- **A GENESIS above 0 taken before TX_GENESIS_GATE** (18.10.2026 20:15 UTC) could announce up to
   TX_GENESIS_CAP = 110 040 864 declared coins on a key with no past. Declared coins are spent after
   proven, are never called proven, and stay declared in every chain they reach (section 3). The count
   of such announcements is measured on the nodes.
@@ -1019,10 +1019,10 @@ second home of any constant of the set.
 # Montana tokenomics, the numbers of the paper. Integers only.
 Y = 31557600            # seconds of a Julian year, 365.25 days
 M = 10 ** 9             # coins of one Montana (constitution, article 13)
-TX_V2_CUT = 1792443600  # mt-coin lib.rs:14, 20.10.2026 00:00 MSK
+TX_V2_CUT = 1792443600  # mt-coin lib.rs:14, 19.10.2026 21:00 UTC
 TX_SECOND_CUT = TX_V2_CUT
-TX_COIN_EPOCH = 1788210000   # lib.rs:17, 01.09.2026 00:00 MSK
-TX_TIME_CUT = 1792702800     # lib.rs:19, 23.10.2026 00:00 MSK
+TX_COIN_EPOCH = 1788210000   # lib.rs:17, 31.08.2026 21:00 UTC
+TX_TIME_CUT = 1792702800     # lib.rs:19, 22.10.2026 21:00 UTC
 WINDOW_SECONDS, TARGET_ROUNDS = 60, 284   # Canon 5.0.0 :4741, :4773
 
 def a2(x):
