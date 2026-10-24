@@ -2148,7 +2148,7 @@ struct PrivacyView: View {
                     Text("Only whether others see you online. Walls and pages come and go regardless.")
                         .font(.caption).foregroundColor(.gray)
                 }
-                // THE OWNER SHOWS OR HIDES THEIR COINS (the author's words 04.10.2026 05:47 and 02:48 UTC: «whether the balance is
+                // THE OWNER SHOWS OR HIDES THEIR COINS (the author's words 04.10.2026 02:47 and 02:48 UTC: «whether the balance is
                 // shown each decides, on by default; who does not show is not in the top -- the privacy settings»; «the owner governs
                 // privacy»): one switch for the Montana top, the coins told to correspondents and the coin's badge (MTCoinShow).
                 VStack(alignment: .leading, spacing: 4) {

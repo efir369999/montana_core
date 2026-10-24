@@ -558,7 +558,7 @@ enum MTCoinBalance {
     }
 }
 
-/// THE PEOPLE IN THE APP HEAR MY BALANCE MOVE (the author's words 04.10.2026 03:03 and 01:19 UTC: «the update instant, as by a web
+/// THE PEOPLE IN THE APP HEAR MY BALANCE MOVE (the author's words 04.10.2026 00:03 and 01:19 UTC: «the update instant, as by a web
 /// socket»): a move of the book says the balance again to the correspondents in the app now, in the app word (E2E.coinBeacon) --
 /// one round in two seconds however fast the coins come, so a minute of minting is thirty rounds to the people online, not one a coin.
 /// A TALKING CALL TELLS AT THE PULL'S PACE (12.10.2026, the critic's finding 10 of helper 65): a call mints every second, so the
@@ -592,7 +592,7 @@ enum MTCoinBalance {
     }
 }
 
-/// THE PEOPLE'S COINS (the author's words 03.10.2026 22:23 and 19:25 UTC: «in the wallet, under the add-account button, the
+/// THE PEOPLE'S COINS (the author's words 03.10.2026 19:23 and 19:25 UTC: «in the wallet, under the add-account button, the
 /// top thirteen balances by coins, beautifully, with avatars and names, as in a social network»; «the coin's badge is the
 /// number in the common rating»). Balances are public ([I-2]): every phone tells its pairs its own balance in its word about
 /// itself (the key c beside the bio and the link), and this book keeps what each pair last told -- the newest word wins. The
@@ -721,7 +721,7 @@ enum MTCoinBalance {
 /// its live words both ways, its minting. Read from any thread; the screens observe the change.
 @MainActor final class MTMoneyFlow: ObservableObject {
     static let shared = MTMoneyFlow()
-    /// A BUBBLE OF THE FLOW IS ONE COIN TIMES THE LEVEL (the author's words 07.10.2026 21:3x and 18:4x UTC: «one coin for one
+    /// A BUBBLE OF THE FLOW IS ONE COIN TIMES THE LEVEL (the author's words 07.10.2026 18:3x and 18:4x UTC: «one coin for one
     /// message bubble -- any bubble: +1 in the money flow and -1 in an ordinary chat»; «the minting in the money flow's chats is one
     /// coin multiplied by the level: for the 7th level 7 coins a message and 7 coins a second of talk; a level 1 on the call -- x1
     /// for him»; it replaces the hundred levels a long text minted, 05.10): every bubble of a chat whose flow is on -- words, a
@@ -881,7 +881,7 @@ enum MTLevelAccess {
     }
 }
 
-/// THE MONTANA TOP (the author's words 04.10.2026 03:03, 05:40 and 02:47 UTC: «a live set as by a web socket, the update instant from
+/// THE MONTANA TOP (the author's words 04.10.2026 00:03, 02:40 and 02:47 UTC: «a live set as by a web socket, the update instant from
 /// the nodes»; «everyone has one source of all data»; «who does not show is not in the top»). One public table of the game's coins,
 /// the same on every node (/top-put, /top-get): this phone puts its own row and the table comes back whole. A row is named by sha256
 /// of a token only the words derive -- HKDF of the entropy under one label, then one HMAC, as the shelf of one's own node
@@ -1700,7 +1700,7 @@ struct MTCallCredit {
     }
 }
 
-/// THE PULL SWITCHES THE AUTO MINTING ON (the author's words 04.10.2026 03:52 and 01:18 UTC: «pulling the wallet's page, as the time
+/// THE PULL SWITCHES THE AUTO MINTING ON (the author's words 04.10.2026 00:52 and 01:18 UTC: «pulling the wallet's page, as the time
 /// panel does, calls the coin for a forced refresh of the tops and the activation of the auto minting once a second»; «at such a
 /// refresh switch the auto minting on: every second coins by the box's level»): a pull let go past the coin's trigger mints at once
 /// and goes on minting every second -- the second's one coin, the book's (MTCoinBook.price) -- while the wallet
@@ -1959,7 +1959,7 @@ enum MTTimeChain {
     }
 }
 
-// MARK: - THE CHAIN OF THE PERSON (the author's words 10.10.2026 13:4x, 15:0x and 12:2x UTC)
+// MARK: - THE CHAIN OF THE PERSON (the author's words 10.10.2026 10:4x, 12:0x and 12:2x UTC)
 
 /// THE CHAIN OF THE PERSON COUNTS THE SECONDS THE WORDS WERE ON THE NETWORK (the author's word 10.10.2026 10:4x UTC: «in this
 /// section the first TimeChain is called Person: it shows the levels of the person, and the count goes only for the seconds this
@@ -2003,7 +2003,7 @@ enum MTTimeChain {
         return level(Int64.max) == 62
     }
     /// THE GLOBAL LEVEL OF THE PERSON, THE ONE READING OF IT (the author's words 10.10.2026 12:0x UTC: «the lowest level among the
-    /// chain of the person and the chain of the wallet becomes the Global Level of the person»; 17.10.2026 22:24 and 19:41 UTC: the
+    /// chain of the person and the chain of the wallet becomes the Global Level of the person»; 17.10.2026 19:24 and 19:41 UTC: the
     /// third level, the Fabric of Time, «bears on the Global level by the rule of the minimum», «under the word level we mean only the
     /// global one»; Canon, «The level of a person»: min(p, w, f)): the lowest of the person's level, the wallet's level of π and the
     /// level of the fabric of time this turn (MTFabricLevel). A fabric this life has not read yet adds no third term -- an unknown
@@ -2206,7 +2206,7 @@ enum MTTimeChain {
     }
 }
 
-// MARK: - THE FABRIC OF TIME (the author's words 17.10.2026 22:24, 22:41, 22:50 and 20:18 UTC)
+// MARK: - THE FABRIC OF TIME (the author's words 17.10.2026 19:24, 19:41, 19:50 and 20:18 UTC)
 
 /// THE RULES OF THE FABRIC OF TIME, AS THE CORE STATES THEM (the author's words 17.10.2026 19:24 UTC: «the 3rd level is the count of
 /// levels of the chats real with regular calls over the last 14 days -- t2 -- and it bears on the Global level by the rule of the
@@ -2633,7 +2633,7 @@ struct MTWeave {
     }
 }
 
-// MARK: - THE COIN CORE OF THE APP (the author's words 03.10 13:40, 13:52 and 10:53 UTC)
+// MARK: - THE COIN CORE OF THE APP (the author's words 03.10 10:40, 10:52 and 10:53 UTC)
 
 /// ONE MOVE OF COINS on this phone's book: a coin earned by a letter of the ribbon, coins received in a chat or on a letter,
 /// coins given on a letter or a post, coins sent to a person. The amount is whole coins (one coin is one billionth of a
@@ -3594,7 +3594,7 @@ enum MTCoinSend {
             return .noKey
         }
     }
-    /// COINS GIVEN ON THE CORRESPONDENT'S LETTER ARE A SEND OF THE CHAIN (the author's words 23.10.2026 03:27 and 00:37 UTC: the
+    /// COINS GIVEN ON THE CORRESPONDENT'S LETTER ARE A SEND OF THE CHAIN (the author's words 23.10.2026 00:27 and 00:37 UTC: the
     /// reactions «each a SEND record in the chain, the phone only the chain's mirror»): the coins leave by the pair's version 3 SEND
     /// under the letter's name, and the reaction word only names that SEND («op»: «coin3», «tx») -- the reader's book takes the
     /// coins from the chain alone (MTCoinTx.receive3), never from the word. An older build reads an unknown op as nothing at all.
@@ -3917,14 +3917,14 @@ enum MTCoinChainRules {
     /// 1 second, the client merely shows it»): from this node second every v3 record first folds the seconds its key has lived, so no
     /// phone lays a MINT for its time. The node's TX_TIME_CUT, 22.10.2026 21:00 UTC.
     nonisolated static let timeCut: Int64 = 1_792_702_800
-    /// MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 03:27 and 00:37 UTC: «minting is a separate entity, and it happens
+    /// MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 00:27 and 00:37 UTC: «minting is a separate entity, and it happens
     /// if the person is online or behind the VPN» -- «right, do it»): from this node second the key's life mints nothing by itself, and a
     /// MINT counts only what its interval holds of the last mintFresh seconds before its node took it -- the seconds the key was present.
     /// A BURN is taken from the same second. The node's TX_ONLINE_CUT, 25.10.2026 21:00 UTC.
     nonisolated static let onlineCut: Int64 = 1_792_962_000
     nonisolated static let mintFresh: Int64 = 120
     /// The key's seconds of life up to the node second `at`, and never past the online cut, credited once, proven by the same step.
-    /// THE PAST NEVER EATS THE PRESENT (fold-8; the author's words 23.10.2026 22:1x and 19:21 UTC: «Andrey's coins are not credited --
+    /// THE PAST NEVER EATS THE PRESENT (fold-8; the author's words 23.10.2026 19:1x and 19:21 UTC: «Andrey's coins are not credited --
     /// fix it in the new build»): a key that minted above its life before the cut by the doubling rule -- 28 of 96 keys on 23.10, every
     /// living phone's -- still gets every second since its last record, never before the cut, so its present seconds are not eaten by
     /// its past: the credit is the greater of its unminted life and those seconds.
@@ -4622,7 +4622,7 @@ extension MTCoinTx {
         // ONLY THE CHAIN MINTS (section 4, fold-6): from the node's TX_TIME_CUT the chain credits the key's seconds itself, so the phone
         // lays no MINT and shows the fold /tx-head answers -- until the node's TX_ONLINE_CUT, past which a key's life mints nothing by itself
         guard st.now < MTCoinChainRules.timeCut else {
-            // MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 03:27 and 00:37 UTC: «minting is a separate entity, and it
+            // MINTING IS ITS OWN ROAD (fold-7; the author's words 23.10.2026 00:27 and 00:37 UTC: «minting is a separate entity, and it
             // happens if the person is online or behind the VPN»): the node counts of a MINT only what its interval holds of the last
             // mintFresh seconds before it takes it, so while the person is here the phone lays the seconds since the last MINT, never
             // older than the freshness less the road's margin; the node's minute between two MINTs is the pace
@@ -4744,7 +4744,7 @@ extension MTCoinTx {
         save(onceFile, ["n": o])
     }
     private static let onceFile = "coin3-once.json"
-    /// AN UNRECORDED CALL BURNS ON THE CHAIN (the author's words 23.10.2026 03:27 and 00:37 UTC: every spend is a record of the chain,
+    /// AN UNRECORDED CALL BURNS ON THE CHAIN (the author's words 23.10.2026 00:27 and 00:37 UTC: every spend is a record of the chain,
     /// the phone only its mirror): from the online cut, the first second the node takes a BURN (V14), the seconds MTCallMint burns are
     /// owed in the person's folder and laid as one BURN on my chain's head -- once a window while the call talks and at its end. The
     /// BURN waits on disk until its node's word decides it, and the owed falls only by a BURN taken, so no second burns twice; what

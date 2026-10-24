@@ -140,7 +140,7 @@ enum MTNodeWire {
         guard body.count <= envelopeSize else { return nil }
         var b = body; b.append(Data(count: envelopeSize - body.count)); return b
     }
-    // ── THE LETTER'S AUTHOR IS THE PERSON, NOT THE DEVICE (the author's words 11.10.2026 16:4x and 14:13 UTC, No.61-62: «the
+    // ── THE LETTER'S AUTHOR IS THE PERSON, NOT THE DEVICE (the author's words 11.10.2026 13:4x and 14:13 UTC, No.61-62: «the
     // avatar is determined by the seed phrase, the whole chain of time»; «the whole architecture is built by the chain of the
     // person and restored by it»). A pipe's secret is held by every device of one person and by the correspondent, and a letter
     // named no author: T3 on T1's words announced its face to 36 correspondents, the same words reached T1 on the same pipes,

@@ -6207,7 +6207,7 @@ extension MontanaCall: RTCPeerConnectionDelegate {
             reportSelectedPair(tag: "connected")
             if let uuid = callUUID { MTCallAudioOwner.shared.expectActivation(uuid) }
             if let uuid = callUUID, isInitiator || rejoining {
-                // THE SYSTEM'S CLOCK IS THE CALL'S ONE CONNECTED MOMENT (the author's words 12.10.2026 13:4x and 12:4x UTC: «after
+                // THE SYSTEM'S CLOCK IS THE CALL'S ONE CONNECTED MOMENT (the author's words 12.10.2026 10:4x and 12:4x UTC: «after
                 // reconnections the duration must go on, not start anew»): nil only at the first connect (the system's now), the same
                 // moment at every reconnect and every rejoin -- the island and the locked screen count on, never from zero.
                 provider.reportOutgoingCall(with: uuid, connectedAt: connectedAt)   // system call timer

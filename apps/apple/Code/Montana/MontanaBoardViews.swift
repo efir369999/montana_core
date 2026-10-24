@@ -1211,7 +1211,7 @@ struct MTBoardClip: View {
 struct MTMintCoin: View {
     var spinning = true
     var side: CGFloat = 22
-    /// ONE TURN, THEN REST (the author's words 03.10.2026 16:46 and 13:49 UTC: «at every letter a +1 coin, animated, one turn,
+    /// ONE TURN, THEN REST (the author's words 03.10.2026 13:46 and 13:49 UTC: «at every letter a +1 coin, animated, one turn,
     /// beautifully, to show how it is minted»; «when the money flow is switched on, an active animation»): the coin makes one
     /// whole turn when it appears with a `turn` and again every time `turn` changes, and rests on its face between.
     var turn: Int? = nil

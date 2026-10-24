@@ -4555,6 +4555,11 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
                 // after the hang-up and ring anew; age and the graveyard close both roads.
                 if let t = o["t"] as? Double, MontanaWakePush.nodeNow() - t > MontanaCall.callLifeS {
                     MontanaTrace.mark("ring_stale", "age=\(Int(MontanaWakePush.nodeNow() - t))s")
+                    // A DEAD INVITATION STILL GETS ITS RECEIPT (24.10.2026, the Mac's diary 15:54-16:02Z: the same three invitations
+                    // of one correspondent, 523 to 535 thousand seconds old, came back at every pickup): a sender whose queue keeps a
+                    // letter until its receipt -- an older build, another platform -- resends a dropped ring for the queue's whole term,
+                    // and every copy wakes this device. The ring is dropped and the receipt goes out, as for a missed call's repeat.
+                    sendDeliveryReceipt(chat, msgId: m.msgId, isFromMe: false, text: m.text)
                     return false
                 }
                 if !MontanaCall.shared.handleSignalGate("call", seed) { return false }

@@ -3155,7 +3155,7 @@ private struct MTPhotoLook: View {
 }
 enum PhotoPresenter {
     private static weak var host: UIViewController?
-    /// ONE ROAD FOR A PICTURE AMONG PICTURES (the author's words 05.10.2026 14:04, 15:04 and 15:24 UTC: «photos dropped into the
+    /// ONE ROAD FOR A PICTURE AMONG PICTURES (the author's words 05.10.2026 11:04, 12:04 and 15:24 UTC: «photos dropped into the
     /// chat -- paging by a tap at the edge or a swipe aside»; «by constitution 0, in the posts and everywhere one function»; «our
     /// task of the edge taps, by constitution 0»): every tap on a picture -- a chat's, a post's, a correspondent's page -- comes
     /// here with the pictures it stands among, oldest first, and opens OUR album (MontanaPhotoViewer: the system's page view

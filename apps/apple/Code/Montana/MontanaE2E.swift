@@ -594,7 +594,7 @@ final class E2E {
         let d = rest.dropFirst().prefix { $0.isNumber }
         return d.isEmpty ? nil : String(d)
     }
-    /// THE BALANCE RIDES THE PRESENCE WORD (the author's words 04.10.2026 03:03 and 01:19 UTC: «the top is a tunnel, a live set as by
+    /// THE BALANCE RIDES THE PRESENCE WORD (the author's words 04.10.2026 00:03 and 01:19 UTC: «the top is a tunnel, a live set as by
     /// a web socket, the update instant from the nodes»; «on T2 135, and on T1 the top did not move at 04:19 -- it must, at the moment
     /// of the update»). The balance rode the word about oneself alone: said at its occasions, once in ten minutes at most, by the bell's
     /// ramp -- T2's word of 04:21:06 reached T1 at 04:22:02. Every presence word now carries it, so the live channel hands it over at

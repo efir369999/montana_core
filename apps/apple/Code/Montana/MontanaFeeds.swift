@@ -75,7 +75,7 @@ enum MTWallpaper {
     /// Indigo keeps the name it was born with: phones store «aurora» and correspondents receive «n:aurora».
     static let indigo = "aurora"
     static let burgundy = "burgundy"
-    /// THE GOLD GROUND IS GONE WHOLE (the author's words 23.10.2026 02:09 and 09:50 UTC: «remove the gold colour from the build
+    /// THE GOLD GROUND IS GONE WHOLE (the author's words 22.10.2026 23:09 and 23.10.2026 09:50 UTC: «remove the gold colour from the build
     /// as our colour»; «I meant only the page's gold ground -- remove the gold completely»): it is no choice, no default and no
     /// picture any more. A choice stored or a ground told by a correspondent under its name wears the default ground.
     static let retired: Set<String> = ["gold"]

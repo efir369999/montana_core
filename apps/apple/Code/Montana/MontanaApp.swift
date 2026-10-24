@@ -966,7 +966,7 @@ private var gMontanaAltStack: UnsafeMutableRawPointer? = nil
 private let gMontanaAltStackSize = 128 * 1024
 /// The base of the image that holds our code (Montana, or Montana.debug.dylib in a Debug build), read once at install.
 private var gMontanaImageBase: UInt = 0
-/// THE IMAGES THE STACK IS COUNTED BY (03.10, T1 2070 15:11 and 12:13 UTC): the handler wrote the fallen thread's 96 innermost
+/// THE IMAGES THE STACK IS COUNTED BY (03.10, T1 2070 12:11 and 12:13 UTC): the handler wrote the fallen thread's 96 innermost
 /// frames, and the megabyte was spent below them, where nothing was written. Every frame of the chain is given to the image
 /// its return stands in -- ours first, «other» last -- by the text ranges read once at install.
 private let gMontanaImageNames: [StaticString] = ["Montana", "SwiftUI", "SwiftUICore", "AttributeGraph", "UIKitCore",

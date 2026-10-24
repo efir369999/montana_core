@@ -210,7 +210,7 @@ struct MTWalletPage: View {
                         .buttonStyle(.borderedProminent)
                         .buttonBorderShape(.capsule)
                         .tint(MontanaOctagon.platformBlue)
-                        // THE TIMECHAIN IN PLACE OF A SECOND ACCOUNT (the author's words 10.10.2026 13:4x and 12:2x UTC: «remove the Add
+                        // THE TIMECHAIN IN PLACE OF A SECOND ACCOUNT (the author's words 10.10.2026 10:4x and 12:2x UTC: «remove the Add
                         // account button and put TimeChains in its place»; «the TimeChain, where the first chain of time is the Person,
                         // the second the Wallet»; App, «The chains of time a client shows»): one seed is one person, and what stands
                         // beside it is the evidence of its time.
@@ -315,7 +315,7 @@ struct MTWalletPage: View {
             }
             .scrollContentBackground(.hidden).montanaPageGround()
             .overlay { MTCoinSides() }   // the coins rise at the sides at every minting (MTCoinFlash, 04.10)
-            // THE PAGE STANDS WHILE THE PANTHEON BURNS (the author's words 04.10 00:51 and 00:13 UTC: «when I tap the coin, switch the
+            // THE PAGE STANDS WHILE THE PANTHEON BURNS (the author's words 03.10 21:51 and 04.10 00:13 UTC: «when I tap the coin, switch the
             // wallet's scroll off»; «while it is on I do not want to see scrolling at all»): no scroll from the first tap until the fire
             // goes out after three quiet seconds (MTPantheon.quiet); the coin's own touch locks the page even before its first coin.
             .scrollDisabled(pantheon.lit)
@@ -366,7 +366,7 @@ struct MTWalletPage: View {
         // by default"): the page standing open mints by the second without a pull or a hold; leaving the page or locking the
         // screen still ends it (MTWalletPull), and the return to the page or to the app begins it again.
         .onAppear { if !pantheon.lit { autoMint.fire() }; MTCoinHistory.shared.warm() }   // the history's fold is ready before its door
-        // THE TOP IS A LIVE SET FROM THE NODES (the author's words 04.10.2026 03:03 and 01:19 UTC: «a live set as by a web socket, the
+        // THE TOP IS A LIVE SET FROM THE NODES (the author's words 04.10.2026 00:03 and 01:19 UTC: «a live set as by a web socket, the
         // update instant from the nodes»): while the wallet stands open the pairs' last words are asked of the nodes every three
         // seconds in one question -- their balances ride them (E2E.coinTail); a pair in the app hands its own over at once.
         .task {
@@ -1682,7 +1682,7 @@ struct MTTimeChainLinkRow<Content: View>: View {
     }
 }
 
-/// THE TIMECHAIN OF THE PERSON (the author's words 10.10.2026 13:4x, 15:2x and 12:4x UTC: «remove the Add account button and put
+/// THE TIMECHAIN OF THE PERSON (the author's words 10.10.2026 10:4x, 12:2x and 12:4x UTC: «remove the Add account button and put
 /// TimeChains in its place»; «the TimeChain, where the first chain of time is the Person, the second the Wallet»; «the third chain
 /// of time is chats and calls»; 14:1x: «the whole TimeChain core shown for an external observer»; App, «The chains of time a client
 /// shows»): one seed is one person, and what stands beside it is the evidence of its time -- the Global Level the minting keeps

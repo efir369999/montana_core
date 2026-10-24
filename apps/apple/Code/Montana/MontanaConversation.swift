@@ -1911,7 +1911,7 @@ struct ChatConversationView: View {
             }
         }
         .toolbar {
-            // THE CHAT'S TOP IS ONE ROW THAT FITS ANY SCREEN (the author's words 04.10.2026 13:49 and 11:06 UTC: «align the buttons
+            // THE CHAT'S TOP IS ONE ROW THAT FITS ANY SCREEN (the author's words 04.10.2026 10:49 and 11:06 UTC: «align the buttons
             // with the name»; «make the buttons adaptive to the screen so the interlocutor's bubble is always seen»; T1 14:06: four bar
             // items of their own took the bar from its middle and pushed the face and the name out of it): the name's bubble with the
             // face in it and the marks close at its right stand in the bar's middle as one row (chatTop) -- in a chat pushed in a stack.
@@ -1923,7 +1923,7 @@ struct ChatConversationView: View {
                 }
             }
         }
-        // THE CHAT'S TOP STANDS 8 FROM THE EDGES (the author's words 05.10.2026 14:04 and 15:11 UTC, T1 on 2116: «left and right 8,
+        // THE CHAT'S TOP STANDS 8 FROM THE EDGES (the author's words 05.10.2026 11:04 and 15:11 UTC, T1 on 2116: «left and right 8,
         // and all the room that is left to the interlocutor's bubble»; the bar kept its own margins of 20 whatever was asked of it,
         // and the row stood 29 from the edge): the chat over the tabs draws its top itself as the bar beside its content -- the
         // platform's own bar of the newest system, with its edge effect -- 8 from each edge; a chat pushed in a stack keeps the bar.
@@ -1984,7 +1984,7 @@ struct ChatConversationView: View {
         }
         .accessibilityLabel(Text("Back"))
     }
-    /// THE FACE IS THE DOOR TO THE CHAT'S SETTINGS (the author's words 03.10 21:30 and 04.10 00:25 UTC: «the interlocutor's avatar at
+    /// THE FACE IS THE DOOR TO THE CHAT'S SETTINGS (the author's words 03.10 18:30 and 04.10 00:25 UTC: «the interlocutor's avatar at
     /// the top of the chat as a button into the chat's settings, as it was»): the whole bubble, the face in it, is the one button.
     private var chatTitleDoor: some View {
         NavigationLink(destination: MontanaPeerInfoScreen(chat: chat, onSave: onChatUpdate)) {
