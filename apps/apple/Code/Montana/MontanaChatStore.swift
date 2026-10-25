@@ -6861,7 +6861,7 @@ enum SeedScope {
         // the point it knocks at, the contact root a name was met by.
         "savedToPhotos", "callHandleTokens", "controlMids", "peerRdvLinks", "peerRdvLinks.b", "pendingMediaJSON",
         "gifFirstRun", "pipeTouched", "pipeDying", "pipeFirstCiphertexts", "pipeFirstRoots", "pipeFirstMeta",
-        "pipeNameRoots",
+        "pipeNameRoots", "pipeFirstConfirms",
         // THE WALL (24.09): my own wall's posts with their peers and marks, and the posts whose files I keep; the
         // correspondents whose build speaks the wall and the version each was carried; the people the wall's two rules
         // name — references of this identity's correspondences, gone with it.
@@ -7018,7 +7018,9 @@ enum SeedScope {
         "coinBoard.levels",   // the Global Levels this person's correspondents told (MTCoinBoard, 11.10): learned for this person
         "mt.account.keys", "mt.twin.ref", "mt.node.identity", "mt.node.kem", "pipeSecrets",
         "pipeKept",   // what each pipe keeps of its secret for good (MTPipeKept, 22.10): the secrets' own, gone with them
+        "pipeFloorGuard",   // the clock guard of this book's first floor, M, H and Hc (MTPipeBook, decision 188, 25.10): the book's own
         "mt.history.folders", "mt.history.heads.form", "mt.history.nameheads", "mt.history.pushed",
+        "archiveSecretHeadsPurged",   // this person's archive had its old secret heads taken out (MontanaArchive.dropSecretHeads, 25.10)
         "mt.history.boxed", "mt.history.twinSeen",   // the history laid for this seed's other devices, and theirs filed here (11.10)
         "mt.group.mirrored.1",   // this device gave this person's groups to the seed's other devices (the twin mirror, 18.10)
         "mt.twin.asked",   // the rows this device asked of the seed's other devices (the twin's past, 18.10)
@@ -7065,7 +7067,7 @@ enum SeedScope {
         "montana.stickers.ids", "montana.gifs.mine", "videoLikes", "barredPeers", "reactionUse",
         "mt.vpn.servers", "mt.vpn.plans", "chatsJSON", "archivedJSON", "savedToPhotos", "callHandleTokens",
         "controlMids", "peerRdvLinks", "peerRdvLinks.b", "peerAbout", "pendingMediaJSON", "gifFirstRun", "pipeTouched",
-        "pipeDying", "pipeFirstCiphertexts", "pipeFirstRoots", "pipeFirstMeta", "pipeNameRoots"]
+        "pipeDying", "pipeFirstCiphertexts", "pipeFirstRoots", "pipeFirstMeta", "pipeNameRoots", "pipeFirstConfirms"]
     /// WHAT A RECORD IS KNOWN BY inside a list of records: the first of these fields it carries. A row of the
     /// chat list is its conversation, a contact its reference, a server its own id, a plan its link; two
     /// records known by one value are one record, and the device's own stands.

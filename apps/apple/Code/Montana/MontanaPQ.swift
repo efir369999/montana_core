@@ -789,8 +789,15 @@ extension MontanaArchive {
             MontanaTrace.markFolded("archive_refused", "a block of a deleted conversation is not filed", window: 60)
             return true
         }
+        // A HEAD WITH THE ESTABLISHED SECRET IS NOT FILED FROM THE FLOOR DAY (25.10.2026, decision 191): the twin's copy of an
+        // old head would lay the secret under the seed again after this device's pass took it out (dropSecretHeads).
+        if MTPipeBook.floorDay() >= MTPipeKey.eraseDay, onlySecretHeads(openBlock(sealed, hk: h, acct: a)) {
+            MontanaTrace.markFolded("archive_refused", "a head with the established secret is not filed from the floor day", window: 60)
+            return true
+        }
         let folder = folderName(forConv: conv) ?? conv.montanaHexString
         let base = rootURL.path
+        logLock.lock()
         let rc = base.withCString { bp in folder.withCString { cn in
             h.withUnsafeBytes { hp in a.withUnsafeBytes { ap in sealed.withUnsafeBytes { sp in
                 mt_archive_ingest(bp, cn,
@@ -799,6 +806,7 @@ extension MontanaArchive {
                     sp.bindMemory(to: UInt8.self).baseAddress, sealed.count)
             }}}
         }}
+        logLock.unlock()
         if rc == 1 {
             MontanaLog.event("HISTORY ← own device: block filed in \(folder.prefix(12))")
             // The block is filed — and now it is READ: the same road the phrase walks, so the
@@ -1212,8 +1220,10 @@ extension MontanaArchive {
         let content: Data, form: String
         if let pipe = MTPipeBook.key(for: convRef), pipe.reference == convRef {
             // the pipe's one owner writes the form the archive seals; the floor's head («f» in the marker) follows the
-            // secret's once, from the day the walk erased it (OZ1, decision 126) -- the last head decides at a restore
-            content = pipe.archiveHead; form = pipe.holdsOrigin ? "s" : "f"
+            // secret's once, from the day the walk erased it (OZ1, decision 126) -- the last head decides at a restore. The day
+            // is the book's own (the clock guard, decision 188), so the archive never floors ahead of the book.
+            let fd = MTPipeBook.floorDay()
+            content = pipe.archiveHead(day: fd); form = pipe.floored(day: fd).holdsOrigin ? "s" : "f"
         } else {
             content = Data("a:".utf8) + Data(convRef.utf8); form = "a"
         }
@@ -1236,9 +1246,94 @@ extension MontanaArchive {
             MontanaTrace.mark("archive_head", "folder=\(folder.prefix(8)) form=x")
         }
     }
+    // ── THE SECRET LEAVES THE ARCHIVE ON THE FLOOR DAY (25.10.2026, decision 191) ───────────────────────────────────────
+    /// Every head written before eraseDay carries the established secret («s:» with the thirty-two bytes), and a folder's log is
+    /// only ever appended to. From eraseDay the archive holds the floor, never the secret: the log of every folder is rewritten
+    /// once without those blocks. A folder whose last secret head has no floor head after it gets the floor
+    /// of that very head in its place, so the last head still decides at a restore as before (closed stays closed, reopened
+    /// stays reopened, 11.10.2026 No.61). Nothing else in the log moves; a block's (writer, seq) is its own and seq is per
+    /// identity, so a block taken out leaves no hole a reader counts. The twin's copy is cleaned by its own pass, and a secret
+    /// head it still sends is not filed here (absorb).
+    private static let logLock = NSLock()   // the rewrite against absorb, the one writer off the queue
+    private static let purgedKey = "archiveSecretHeadsPurged"
+    /// `day`: the day the book floored by (MTPipeBook.floorDay), from eraseDay.
+    static func dropSecretHeads(day: UInt64) {
+        ioQueue.async { dropSecretHeadsIn(day: day) }
+    }
+    /// Whether a sealed block is nothing but heads carrying the established secret.
+    private static func onlySecretHeads(_ items: [(conv: Data, dir: UInt8, at: UInt64, content: Data)]) -> Bool {
+        items.allSatisfy { it in it.dir == headDir } && MTPipeKey.onlySecretHeads(items.map { String(decoding: $0.content, as: UTF8.self) })
+    }
+    /// Queue-only: the pass itself, once per archive from eraseDay (again after a restore brings an older archive: the mark is
+    /// not one of the records a restore carries).
+    private static func dropSecretHeadsIn(day: UInt64) {
+        guard day >= MTPipeKey.eraseDay, MontanaLocalVault.getDecrypted(purgedKey) == nil, let (h, _, a) = keys() else { return }
+        var cut = 0, replaced = 0, folders = 0, failed = 0
+        for folder in conversations() {
+            let url = rootURL.appendingPathComponent(MontanaPaths.chats).appendingPathComponent(folder)
+                .appendingPathComponent(MontanaPaths.log)
+            logLock.lock()
+            defer { logLock.unlock() }
+            guard let data = try? Data(contentsOf: url) else { continue }
+            // the frames in file order: (u32 LE length ‖ sealed), as readLog reads them; a torn tail is kept as it lay
+            var frames: [(frame: Data, items: [(conv: Data, dir: UInt8, at: UInt64, content: Data)])] = []
+            var i = 0
+            let n = data.count
+            while i + 4 <= n {
+                let len = Int(UInt32(data[i]) | UInt32(data[i+1]) << 8 | UInt32(data[i+2]) << 16 | UInt32(data[i+3]) << 24)
+                guard len > 0, i + 4 + len <= n else { break }
+                frames.append((data.subdata(in: i..<(i + 4 + len)), openBlock(data.subdata(in: (i + 4)..<(i + 4 + len)), hk: h, acct: a)))
+                i += 4 + len
+            }
+            let tail = i < n ? data.subdata(in: i..<n) : Data()
+            // a floor head after the last secret head already decides; else the floor of that head takes its place (MTPipeKey.purge)
+            let kinds: [MTPipeKey.LogFrame] = frames.map { f in
+                if onlySecretHeads(f.items) { return .secretHead }
+                let floorHead = f.items.contains { it in
+                    let s = String(decoding: it.content, as: UTF8.self)
+                    return it.dir == headDir && MTPipeKey(archiveHead: s) != nil && !MTPipeKey.headHoldsSecret(s)
+                }
+                return floorHead ? .floorHead : .other
+            }
+            let plan = MTPipeKey.purge(kinds)
+            guard let last = plan.drop.last else { continue }
+            var put: Data? = nil
+            if plan.floorAt != nil {
+                // the floor head could not be made or laid: the old head stays rather than leave the folder with no head, the
+                // pass is not marked done, and the next start tries again
+                guard let it = frames[last].items.first,
+                      let pipe = MTPipeKey(archiveHead: String(decoding: it.content, as: UTF8.self), day: day), !pipe.holdsOrigin
+                else { failed += 1; continue }
+                appendHeadBlock(conv: it.conv, folder: folder, content: pipe.archiveHead(day: day))
+                // the block just appended is the log's last frame: the queue and the lock let no other writer in between
+                if let after = try? Data(contentsOf: url), after.count > data.count, after.prefix(data.count) == data {
+                    put = after.subdata(in: data.count..<after.count)
+                }
+                if put == nil { failed += 1; continue }
+            }
+            var out = Data()
+            for (k, f) in frames.enumerated() {
+                if kinds[k] == .secretHead {
+                    cut += 1
+                    if k == last, let put { out.append(put); replaced += 1 }
+                    continue
+                }
+                out.append(f.frame)
+            }
+            out.append(tail)
+            do { try out.write(to: url, options: .atomic) } catch { failed += 1; continue }
+            folders += 1
+        }
+        if failed == 0 { _ = MontanaLocalVault.setEncrypted(purgedKey, Data("\(day)".utf8)) }
+        MontanaTrace.mark("archive_secret_heads", "folders=\(folders) cut=\(cut) floored=\(replaced) failed=\(failed)")
+    }
+
     /// Queue-only: one head block appended to a folder's log.
     private static func appendHead(convRef: String, folder: String, content: Data) {
-        let conv = MontanaQueueKeys.sha256(Data(convRef.utf8))
+        appendHeadBlock(conv: MontanaQueueKeys.sha256(Data(convRef.utf8)), folder: folder, content: content)
+    }
+    /// Queue-only: the same block under a conversation already named by its hash.
+    private static func appendHeadBlock(conv: Data, folder: String, content: Data) {
         let base = rootURL.path
         let dev16 = Self.writerTag16()
         let st = UInt64(Date().timeIntervalSince1970)
@@ -1360,6 +1455,8 @@ extension MontanaArchive {
     static func restore(folders: [String]) -> [RestoredChat] {
         guard let (h, _, a) = keys() else { return [] }
         let book = refBook()
+        // THE ROAD BACK FLOORS BY THE LATER DAY (decision 188, E): the device's day or the trusted mark M, whichever is later
+        let backDay = MTPipeBook.recoveryDay()
         var out: [RestoredChat] = []
         var headsS = 0, headsA = 0, headsN = 0, faces = 0, closedN = 0, reopenedN = 0
         for folder in folders {
@@ -1374,7 +1471,7 @@ extension MontanaArchive {
                         guard let s = String(data: it.content, encoding: .utf8) else { continue }
                         // COMPAT-LOCAL: the head forms s:/a:/n: live only in the sealed archive on the
                         // device, never on the wire; an older archive's bare address is read below.
-                        if let sec = MTPipeKey(archiveHead: s) {
+                        if let sec = MTPipeKey(archiveHead: s, day: backDay) {
                             // The secret re-establishes the pipe once the whole log is read: from there the device
                             // answers for the correspondence again, and the reference is its chat key.
                             headsS += 1

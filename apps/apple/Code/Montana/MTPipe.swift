@@ -212,6 +212,13 @@ enum MTPipe {
 enum MTPipeBook {
     private static let storeKey = "pipeSecrets"
     private static var cache: [String: MTPipeKey]?
+    /// The UTC day the book in memory stands floored for (0 before the first read).
+    private static var cacheDay: UInt64 = 0
+    /// Whether the clock guard withheld the first floor at the last read: the next read asks it again (decision 188, #38).
+    private static var cacheHeld = false
+    /// When the vault last refused to seal the book (nil while the disk holds what memory holds). Memory keeps the floored copy
+    /// and hands it out floored; a later read seals it again, at most once a minute (a locked device must not flood the trace).
+    private static var cacheRefusedAt: Date?
 
     /// THE LOCK GUARDS MEMORY ONLY. The store — cipher, keychain, preferences, the diary — is
     /// read and written OUTSIDE it (14.09: the main thread stood 200 s on this lock in the chat's
@@ -219,29 +226,48 @@ enum MTPipeBook {
     /// now slows one reader; nobody waits on a lock for I/O.
     private static let cacheLock = NSLock()
     private static func load() -> [String: MTPipeKey] {
+        let day = MTNodeWire.dayWindow()
         cacheLock.lock()
-        let hit = cache
+        let hit = cache, hitDay = cacheDay, hitHeld = cacheHeld
+        let retry = cacheRefusedAt.map { Date().timeIntervalSince($0) >= 60 } ?? false
         cacheLock.unlock()
-        if let hit { return hit }
+        if let hit {
+            if hitDay == day, !hitHeld, !retry { return hit }
+            // THE BOOK IN MEMORY WALKS WITH THE DAY (25.10.2026, decision 191): memory holds the book as floored for the day
+            // it is read on, as the disk does. A new day floors what memory holds before anyone reads it -- by the day the
+            // clock guard gives (decision 188, #38), asked again at every read while it withholds the first floor.
+            let fd = floorDay(for: hit)
+            let walked = hit.mapValues { $0.floored(day: fd) }
+            cacheLock.lock()
+            if cacheDay == hitDay { cache = walked; cacheDay = day; cacheHeld = fd < day }
+            cacheLock.unlock()
+            if walked != hit { floorStore(walked) } else if retry { store(walked) }   // a refused write is sealed again (#38, case 13)
+            if fd >= MTPipeKey.eraseDay { MontanaArchive.dropSecretHeads(day: fd) }   // after the floor heads, on the same queue
+            return walked
+        }
         // A decryption failure is NOT cached: a thread race at process start cached emptiness forever --
         // the whole pipe book "vanished", live letters fell with send_refused no_secret /
         // enqueue_drop no-pipe (22:10:30). Truly empty -- we re-read cheaply; empty from a fault --
         // the next attempt sees the truth.
         let t0 = Date()
         guard let d = MontanaLocalVault.getDecrypted(storeKey) else { return [:] }
-        let m = MTPipeKey.book(d)
+        let raw = MTPipeKey.book(d, day: 0)   // as sealed, before the day's floor: the guard sees whether a key is floored
+        let fd = floorDay(for: raw)
+        let m = raw.mapValues { $0.floored(day: fd) }
         let ms = Int(Date().timeIntervalSince(t0) * 1000)
         if ms > 500 { MontanaTrace.mark("pipes_read_slow", "ms=\(ms) main=\(Thread.isMainThread ? 1 : 0)") }
         cacheLock.lock()
         let first = cache == nil
-        if first { cache = m }   // the first reader publishes; a parallel reader's copy is the same book
+        if first { cache = m; cacheDay = day; cacheHeld = fd < day }   // the first reader publishes; a parallel reader's copy is the same book
         let now = cache ?? m
         cacheLock.unlock()
         // THE BOOK ERASES ITSELF BY THE DAY (OZ1, decision 126): the pipes were read floored (MTPipeKey.book); a vault that still
         // holds more -- the established secret from 03.11.2026 UTC, a floor of an earlier day -- is sealed again as read, once,
         // and the archive's head of each correspondence is written in the floor's form, so a restore by the words never meets
         // the secret again. The index stays: a floor derives every tag of the days it keeps byte for byte.
-        if first, MTPipeKey.lags(d) { floorStore(now) }
+        if first, MTPipeKey.lags(d, day: fd) { floorStore(now) }
+        // the archive's old heads with the secret leave the folders' logs, once, after the floor heads above (the same queue)
+        if first, fd >= MTPipeKey.eraseDay { MontanaArchive.dropSecretHeads(day: fd) }
         return now
     }
 
@@ -252,14 +278,100 @@ enum MTPipeBook {
         MontanaTrace.mark("pipes_floored", "n=\(m.count) heads=\(refs.count)")
     }
 
-    private static func store(_ m: [String: MTPipeKey]) {
+    @discardableResult
+    private static func store(_ m: [String: MTPipeKey]) -> Bool {
         // The seal refused (the key is absent at this instant) -- the cache is NOT replaced: otherwise
         // the process would live with a book that is not on disk, and the next writer would immortalise emptiness.
-        guard let d = MTPipeKey.form(m), MontanaLocalVault.setEncrypted(storeKey, d) else {
+        let fd = floorDay(for: m)
+        guard let d = MTPipeKey.form(m, day: fd), MontanaLocalVault.setEncrypted(storeKey, d) else {
             MontanaTrace.mark("pipes_write_refused", "n=\(m.count)")
-            return
+            cacheLock.lock(); cacheRefusedAt = Date(); cacheLock.unlock()
+            return false
         }
-        cacheLock.lock(); cache = m; cacheLock.unlock()
+        // Memory holds what the disk holds: the book as floored on the day (a pipe born from eraseDay is floored at its birth,
+        // and the confirmation its first letter carries was kept beside the ciphertext before it -- rememberConfirm).
+        let day = MTNodeWire.dayWindow()
+        let held = m.mapValues { $0.floored(day: fd) }
+        cacheLock.lock(); cache = held; cacheDay = day; cacheHeld = fd < day; cacheRefusedAt = nil; cacheLock.unlock()
+        return true
+    }
+
+    // ── THE CLOCK GUARD OF THE FIRST FLOOR, SEALED BESIDE THE BOOK (decision 188, #38, 25.10.2026) ─────────────────────────────
+    // The rule is MTFloorGuard's (MTPipeKey.swift); here its state lives: M, H and Hc sealed under the device key beside the book,
+    // one of the seat's keys (SeedScope.seatKeys), never in the archive -- a restore by the words starts with none and takes c
+    // from the nodes. A record that does not open now is not replaced: the guard decides on a fresh state and writes nothing.
+    private static let guardKey = "pipeFloorGuard"
+    private static let guardLock = NSLock()   // LOCK-OK: the guard's state and this run's node day, in memory
+    private static var guardState: MTFloorGuard?
+    private static var heardDay: UInt64?        // the day of a node Date heard in this run (c of the run)
+    private static var heldTold: [UInt64]?      // d, c, left of this run's last floor_held
+    private static var floorDayNow: UInt64 = 0  // the day the book last floored by
+    /// The sealed record, read outside the lock; nil while it lies on the disk and does not open.
+    private static func guardRead() -> MTFloorGuard? {
+        guardLock.lock(); let hit = guardState; guardLock.unlock()
+        if let hit { return hit }
+        let g: MTFloorGuard
+        if UserDefaults.standard.data(forKey: guardKey) == nil {
+            g = MTFloorGuard()
+        } else {
+            guard let d = MontanaLocalVault.getDecrypted(guardKey),
+                  let read = try? JSONDecoder().decode(MTFloorGuard.self, from: d) else { return nil }
+            g = read
+        }
+        guardLock.lock()
+        if guardState == nil { guardState = g }
+        let now = guardState ?? g
+        guardLock.unlock()
+        return now
+    }
+    private static func guardWrite(_ g: MTFloorGuard) {
+        if let d = try? JSONEncoder().encode(g) { _ = MontanaLocalVault.setEncrypted(guardKey, d) }
+    }
+    /// A node's Date was heard (MontanaWakePush.learnSkew): it is the confirmed day of this run, and M rises to it.
+    static func heard(nodeDate: Date) {
+        let day = UInt64(max(0, nodeDate.timeIntervalSince1970)) / 86400
+        let read = guardRead()
+        guardLock.lock()
+        heardDay = max(heardDay ?? 0, day)
+        var g = guardState ?? read ?? MTFloorGuard()
+        let rose = g.heard(day)
+        if read != nil { guardState = g }
+        guardLock.unlock()
+        if rose, read != nil { guardWrite(g) }
+    }
+    /// The day a restore by the words floors the heads it reads by: the later of the device day and M (decision 188, E).
+    static func recoveryDay() -> UInt64 {
+        MTPipeKey.recoveryDay(device: MTNodeWire.dayWindow(), mark: guardRead()?.mark)
+    }
+    /// The day the book floors by now: the device day, or the day before eraseDay while the guard withholds the first floor.
+    /// The archive's heads and the extensions' mirror are written by it, as the book is.
+    static func floorDay() -> UInt64 {
+        _ = load()
+        guardLock.lock(); let fd = floorDayNow; guardLock.unlock()
+        return fd == 0 ? MTNodeWire.dayWindow() : fd
+    }
+    /// The guard asked for a book about to be floored: the day it floors by. A book with no pipe is not asked (the rule is
+    /// asked when the first pipe arrives, and H does not start on an empty book).
+    private static func floorDay(for book: [String: MTPipeKey]) -> UInt64 {
+        let d = MTNodeWire.dayWindow()
+        guard !book.isEmpty else {
+            guardLock.lock(); floorDayNow = d; guardLock.unlock()
+            return d
+        }
+        let floored = book.values.contains { $0.isFloored }
+        let read = guardRead()
+        guardLock.lock()
+        var g = guardState ?? read ?? MTFloorGuard()
+        let before = g, heard = heardDay
+        let v = g.decide(day: d, heard: heard, floored: floored)
+        let line = MTFloorGuard.line(v, day: d, confirmed: g.confirmed(heard: heard), told: &heldTold)
+        if read != nil { guardState = g }
+        let fd = MTFloorGuard.floorDay(v, day: d)
+        floorDayNow = fd
+        guardLock.unlock()
+        if g != before, read != nil { guardWrite(g) }
+        if let line { MontanaTrace.mark(line.0, line.1) }
+        return fd
     }
 
     /// Remember the secret a first letter established. Written once per correspondence: a second
@@ -270,7 +382,16 @@ enum MTPipeBook {
         if !secret.isWhole || conv.isEmpty { return false }
         guard MontanaDeviceKey.key != nil else { MontanaTrace.mark("pipes_read_locked", "remember"); return false }
         var m = load()
-        if let existing = m[conv] { return existing == secret }
+        // ONE PIPE MET AGAIN (decision 188, #37): from eraseDay the book holds the floor, and a card letter brings the whole secret
+        // again, an archive head a floor of another day. Two keys are one pipe only when both, walked to the later floor day,
+        // give the same whole floor (MTPipeKey.samePipe) -- never the reference alone. The store keeps the further floor; a whole
+        // secret met again is floored before the comparison and never written back.
+        if let existing = m[conv] {
+            guard existing.samePipe(secret) else { return false }
+            let keep = existing.further(secret)
+            if keep != existing { m[conv] = keep; store(m) }
+            return true
+        }
         m[conv] = secret
         store(m)
         dropIndex()
@@ -349,7 +470,8 @@ enum MTPipeBook {
     /// device key that SeedScope resets, so only the cache could have carried the previous
     /// person's pipes into the next person's book — and re-sealed them there on the first write.
     static func forgetAll() {
-        cacheLock.lock(); cache = nil; keptCache = nil; cacheLock.unlock()
+        cacheLock.lock(); cache = nil; keptCache = nil; cacheHeld = false; cacheLock.unlock()
+        guardLock.lock(); guardState = nil; heldTold = nil; floorDayNow = 0; guardLock.unlock()   // the guard is the seat's, as the book
         dropIndex()
     }
 
@@ -549,10 +671,46 @@ enum MTPipeBook {
     static func first(for conv: String) -> Data? { firsts()[conv] }
     static func forgetFirst(_ conv: String) {
         forgetRoot(conv)   // the point of first contact dies with the ciphertext it belonged to
+        forgetConfirm(conv)   // and the confirmation bound to that ciphertext
         var m = firsts()
         guard m.removeValue(forKey: conv) != nil, let d = try? JSONEncoder().encode(m) else { return }
         _ = MontanaLocalVault.setEncrypted(firstKey, d)
         dropAwaiting()
+    }
+
+    /// THE CONFIRMATION OF A FIRST LETTER OUTLIVES THE FLOOR (decision 188, #36, 25.10.2026). The key confirmation a first
+    /// letter carries is made of the established secret (MTNodeWire.firstConfirm), and from eraseDay the book holds the floor, never the secret: an
+    /// introduction still unanswered then could not be sent again (sameConfirm refuses an empty value). So the confirmation is
+    /// made once, at the pipe's birth, and kept here -- sealed like the ciphertext beside it, bound to that ciphertext by its
+    /// hash, and dropped with it on the answer or the drop (forgetFirst). It is bytes the wire carries anyway: it opens nothing,
+    /// and the floor still erases the secret.
+    private static let confirmKey = "pipeFirstConfirms"
+    private static func confirms() -> [String: Data] {
+        guard let d = MontanaLocalVault.getDecrypted(confirmKey),
+              let m = try? JSONDecoder().decode([String: Data].self, from: d) else { return [:] }
+        return m
+    }
+    /// The bound form: SHA-256 of the ciphertext (32) followed by the confirmation's bytes.
+    // LOCAL-HASH-OK: a binding inside one device's sealed record, not a quantity of the protocol.
+    private static func bound(_ ct: Data) -> Data { Data(SHA256.hash(data: ct)) }
+    @discardableResult
+    static func rememberConfirm(_ confirm: String, ct: Data, for conv: String) -> Bool {
+        guard ct.count == 1088, !conv.isEmpty, !confirm.isEmpty else { return false }
+        var m = confirms(); m[conv] = bound(ct) + Data(confirm.utf8)
+        guard let d = try? JSONEncoder().encode(m) else { return false }
+        return MontanaLocalVault.setEncrypted(confirmKey, d)
+    }
+    private static func forgetConfirm(_ conv: String) {
+        var m = confirms()
+        guard m.removeValue(forKey: conv) != nil, let d = try? JSONEncoder().encode(m) else { return }
+        _ = MontanaLocalVault.setEncrypted(confirmKey, d)
+    }
+    /// The confirmation a first letter of this correspondence carries with this ciphertext: the pipe's own while it holds the
+    /// secret, else the one kept at its birth -- and only for the very ciphertext it was made for; any other gets none.
+    static func firstConfirm(for conv: String, pipe: MTPipeKey, ct: Data) -> String {
+        if pipe.holdsOrigin { return pipe.firstConfirm(ct: ct) }
+        guard let kept = confirms()[conv], kept.count > 32, kept.prefix(32) == bound(ct) else { return "" }
+        return String(decoding: kept.dropFirst(32), as: UTF8.self)
     }
 
     /// The contact key a correspondence was BEGUN at, kept until the other side answers.

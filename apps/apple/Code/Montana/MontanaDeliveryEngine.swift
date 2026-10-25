@@ -1671,7 +1671,7 @@ final class MontanaDeliveryEngine {
                 let fct = MTPipeBook.first(for: to)
                 if let inv, let fct {
                     MontanaWakePush.wakeRdv(invite: inv, mid: m, text: text, ct: fct,
-                                            conf: secret.firstConfirm(ct: fct)) { [weak self] code in
+                                            conf: MTPipeBook.firstConfirm(for: to, pipe: secret, ct: fct)) { [weak self] code in
                         // THE NODE'S WORD ON A FIRST LETTER REACHES THE QUEUE (07.10, T1 to a second account of the same phone): the
                         // doorbell boxes the letter under the card's key, and the node answers 200 the moment it is safe in the box --
                         // nineteen times in ten minutes the queue heard none of it. 200 is the node holding it: one checkmark, and

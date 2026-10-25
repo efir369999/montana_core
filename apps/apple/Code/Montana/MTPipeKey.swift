@@ -92,6 +92,28 @@ struct MTPipeKey: Hashable, Sendable {
                                       faceBid: bid, faceKey: k.faceKey, pair: k.pair, ref: ref))
     }
 
+    /// Whether the walk already erased the established secret here: the pipe holds its floor.
+    var isFloored: Bool { floor != nil }
+
+    // ── ONE PIPE MET AGAIN (decision 188, #37, 25.10.2026) ───────────────────────────────────────────────────────────────────
+    /// Whether two keys are one pipe: equal, or both walked to the later floor day of the two give the same whole floor -- the
+    /// walk's value, root, rank, fingerprint, face name and key, pair and reference. Never the reference alone, never a name: a
+    /// key that differs in any one kept quantity is another pipe. Two whole secrets are one pipe only when they are equal.
+    func samePipe(_ other: MTPipeKey) -> Bool {
+        if self == other { return true }
+        guard let f = [floor?.day, other.floor?.day].compactMap({ $0 }).max() else { return false }
+        let day = f + Self.floorLag
+        guard let a = floored(day: day).floor, let b = other.floored(day: day).floor else { return false }
+        return a == b
+    }
+    /// Of two keys of one pipe, the one a store keeps: the further floor. A whole secret met again is never written back over a
+    /// floor.
+    func further(_ other: MTPipeKey) -> MTPipeKey {
+        guard let o = other.floor?.day else { return self }
+        guard let s = floor?.day else { return other }
+        return o > s ? other : self
+    }
+
     /// The letter body key of a minute: the seal key under the pipe secret of that minute's day.
     func bodyKey(window: UInt64) -> [UInt8] {
         MTNodeWire.sealKey(stepSecret: walked(window / MTNodeWire.minutesPerDay), window: window)
@@ -162,7 +184,8 @@ struct MTPipeKey: Hashable, Sendable {
 
     // ── the proofs that stand on the secret itself ──────────────────────────────────────────────────────────────────────────────
     /// The key confirmation a first letter carries (MontanaFirstContact.firstConfirm, P-56). A pipe whose secret the walk erased
-    /// confirms nothing: its first letter was answered days before, and an empty confirmation matches none (sameConfirm).
+    /// confirms nothing by itself: an introduction still unanswered on eraseDay sends the confirmation kept at its birth
+    /// (MTPipeBook.firstConfirm(for:pipe:ct:), decision 188), and an empty confirmation matches none (sameConfirm).
     func firstConfirm(ct: Data) -> String { holdsOrigin ? MTNodeWire.firstConfirm(secret: secret, ct: ct) : "" }
     /// ONE PERSON, ONE CONVERSATION (MTSamePair, 20.10.2026): the tag of this pipe (the older) beside a pipe just born (the newer),
     /// sixteen bytes in hex -- over the two roots from tagWalkDay (decision 126), over the two established secrets before it.
@@ -272,12 +295,40 @@ struct MTPipeKey: Hashable, Sendable {
     /// The head the archive seals under the seed (MontanaArchive.writeHead, «s:»): the one place a pipe may outlive the device
     /// key, and what a restore by the words answers the correspondence from -- from eraseDay the floor, never the secret; a
     /// head read with the secret after it is walked and erased on reading.
-    var archiveHead: Data { Data("s:".utf8) + Data(sealedForm.base64EncodedString().utf8) }   // COMPAT-LOCAL: an archive head form on the device
+    /// The head is written from the pipe as floored on the day it is written (25.10.2026, decision 191): a key held in memory
+    /// across the midnight into eraseDay, or born on it, never lays the established secret under the seed.
+    var archiveHead: Data { archiveHead(day: MTNodeWire.dayWindow()) }
+    func archiveHead(day: UInt64) -> Data {
+        Data("s:".utf8) + Data(floored(day: day).sealedForm.base64EncodedString().utf8)   // COMPAT-LOCAL: an archive head form on the device
+    }
+    /// Whether a head read from the archive carries the established secret itself, not the floor's form: from eraseDay such a
+    /// head is taken out of the folder's log and never filed again (MontanaArchive.dropSecretHeads, absorb).
+    static func headHoldsSecret(_ head: String) -> Bool {
+        guard head.hasPrefix("s:"), let s = Data(base64Encoded: String(head.dropFirst(2))) else { return false }   // COMPAT-LOCAL
+        return MTPipeKey(sealed: s).holdsOrigin
+    }
     init?(archiveHead head: String, day: UInt64 = MTNodeWire.dayWindow()) {
         guard head.hasPrefix("s:"), let s = Data(base64Encoded: String(head.dropFirst(2))) else { return nil }   // COMPAT-LOCAL
         let k = MTPipeKey(sealed: s)
         guard k.isWhole else { return nil }
         self = k.floored(day: day)
+    }
+
+    /// THE ROAD BACK FROM THE WORDS FLOORS BY THE LATER DAY (decision 188, E, 25.10.2026): a restore reads its heads on the later
+    /// of the device's day and the trusted mark M (the highest day a node's Date confirmed, MTFloorGuard), so a device whose
+    /// clock is behind does not keep a secret that a node's Date says is past its floor.
+    static func recoveryDay(device day: UInt64, mark: UInt64?) -> UInt64 { max(day, mark ?? 0) }
+    /// Whether the heads of one archive block all carry the established secret: from the floor day such a block leaves a
+    /// folder's log and is not filed again (MontanaArchive.dropSecretHeads, absorb).
+    static func onlySecretHeads(_ heads: [String]) -> Bool { !heads.isEmpty && heads.allSatisfy(headHoldsSecret) }
+    /// What one frame of a folder's log holds, for the purge of the secret heads.
+    enum LogFrame: Equatable, Sendable { case secretHead, floorHead, other }
+    /// The purge of a folder's log from eraseDay: every frame of nothing but secret heads leaves; when no floor head follows the
+    /// last of them, the floor of that very head takes its place (floorAt), so the last head still decides at a restore.
+    static func purge(_ frames: [LogFrame]) -> (drop: [Int], floorAt: Int?) {
+        guard let last = frames.lastIndex(of: .secretHead) else { return ([], nil) }
+        let drop = frames.indices.filter { frames[$0] == .secretHead }
+        return (drop, frames[(last + 1)...].contains(.floorHead) ? nil : last)
     }
 
     // ── THE EXTENSIONS' MIRROR (the app writes; the notification extension and the sheet read) ─────────────────────────────────
@@ -286,8 +337,9 @@ struct MTPipeKey: Hashable, Sendable {
     /// alias names the chat key a pipe filed under a local reference answers to.
     private static let mirrorKey = "nsePipeSecrets"
     private static let aliasKey = "nsePipeAlias"
-    static func mirror(_ keys: [String: MTPipeKey], alias: [String: String]) {
-        if let d = form(keys) { MontanaKeychain.set(mirrorKey, d) }
+    /// `day`: the day the book floors by (MTPipeBook.floorDay: the clock guard may withhold the first floor, decision 188).
+    static func mirror(_ keys: [String: MTPipeKey], alias: [String: String], day: UInt64 = MTNodeWire.dayWindow()) {
+        if let d = form(keys, day: day) { MontanaKeychain.set(mirrorKey, d) }
         if let d = try? JSONEncoder().encode(alias) { MontanaKeychain.set(aliasKey, d) }
     }
     static func mirrored() -> [String: MTPipeKey] { book(MontanaKeychain.get(mirrorKey)) }
@@ -376,6 +428,91 @@ struct MTPipeKey: Hashable, Sendable {
               MTPipeKey(sealed: floored.sealedForm) == floored, floored.floored(day: e + 1) == floored
         else { return false }
         return true
+    }
+}
+
+// ── THE CLOCK GUARD OF THE FIRST FLOOR (decision 188, #38: the rule of DinetPDA 17:59 UTC as the chair confirmed it at 18:11 UTC
+// with both corrections, and the five readings of 19:2x UTC) ──────────────────────────────────────────────────────────────────
+/// The device's day alone decides the floor (MTPipeKey.floored(day:)), and the floor is irreversible: a clock running ahead floors
+/// a book early, and it can no longer open what its peer lays under the earlier days. The guard withholds the first floor, and
+/// only it, while the device day stands more than one day ahead of every day a node's Date confirmed, for at most N days (the
+/// box's four); sources that disagree never withhold it, and a hostile door can only raise M, which ends the wait -- the safe
+/// side. The one case with no end is a clock frozen ahead with every door cut: a traced residual (floor_held, left unchanged),
+/// never closed by an uptime count. The client's own key schedule, not consensus; the node Date is read for nothing else.
+/// M, H and Hc are device state sealed beside the pipe book (MTPipeBook), never in the archive.
+struct MTFloorGuard: Codable, Equatable, Sendable {
+    /// M: the highest day a node's Date confirmed. It only rises, and only from a node Date.
+    var mark: UInt64?
+    /// H and Hc: the device day and the confirmed day at the first moment the first floor was withheld.
+    var since: UInt64?
+    var sinceConfirmed: UInt64?
+    /// The first floor applied: the guard is never asked again (rule 4), even when a write of the floored book failed.
+    var done = false
+
+    /// N: the days a box read listens at (MTNodeWire.boxDays), four.
+    static let width = UInt64(MTNodeWire.boxDays(around: 2).count)
+
+    enum Verdict: Equatable, Sendable {
+        case early                                    // before eraseDay: nothing floors, H and Hc stay
+        case floor                                    // the floor applies on the device day (rule 2 with nothing held, rule 4)
+        case free                                     // the floor applies and clears a withholding (rule 2)
+        case held(since: UInt64, left: UInt64)        // the first floor withheld (rule 3)
+        case ceiling(since: UInt64, byDevice: Bool)   // the wait ended at its ceiling (rule 3)
+    }
+
+    /// A node's Date names a day: M rises to it. Whether it rose.
+    mutating func heard(_ day: UInt64) -> Bool {
+        guard day > (mark ?? 0) else { return false }
+        mark = day
+        return true
+    }
+    /// c: the higher of M and the day of a node Date heard in this run, never projected forward by the time since; nil with neither.
+    func confirmed(heard: UInt64?) -> UInt64? { [mark, heard].compactMap { $0 }.max() }
+    /// The rule, asked wherever the book floors; `floored`: a key of the book is floored already.
+    mutating func decide(day d: UInt64, heard: UInt64?, floored: Bool) -> Verdict {
+        if floored || done { return .floor }                       // rule 4: after the first floor the guard is never asked
+        if d < MTPipeKey.eraseDay { return .early }                // rule 1
+        let n = Self.width
+        guard let c = confirmed(heard: heard), d > c + 1 else {     // rule 2: no confirmed source, or the device day is not ahead
+            let was = since != nil
+            since = nil; sinceConfirmed = nil; done = true
+            return was ? .free : .floor
+        }
+        if since == nil { since = d; sinceConfirmed = c }          // rule 3: the first moment of the withholding
+        let h = since ?? d, hc = sinceConfirmed ?? c
+        if d >= h + n || c >= hc + n {                               // the ceiling: whichever count ends first
+            since = nil; sinceConfirmed = nil; done = true
+            return .ceiling(since: h, byDevice: d >= h + n)
+        }
+        return .held(since: h, left: min(h + n - d, hc + n - c))  // the nearer of the two ends
+    }
+    /// The day the book floors by under a verdict: while withheld, the day before eraseDay, on which nothing floors.
+    static func floorDay(_ v: Verdict, day d: UInt64) -> UInt64 {
+        if case .held = v { return MTPipeKey.eraseDay - 1 }
+        return d
+    }
+    /// The trace, one format on every port: the days as plain integers, no names, no keys.
+    static func trace(_ v: Verdict, day d: UInt64, confirmed c: UInt64?) -> (String, String)? {
+        let cs = c.map { String($0) } ?? "none"
+        switch v {
+        case .early, .floor: return nil
+        case .free: return ("floor_free", "d=\(d) c=\(cs)")
+        case let .held(h, left): return ("floor_held", "d=\(d) c=\(cs) since=\(h) left=\(left)")
+        case let .ceiling(h, byDevice): return ("floor_ceiling", "d=\(d) c=\(cs) since=\(h) by=\(byDevice ? "device" : "confirmed")")
+        }
+    }
+    /// What a run writes for a verdict: floor_held once per run and again only when d, c or left changes; floor_ceiling and
+    /// floor_free when they happen. `told` is the run's last floor_held (d, c, left).
+    static func line(_ v: Verdict, day d: UInt64, confirmed c: UInt64?, told: inout [UInt64]?) -> (String, String)? {
+        let line = trace(v, day: d, confirmed: c)
+        if case let .held(_, left) = v {
+            let now = [d, c ?? 0, left]
+            if told == now { return nil }
+            told = now
+        } else if line != nil {
+            told = nil
+        }
+        return line
     }
 }
 

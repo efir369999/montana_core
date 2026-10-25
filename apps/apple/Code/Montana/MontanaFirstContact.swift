@@ -178,6 +178,9 @@ extension MontanaFirstContact {
     static func meet(contactRoot root: Data) -> (reference: String, ciphertext: Data)? {
         guard root.count == 1184, let started = begin(toward: root),
               let ref = MTPipeBook.establish(secret: started.secret) else { return nil }
+        // The confirmation the first letter carries is made here, while the secret is whole, and kept beside the ciphertext
+        // until the answer (decision 188, #36): from eraseDay the book holds the floor, and a resend still confirms.
+        MTPipeBook.rememberConfirm(firstConfirm(secret: started.secret, ct: started.ciphertext), ct: started.ciphertext, for: ref)
         // Where the first letter must be addressed. The other side cannot derive the pipe secret
         // until that letter reaches them, so it cannot be addressed by the tag of the pipe.
         MTPipeBook.rememberRoot(root, for: ref)

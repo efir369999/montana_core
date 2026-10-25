@@ -864,7 +864,7 @@ enum MontanaWakePush {
         }
         // The pipes of the slots this phone keeps (MTKeeping): the extension opens a loud call in them and shows whose copy it is.
         for (name, secret) in MTKeeping.listening() { m[name] = secret }
-        MTPipeKey.mirror(m, alias: alias)   // the pipe's one owner writes its mirror and reads it in the extensions
+        MTPipeKey.mirror(m, alias: alias, day: MTPipeBook.floorDay())   // the pipe's one owner writes its mirror and reads it in the extensions
         // The share extension sends letters itself; the sender identity rides sealed inside
         // the envelope, so the mirror carries it the same way it carries the pipe secrets
         // (device-only keychain, never the node).
@@ -1361,6 +1361,7 @@ enum MontanaWakePush {
         guard let hdr = (resp as? HTTPURLResponse)?.value(forHTTPHeaderField: "Date"),
               let server = httpDateFormatter.date(from: hdr) else { return }
         if let resp { personFeed(resp) }
+        MTPipeBook.heard(nodeDate: server)   // the clock guard of the first floor: c of this run, and M (decision 188, #38)
         let skew = Int(Date().timeIntervalSince(server) * 1000)
         let tolMs = Int(clockSlackS * 1000)
         // A CORRECTION IS TOLD ONLY WHEN IT STANDS (24.09, the noticed point 3 — the author's word «close it»): the first
@@ -4359,7 +4360,7 @@ enum MontanaWakePush {
         guard let ct = MTPipeBook.first(for: conv), let inv = MontanaMeeting.invite(forConv: conv) else { return nil }
         var plain = cardRingWord
         plain.append(ct)
-        plain.append(Data(secret.firstConfirm(ct: ct).utf8)); plain.append(0)
+        plain.append(Data(MTPipeBook.firstConfirm(for: conv, pipe: secret, ct: ct).utf8)); plain.append(0)
         plain.append(ring)
         guard let sealed = MTPipe.sealBody(plain, sharedSecret: rdvLetterSecret(inv)) else { return nil }
         let env = sealed.base64EncodedString()
