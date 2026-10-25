@@ -2122,13 +2122,13 @@ final class MTGroup {
     }
     /// The person's tag on a word carried on one pipe: the letter author's key (MTLetterAuthor) over that pipe's secret.
     static func ownTag(_ w: MTGroupWord, pipe: String) -> String? {
-        guard let key = MTLetterAuthor.key, let secret = MTPipeBook.secret(for: pipe) else { return nil }
-        return MTNodeWire.authorTag(key: key, secret: secret, mid: w.g, text: tagText(w))
+        guard let key = MTLetterAuthor.key, let held = MTPipeBook.key(for: pipe) else { return nil }
+        return held.authorTag(person: key, mid: w.g, text: tagText(w))
     }
     /// Whether a word heard on a pipe was signed by this person -- on another of its devices.
     func ownWord(_ w: MTGroupWord, pipe: String) -> Bool {
-        guard let tag = w.au, let secret = MTPipeBook.secret(for: pipe) else { return false }
-        return MTNodeWire.authorHolds(tag, key: MTLetterAuthor.key, secret: secret, mid: w.g, text: Self.tagText(w))
+        guard let tag = w.au, let held = MTPipeBook.key(for: pipe) else { return false }
+        return held.authorHolds(tag, person: MTLetterAuthor.key, mid: w.g, text: Self.tagText(w))
     }
 
     @MainActor

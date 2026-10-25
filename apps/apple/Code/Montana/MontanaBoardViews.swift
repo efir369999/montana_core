@@ -2096,7 +2096,7 @@ struct MTBoardComposer: View {
     }
 
     /// THE PICK COMES AS THE CHAT'S DOES, AND EVERY STEP OF IT IS WRITTEN (the author's word 05.10.2026 21:3x UTC: «why can't I
-    /// attach a video to a new post on T1»). T1 held this page open from 00:30:02 to 00:32:56 and nothing came: not a line in the
+    /// attach a video to a new post on T1»). T1 held this page open from 21:30:02 to 21:32:56 and nothing came: not a line in the
     /// diary, not a file in the drafts folder, not a copy in the temporary one -- the road wrote nothing and its refusals fell
     /// silent (try?), and a film came through the picker's automatic encoding, which re-encodes a long film for minutes with
     /// nothing on the page. Now a film comes as the library keeps it (.current); when the picker's hand-over refuses, the

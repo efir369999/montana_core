@@ -627,7 +627,7 @@ enum MTKeepDerive {
     /// correspondences from the first laid. The box keeps the letters: the next phone of the same words reads them too.
     private func takeLight(_ secret: Data, dir: URL) async -> Bool {
         var rows: [[String: String]] = []
-        let ear = MontanaWakePush.BoxEar(invites: [], pipes: [Self.lightName: secret], owner: MontanaSeed.twin ?? "")
+        let ear = MontanaWakePush.BoxEar(invites: [], pipes: [Self.lightName: MTPipeKey(secret)], owner: MontanaSeed.twin ?? "")
         _ = await MontanaWakePush.pickup(ear, buries: nil, keep: { row in rows.append(row); return false })
         var newest: [String: [String: Any]] = [:]
         for o in rows.compactMap({ Self.word($0["t"] ?? "") }) where (o["w"] as? String) == "light" {
@@ -790,10 +790,10 @@ enum MTKeepDerive {
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "keep-" + UUID().uuidString, content: c, trigger: nil))
     }
     /// The pipes of the slots this phone holds, heard in the box beside every correspondence (MontanaWakePush.fetchBox).
-    nonisolated static func listening() -> [String: Data] {
+    nonisolated static func listening() -> [String: MTPipeKey] {
         guard agrees else { return [:] }
-        var out: [String: Data] = [:]
-        for (conv, h) in heldNow() { out[pipePrefix + conv] = h.secret }
+        var out: [String: MTPipeKey] = [:]
+        for (conv, h) in heldNow() { out[pipePrefix + conv] = MTPipeKey(h.secret) }
         return out
     }
     /// A row of the box under the pipe of a slot is this file's own: a call is answered, and the row is in hand either way.
@@ -835,7 +835,7 @@ enum MTKeepDerive {
               let s = String(data: d, encoding: .utf8) else { return false }
         let mid = UUID().uuidString
         guard let plain = MTNodeWire.padEnvelope(MTNodeWire.letterHead(mid: mid, text: keepMark + s, name: "", glyph: "")) else { return false }
-        let k = await MTNodeWire.knockLetter(secret: secret, twinRef: twin, mid: mid, plain: plain,
+        let k = await MTNodeWire.knockLetter(secret: MTPipeKey(secret), twinRef: twin, mid: mid, plain: plain,
                                              doors: MontanaWakePush.oneDoorPerNode(MontanaWakePush.orderedBases(for: "box")), silent: silent)
         return k.boxed
     }
@@ -894,7 +894,7 @@ enum MTKeepDerive {
     /// THE CORRESPONDENCE TAKEN BACK: only an answer to this phone's own request, only the letters later than the last one in that
     /// correspondence here -- a letter erased before the copy stays erased -- each on the side of the one who wrote it.
     /// WHICH LETTER IS MINE IS SAID BY MY OWN WORDS (the critic R-6; the author's words 11.10.2026 17:1x UTC: «check the whole
-    /// architecture of the chats' time chains, so there are no holes by the constitution», 21:5x: «carry out all 13»): the side
+    /// architecture of the chats' time chains, so there are no holes by the constitution», 18:5x: «carry out all 13»): the side
     /// was the correspondent's flag alone, and a correspondent could lay words on this phone as the person's own. A letter they
     /// name as theirs is theirs; one they name as mine stands as mine only when the author field it rode with is made again
     /// under this person's key (MTLetterAuthor.mine) -- else it is not laid at all, and the count says so.
@@ -985,7 +985,7 @@ enum MTKeepDerive {
                 MontanaTrace.mark("keep_call", "loud rung=\(rung) heard=\(heard.count)")
             }
             var rows: [[String: String]] = []
-            let ear = MontanaWakePush.BoxEar(invites: [], pipes: pipes, owner: MontanaSeed.twin ?? "")
+            let ear = MontanaWakePush.BoxEar(invites: [], pipes: pipes.mapValues(MTPipeKey.init), owner: MontanaSeed.twin ?? "")
             _ = await MontanaWakePush.pickup(ear, buries: nil, keep: { row in rows.append(row); return true })
             for row in rows {
                 guard let c = row["c"], c.hasPrefix(Self.callPrefix), let k = Int(c.dropFirst(Self.callPrefix.count)),

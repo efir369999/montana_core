@@ -114,7 +114,7 @@ enum MontanaKeychain {
     /// A WRITE THAT CHANGES NOTHING WRITES NOTHING, AND A WRITE NEVER LEAVES THE KEY ABSENT (23.10.2026, the author's words
     /// 09:16 UTC: «I quit Montana on the Mac, and it hangs and starts by itself»). Every wake by a push walks the ninety doors
     /// that write here, and each write was a delete and an add: 114 deletes and 111 adds in the 36 s of one background launch
-    /// on the Mac (system log 12:17:45-12:18:20), most of them the same bytes again -- and between the delete and the add an
+    /// on the Mac (system log 09:17:45-09:18:20), most of them the same bytes again -- and between the delete and the add an
     /// extension reading the key found none. The same bytes under the same class: nothing is written. Otherwise the item is
     /// updated where it stands, added only where none stands, and recreated only when the keychain refuses the update.
     @discardableResult static func set(_ key: String, _ data: Data) -> Bool {

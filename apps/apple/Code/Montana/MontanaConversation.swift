@@ -1159,8 +1159,8 @@ struct MTCoinBalancePlate: View {
     }
 }
 
-/// THE CHAT PAGE IS CARRIED LINK BY LINK IN A BOX (the author's word 03.10.2026 12:13 UTC: «find the cause of the crash at 15:12, fix
-/// it and put it on T1»; 16:24: «the chats page crashes, most likely from the feed, keyboard, field and minting edits -- a deep
+/// THE CHAT PAGE IS CARRIED LINK BY LINK IN A BOX (the author's word 03.10.2026 12:13 UTC: «find the cause of the crash at 12:12, fix
+/// it and put it on T1»; 13:24: «the chats page crashes, most likely from the feed, keyboard, field and minting edits -- a deep
 /// analysis»). T1 died of an exhausted main-thread stack (1008 KB, the kernel's own size) on 2069, 2070 and 2071 at the first chat
 /// opened in a run. The whole chain counted on 2071: 329 frames, and eleven of ours held 840 KB of the 1008. A value of the chat page
 /// weighs some 29 KB, and each getter of the body's chain (chatCoreL3 down to chatCoreL0, the feed, the bar) held every intermediate of
@@ -1912,7 +1912,7 @@ struct ChatConversationView: View {
         }
         .toolbar {
             // THE CHAT'S TOP IS ONE ROW THAT FITS ANY SCREEN (the author's words 04.10.2026 10:49 and 11:06 UTC: «align the buttons
-            // with the name»; «make the buttons adaptive to the screen so the interlocutor's bubble is always seen»; T1 14:06: four bar
+            // with the name»; «make the buttons adaptive to the screen so the interlocutor's bubble is always seen»; T1 11:06: four bar
             // items of their own took the bar from its middle and pushed the face and the name out of it): the name's bubble with the
             // face in it and the marks close at its right stand in the bar's middle as one row (chatTop) -- in a chat pushed in a stack.
             if onBack == nil {
@@ -1950,7 +1950,7 @@ struct ChatConversationView: View {
         .frame(maxWidth: .infinity)
     }
     /// THE MARKS STAND CLOSE BESIDE THE NAME (the author's word 04.10.2026 10:06 UTC: «the buttons at the top of the chat closer to
-    /// each other, and the name's bubble on the rest of the room»). The chess and the handset are separate buttons (30.09 23:29), the
+    /// each other, and the name's bubble on the rest of the room»). The chess and the handset are separate buttons (30.09 20:29), the
     /// marks are one round of the platform's glass with the ring on that same circle (02.10 18:27, MTBarRoundMark).
     /// ONE STEP BETWEEN EVERY ROUND (the author's word 05.10.2026 11:04 UTC: «the step between all the buttons as between the handset
     /// and the chess; the room freed goes to the interlocutor's bubble»): the back, the bubble and the marks stand at one gap, and
@@ -2608,7 +2608,31 @@ struct ChatConversationView: View {
         }
         // THE FEED'S TURN (the author's word 02.10 14:03): the inverted list puts its first row at the visual bottom, so the
         // newest on top is the same rows handed over oldest first -- the one owner of the order, the container untouched.
-        return newestFirst ? out : out.reversed()
+        guard newestFirst else { return out.reversed() }
+        // A LONG TEXT READS DOWNWARD IN THE TURNED FEED TOO (the author's word 25.10.2026 11:23 UTC: «the first message on top, so
+        // that scrolling down I see the continuation»): a text cut at its sending (ChatStore.breakOutgoingText) is born as
+        // neighbouring letters a moment apart, and the turn stood its last piece on top. Each such run is handed over reversed,
+        // its letters only -- the run's day, head and foot stay where every run of the turned feed has them.
+        var i = 0
+        while i < out.count {
+            var j = i
+            while j + 1 < out.count, Self.continues(out[j], out[j + 1]) { j += 1 }
+            if j > i {
+                let run = Array(out[i...j])
+                for (k, row) in run.reversed().enumerated() {
+                    let at = run[k]
+                    out[i + k] = ChatRowVM(message: row.message, newDay: at.newDay, tail: at.tail, topPad: at.topPad, members: row.members)
+                }
+            }
+            i = j + 1
+        }
+        return out
+    }
+    /// Two neighbouring rows are pieces of one text cut at its sending: one side and one speaker, plain letters, born under two
+    /// seconds apart, the earlier as long as only a cut piece is (half the piece's standard or more).
+    private static func continues(_ a: ChatRowVM, _ b: ChatRowVM) -> Bool {
+        a.members.isEmpty && b.members.isEmpty && a.message.isMine == b.message.isMine && a.message.senderRef == b.message.senderRef
+            && b.message.createdAt - a.message.createdAt < 2 && a.message.text.count * 2 >= ChatStore.sendPieceChars
     }
 
     // in-chat search bar

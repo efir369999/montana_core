@@ -290,8 +290,8 @@ struct MTQuestionsPage: View {
             Item(question: "Can I take my copy back from my node below level 8?",
                  answer: "Yes. Setting up your node and sending copies to it open at level 8. Taking your copy back from it is open on every level."),
         ]),
-        // THE FABRIC OF TIME (the author's words 17.10.2026 19:24-19:50 UTC; 18.10.2026 00:4x «a sliding window of t2 over live activity»,
-        // 10:2x a correspondent weighed by their ceiling; MTFabric): what this build does of it and no more -- its deviations from the
+        // THE FABRIC OF TIME (the author's words 17.10.2026 19:24-19:50 UTC; 17.10.2026 21:4x «a sliding window of t2 over live activity»,
+        // 07:2x a correspondent weighed by their ceiling; MTFabric): what this build does of it and no more -- its deviations from the
         // specification named, not hidden (the window from the nodes' seconds, no witness into the network yet).
         Topic(title: "Fabric of Time", systemImage: "point.3.connected.trianglepath.dotted", items: [
             Item(question: "What is the Fabric of Time?",

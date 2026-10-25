@@ -157,8 +157,8 @@ struct MTWalletPage: View {
                         // chain's fold -- stood still. The figure is every coin the book holds, minted and received by every road; under it the
                         // part the person's chain on the network holds for its one owner (MTCoinSplit.available), and nothing more.
                         // THE TIME BALANCE (the author's words 19.10.2026 14:2x UTC: «the time on the Time Coins page white and large, as in
-                        // the film In Time -- seconds, minutes, days and so on; the transfer by the fact of the coins, Montana, TCM»; 17:4x:
-                        // «in 2250 I want to see Time Balance, and below it in a small font the TCM»; 17:44: «the rate is exactly 1 Coin =
+                        // the film In Time -- seconds, minutes, days and so on; the transfer by the fact of the coins, Montana, TCM»; 14:4x:
+                        // «in 2250 I want to see Time Balance, and below it in a small font the TCM»; 14:44: «the rate is exactly 1 Coin =
                         // 0.000000001 TCM = 1 second; white and large the Time Balance, below it in Coins, and in transfers and everywhere in
                         // the TimeChain both the time and the coins»): a coin is a second (the constitution, article 11), so the figure is the
                         // time the book holds; the coins under it are what a transfer moves -- coins, never TCM (a TCM is a billion of them).
@@ -975,7 +975,7 @@ struct MTCoinMovePage: View {
 
 /// THE HISTORY OF OPERATIONS IN A BANK'S FORMAT (the author's words 12.10.2026 10:1x UTC: «the history of operations must look like
 /// this page in a bank's format, with separators by days, in the order of time, filters by spending and income, with a search by
-/// contacts, and inside the Explorer at once in the app»; «the sum of a day's minting -- simply one line for that day»; 15:2x: «at the
+/// contacts, and inside the Explorer at once in the app»; «the sum of a day's minting -- simply one line for that day»; 12:2x: «at the
 /// history's opening the transactions open at once», the analytics by its own button): the flow, then day after day, newest first, each
 /// day with its own sum, a page of lines at a time that grows as it is read. Reads the one fold (MTCoinHistory).
 struct MTCoinHistoryPage: View {
@@ -1261,7 +1261,7 @@ struct MTLevelProgress: View {
 }
 
 /// THE PRICE OF A SECOND, FIXED UNDER THE COUNT (the author's words 04.10.2026 14:32 UTC: «put the price of one second under the
-/// field of the level's count as a fixed line: 1 second = 13 coins»; ~18:03: «the rate and the question are seen without the
+/// field of the level's count as a fixed line: 1 second = 13 coins»; ~15:03: «the rate and the question are seen without the
 /// Pantheon's game too»): the rate and the link to the form of the person's hour stand always, under the level's count, which
 /// shows only while a game mints.
 struct MTSecondPrice: View {
@@ -1684,7 +1684,7 @@ struct MTTimeChainLinkRow<Content: View>: View {
 
 /// THE TIMECHAIN OF THE PERSON (the author's words 10.10.2026 10:4x, 12:2x and 12:4x UTC: «remove the Add account button and put
 /// TimeChains in its place»; «the TimeChain, where the first chain of time is the Person, the second the Wallet»; «the third chain
-/// of time is chats and calls»; 14:1x: «the whole TimeChain core shown for an external observer»; App, «The chains of time a client
+/// of time is chats and calls»; 11:1x: «the whole TimeChain core shown for an external observer»; App, «The chains of time a client
 /// shows»): one seed is one person, and what stands beside it is the evidence of its time -- the Global Level the minting keeps
 /// while the app is away, the chain of the person, the wallet's chain of π and coins, the chains of the chats and calls, and what
 /// an observer checks for themselves.
@@ -1768,7 +1768,7 @@ struct MTTimeChainsPage: View {
                 Text("Your balance reveals π: each level opens when the balance reaches the next amount — 3, 31, 314 …")
             }
             // THE FABRIC OF TIME (the author's words 17.10.2026 19:24-19:50 UTC: «the 3rd level ... regular calls over the last 14 days»;
-            // «a new level that sets the global one, named Fabric of Time»; 18.10.2026 00:4x «a sliding window of t2 over live activity»;
+            // «a new level that sets the global one, named Fabric of Time»; 17.10.2026 21:4x «a sliding window of t2 over live activity»;
             // App, «The chains of time a client shows»): the third chain of time -- the level now, the regular correspondents it weighs,
             // the testimonies held in the window, the person's own ceiling, and its chain; through the first τ₂, the days until the
             // first count, the level standing at the ceiling.
@@ -1993,7 +1993,7 @@ struct MTCoinSendSheet: View {
         _chosen = State(initialValue: 0 < each ? each : 1)   // the number written in the group's field: each pick's coins
     }
     /// EVERY PAIR OF THE CHATS TAB, IN ITS ORDER, EVERY ONE OPEN (the author's words 11.10.2026 14:5x UTC: «put full order in the list
-    /// of chats for sending the time coins -- not all chats show on the send page»; 19:5x: «the person is the seed and everything is in
+    /// of chats for sending the time coins -- not all chats show on the send page»; 16:5x: «the person is the seed and everything is in
     /// it»): a person is their seed and their wallet is in it, so no row stands dimmed «no wallet yet» (MTCoinSend.canPay).
     @State private var chats: [Chat] = []
     @State private var picked: Set<String> = []

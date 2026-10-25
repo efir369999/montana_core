@@ -60,7 +60,7 @@ enum MontanaFirstContact {
     /// produced without the real shared secret short of finding a SHA-256 preimage. That is the
     /// named cryptographic prohibition the law stands on.
     static func firstConfirm(secret: Data, ct: Data) -> String {
-        MTPipe.domained("mt-first-conf", [secret, ct]).prefix(16).base64urlNoPad
+        MTNodeWire.firstConfirm(secret: secret, ct: ct)   // a secret at its birth; a pipe already held asks its owner (MTPipeKey.firstConfirm)
     }
 
     /// Constant-time comparison: an early-exit compare is a timing oracle over the secret.
@@ -214,15 +214,8 @@ extension MontanaFirstContact {
     // node the moment the pipe is born, under a name and a seal derived from the pipe's own secret — held by exactly
     // the two of them; the other side reads it the moment the first letter hands it that secret. An empty seal says
     // «no face». The node learns nothing the meeting has not shown it already — the same pair at the same moment,
-    // the size the face letter carries anyway.
-    static func pipeFaceBid(_ secret: Data) -> String {
-        var m = Data("mt-pipe-f".utf8); m.append(0); m.append(secret)
-        return SHA256.hash(data: m).map { String(format: "%02x", $0) }.joined()
-    }
-    static func pipeFaceKey(_ secret: Data) -> Data {
-        var m = Data("mt-pipe-fk".utf8); m.append(0); m.append(secret)
-        return Data(SHA256.hash(data: m))
-    }
+    // the size the face letter carries anyway. The face's name and key are derived at the pipe's birth by the secret's one
+    // owner and kept for good (MTPipeKey.kept: faceBid, faceKey).
 
     /// The beginner's side, at the pipe's birth.
     static func layPipeFace(conv: String) {

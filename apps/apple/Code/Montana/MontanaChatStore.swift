@@ -119,7 +119,7 @@ class ChatStore: ObservableObject {
     /// refused in append), the reception intent is dropped, the shipping crate thrown out.
     func deleteLocally(chat: String, _ m: Message) { deleteLocally([(chat, m)]) }
     func deleteLocally(chat: String, _ ms: [Message]) { deleteLocally(ms.map { m in (chat, m) }) }
-    // MANY LETTERS, ONE WRITE (the author's word 11.10.2026 17:1x UTC: «at 20:11 on T1 the screen hangs when a chat is deleted»;
+    // MANY LETTERS, ONE WRITE (the author's word 11.10.2026 17:1x UTC: «at 17:11 on T1 the screen hangs when a chat is deleted»;
     // the critic R-1): a selection of N letters went through this road one by one -- N tombstone writes, each the whole list
     // encoded, sealed and handed to the defaults, and N blocking history writes, all on the main thread. The rows leave by one
     // pass per chat, the tombstones by one write (bury), and the history leaves for the disk on its own queue at once.
@@ -1951,7 +1951,7 @@ class ChatStore: ObservableObject {
     // first. The order is the moment this phone buried the name; the list on disk is that order, oldest first, and memory holds
     // the same window, so a launch and a long life keep one rule.
     // A TOMBSTONE STANDS IN ITS CONVERSATION (the critic's second pass; the author's words 11.10.2026 17:1x UTC: «check the whole
-    // architecture of the chats' time chains, so there are no holes by the constitution», 21:5x: «carry out all 13»): the set was
+    // architecture of the chats' time chains, so there are no holes by the constitution», 18:5x: «carry out all 13»): the set was
     // one for the whole phone, and a correspondent's delete notice, the blocked door and a group's notice buried any name the
     // sender chose -- a letter of another conversation never came, and a flood of names pushed every real tombstone out. A grave
     // is now a name in a conversation: a word of a conversation buries there alone, a letter is asked by the conversation it
@@ -2039,7 +2039,7 @@ class ChatStore: ObservableObject {
         if legacy != nil, wrote { UserDefaults.standard.removeObject(forKey: Self.legacyGravesKey) }
     }
     // THE FUNERAL HAS A BIRTH (the critic R-5; the author's words 11.10.2026 17:1x UTC: «check the whole architecture of the chats'
-    // time chains, so there are no holes by the constitution», 21:5x: «carry out all 13»): «delete for both» rode under a name with
+    // time chains, so there are no holes by the constitution», 18:5x: «carry out all 13»): «delete for both» rode under a name with
     // no moment (a UUID), the receiver erased whatever stood whenever it came, and a letter of the dying pipe still on its way --
     // in a node's box, in a queue, on the other device -- landed after it and stood the conversation again. The funeral is named
     // at its birth now (mintMid), and each side keeps the newest funeral's moment of a conversation: a letter of it born at or
@@ -2909,7 +2909,7 @@ class ChatStore: ObservableObject {
     }
 
     /// A ROW STANDS WHERE ITS TIME SAYS: the moment of the chat's newest letter, the very one the row shows (the author's word
-    /// 22.10.2026 20:0x UTC, T1 at 23:01: «the chats sort crooked -- maybe not one owner of time»). The order was the moment
+    /// 22.10.2026 20:0x UTC, T1 at 20:01: «the chats sort crooked -- maybe not one owner of time»). The order was the moment
     /// THIS PHONE handled a letter, the row's time the moment the letter was BORN -- two owners. T1 rose at 20:00:29Z after a
     /// crash, the archive laid back letters missed for hours (archive_gap rows=1196 in 25 chats) and every one of them lifted
     /// its chat to the top as «now» while the row still said 19:33; a late photo did the same. One owner now: the birth.
@@ -4005,7 +4005,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         // resurrected a deleted message). The extension box is purged of this conversation's
         // rows by the same motion. The node half — removing the undelivered from the node
         // store — is stage 7.
-        // ONE WRITE FOR THE WHOLE CONVERSATION (the author's word 11.10.2026 17:1x UTC: «at 20:11 on T1 the screen hangs when a chat
+        // ONE WRITE FOR THE WHOLE CONVERSATION (the author's word 11.10.2026 17:1x UTC: «at 17:11 on T1 the screen hangs when a chat
         // is deleted»): a tombstone a letter, each insert ran the set's didSet -- the whole list encoded, sealed and written to the
         // defaults on the main thread, letter after letter; T1's defaults weigh 26 MB, and the main thread stood 22 s in
         // setEncrypted waiting for the system's preferences service (HANG 17:11:45Z-17:12:07Z, all three stacks there).
@@ -4032,7 +4032,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         forgetConversation(conv)
     }
     /// A CONVERSATION GONE LEAVES NO STATE OF ITS OWN BEHIND (the critic R-3; the author's words 11.10.2026 17:1x UTC: «check the
-    /// whole architecture of the chats' time chains, so there are no holes by the constitution», 21:5x: «carry out all 13»): the
+    /// whole architecture of the chats' time chains, so there are no holes by the constitution», 18:5x: «carry out all 13»): the
     /// rows, the list record, the folder and the queue went, and the conversation's own keys stayed in the settings -- its ground
     /// and the ground's picture and softness, the correspondent's page ground, what this phone told them and learned their build
     /// reads, the Money Flow and the paid rule -- with its entries in the maps: the letters pinned in it, its order and its pin in
@@ -7529,16 +7529,14 @@ enum MTSamePair {
             || text.hasPrefix(callSignalMark) || text.hasPrefix(ringMark)
     }
     private static func hex(_ d: Data) -> String { d.map { String(format: "%02x", $0) }.joined() }
-    private static func tag(_ domain: String, _ older: Data, _ newer: Data) -> String {
-        hex(MTPipe.domained(domain, [older, newer]).prefix(16))
-    }
+
     private static func noise() -> String {
         var b = [UInt8](repeating: 0, count: 16)
         _ = mt_random_fast(&b, 16)
         return hex(Data(b))
     }
-    /// A pipe's place in the one order both ends compute alike — the tie between two pipes born at one meeting.
-    private static func rank(_ secret: Data) -> Data { MTPipe.domained("mt-same-rank", [secret]) }
+    // The tags of a question and an answer and a pipe's place in the one order both ends compute alike (the tie between two
+    // pipes born at one meeting) stand on the pipes' secrets, so their one owner makes them (MTPipeKey.sameTag, sameRank).
 
     // -- this device's own questions still waiting for their answer, with the pipes each one named: a meeting's
     //    minutes, memory only --
@@ -7580,10 +7578,10 @@ enum MTSamePair {
 
     /// The question: the silent first letter of a pipe just born at a meeting, carrying the pipe's ciphertext.
     static func ask(new conv: String) {
-        guard let sn = MTPipeBook.secret(for: conv) else { return }
+        guard let sn = MTPipeBook.key(for: conv) else { return }
         let dying = Set(MTPipeBook.dyingAll())
         let named = Array(MTPipeBook.allByFreshness().filter { $0 != conv && !dying.contains($0) }.prefix(slots))
-        var tags = named.compactMap { q in MTPipeBook.secret(for: q).map { tag("mt-same-ask", $0, sn) } }
+        var tags = named.compactMap { q in MTPipeBook.key(for: q).map { $0.sameTag("mt-same-ask", newer: sn) } }
         while tags.count < slots { tags.append(noise()) }
         tags.shuffle()
         guard let d = try? JSONSerialization.data(withJSONObject: ["t": tags]) else { return }
@@ -7594,17 +7592,17 @@ enum MTSamePair {
     }
     /// The answering side's choice: the pipe it shares with the one who asked, or none.
     static func shared(ask payload: String, new conv: String) -> String? {
-        guard let sn = MTPipeBook.secret(for: conv), let d = Data(base64Encoded: payload),
+        guard let sn = MTPipeBook.key(for: conv), let d = Data(base64Encoded: payload),
               let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let t = o["t"] as? [String] else { return nil }
         let heard = Set(t.prefix(slots))
         let dying = Set(MTPipeBook.dyingAll())
         let matches = MTPipeBook.allByFreshness().filter { q in
-            q != conv && !dying.contains(q) && (MTPipeBook.secret(for: q).map { heard.contains(tag("mt-same-ask", $0, sn)) } ?? false)
+            q != conv && !dying.contains(q) && (MTPipeBook.key(for: q).map { !heard.isDisjoint(with: $0.sameTags("mt-same-ask", newer: sn)) } ?? false)
         }
         if let q = matches.first(where: { waiting($0) == nil }) { return q }
         if let q = matches.first(where: { !(waiting($0)?.contains(conv) ?? false) }) { return q }
-        let mine = rank(sn)
-        if let q = matches.first(where: { q in MTPipeBook.secret(for: q).map { rank($0).lexicographicallyPrecedes(mine) } ?? false }) {
+        let mine = sn.sameRank
+        if let q = matches.first(where: { q in MTPipeBook.key(for: q).map { $0.sameRank.lexicographicallyPrecedes(mine) } ?? false }) {
             return q
         }
         var book = deferredBook()
@@ -7614,8 +7612,8 @@ enum MTSamePair {
     }
     /// The answer, one shape for «yes» and «no»: the proof over the chosen pipe, or a tag nobody can check.
     static func answer(_ older: String?, new conv: String) {
-        guard let sn = MTPipeBook.secret(for: conv) else { return }
-        let p = older.flatMap { MTPipeBook.secret(for: $0) }.map { tag("mt-same-yes", $0, sn) } ?? noise()
+        guard let sn = MTPipeBook.key(for: conv) else { return }
+        let p = older.flatMap { MTPipeBook.key(for: $0) }.map { $0.sameTag("mt-same-yes", newer: sn) } ?? noise()
         guard let d = try? JSONSerialization.data(withJSONObject: ["p": p]) else { return }
         MontanaDeliveryEngine.shared.enqueue(to: conv, chat: conv, mid: "same-" + UUID().uuidString,
                                              text: sameYesMark + d.base64EncodedString(), silent: true)
@@ -7623,9 +7621,9 @@ enum MTSamePair {
     }
     /// The asker's reading of the answer: the pipe the other side proved, or none.
     static func proven(answer payload: String, new conv: String) -> String? {
-        guard let sn = MTPipeBook.secret(for: conv), let d = Data(base64Encoded: payload),
+        guard let sn = MTPipeBook.key(for: conv), let d = Data(base64Encoded: payload),
               let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let p = o["p"] as? String else { return nil }
-        return MTPipeBook.all().first { q in q != conv && (MTPipeBook.secret(for: q).map { tag("mt-same-yes", $0, sn) == p } ?? false) }
+        return MTPipeBook.all().first { q in q != conv && (MTPipeBook.key(for: q).map { $0.sameTags("mt-same-yes", newer: sn).contains(p) } ?? false) }
     }
     /// They wrote into a pipe folded here: the answer may have been lost on the way, so it is said again, once an hour at most.
     static func remind(_ folded: String) {

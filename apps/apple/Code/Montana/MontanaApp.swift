@@ -954,7 +954,7 @@ private func montanaCrashHex(_ v: UInt, _ to: UnsafeMutablePointer<CChar>) -> In
     return 2 + w
 }
 
-/// THE STACK THE HANDLER STANDS ON (the author's word 03.10.2026 10:33 UTC: «find the root of the crashes at 01:18 and 13:18»).
+/// THE STACK THE HANDLER STANDS ON (the author's word 03.10.2026 10:33 UTC: «find the root of the crashes at 22:18 and 10:18»).
 /// T1 2069 fell eleven times with SIGSEGV, KERN_PROTECTION_FAILURE (MetricKit: type 1, code 2), and not one of those deaths
 /// left the handler's line or its mark in run.crashed: the handler was installed by signal() and ran on the thread's own
 /// stack, and a thread that dies of an exhausted stack has no room left to run it -- the kernel kills the process in
@@ -1176,7 +1176,7 @@ enum MontanaNetWitness {
     }
 
     /// Margarita's phone, 03.10 09:48-13:20 UTC on 2063: a third-party tunnel stood, ours was off, every door of the nodes died
-    /// through it, and her call at 16:20:14 fell into that window; the doors answered 0.7 s after the tunnel left. A socket bound
+    /// through it, and her call at 13:20:14 fell into that window; the doors answered 0.7 s after the tunnel left. A socket bound
     /// to a physical interface leaves any tunnel that does not hold every route -- ours does not, nor do most. This is the
     /// interface a door is bound to while a tunnel stands (MontanaDirect.doorRoadAbove).
     private static let physicalLock = NSLock()

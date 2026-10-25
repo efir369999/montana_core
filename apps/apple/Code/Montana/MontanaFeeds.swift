@@ -399,7 +399,7 @@ enum MTWallpaper {
     }
 }
 /// THE CUSTOM BUBBLES' PICTURE GROUND LIVES IN A SEALED FILE, NOT IN THE SETTINGS (the critic B-6; the author's words 11.10.2026
-/// 17:1x UTC: «check the whole architecture of the chats' time chains, so there are no holes by the constitution», 21:5x: «carry
+/// 17:1x UTC: «check the whole architecture of the chats' time chains, so there are no holes by the constitution», 18:5x: «carry
 /// out all 13»). An older build kept the picture raw in the settings («cbBgPhoto», 0.6 MB on T1), and every write of any setting
 /// carried it to the system's preferences service. No build sets it any more; a look that still wears it keeps it: the value is
 /// read from the settings once, sealed under the device key into this device's own folder, and the key leaves.

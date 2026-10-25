@@ -785,7 +785,7 @@ final class MTBoard: ObservableObject {
         var once = Set<String>()
         all = all.filter { once.insert($0.id).inserted }
         // THE FEED STANDS BY TIME, THE NEWEST ON TOP (the author's word 06.10.2026 12:0x UTC: «the Wall of Thoughts strictly by time,
-        // the newest on top, the common one» -- it replaces the rank by views of 00:4x): every post by the moment it was published,
+        // the newest on top, the common one» -- it replaces the rank by views of 21:4x): every post by the moment it was published,
         // the newest first; a comment moves nothing. Every reader of the feed -- its page, its pictures' pager, its playlist -- reads
         // this one order.
         return Array(all.sorted { a, b in a.post.at == b.post.at ? a.id > b.id : b.post.at < a.post.at }.prefix(Self.feedSize))
@@ -1232,7 +1232,7 @@ final class MTBoard: ObservableObject {
         send(MTBoardWord(t: "ask"), to: wall)
         DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [weak self] in self?.asking.remove(wall) }
     }
-    /// COINS ON ANOTHER'S POST ARE A SEND OF THE CHAIN (the author's word 03.10 13:40 for the coins, and 23.10.2026 03:27 and
+    /// COINS ON ANOTHER'S POST ARE A SEND OF THE CHAIN (the author's word 03.10 10:40 for the coins, and 23.10.2026 00:27 and
     /// 00:37 UTC: «each a SEND record in the chain, the phone only the chain's mirror»): the coins leave by the pair's version 3
     /// SEND under the post's name -- a wall's correspondence is a pipe already (MontanaConv.holds), no first letter is owed -- and
     /// the wall's word only names that SEND; the owner's book takes the coins from the chain alone (MTCoinTx.heard, receive3).

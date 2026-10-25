@@ -142,9 +142,9 @@ final class MontanaDeliveryEngine {
     }
 
     /// A DELETION IS AN EVENT OF THE SEED'S CHAIN (the critic B-4; the author's words 11.10.2026 17:1x UTC: «check the whole
-    /// architecture of the chats' time chains, so there are no holes by the constitution», 21:5x: «carry out all 13»). My other
+    /// architecture of the chats' time chains, so there are no holes by the constitution», 18:5x: «carry out all 13»). My other
     /// device took a letter away for everyone, or the whole conversation, and its word reached here signed by these words
-    /// (MTNodeWire.authorHolds). Applied to nobody, the conversation stood on this phone after the other had erased it, and this
+    /// (MTPipeKey.authorHolds). Applied to nobody, the conversation stood on this phone after the other had erased it, and this
     /// phone's archive blocks were filed back there. The word walks the hand's own road here -- the plate's deleteLocally and
     /// deleteEverywhere for a letter, deleteChat's local steps and the dying pipe for the conversation -- and nothing is said to
     /// the correspondent again: the device that spoke already said it.
@@ -252,7 +252,7 @@ final class MontanaDeliveryEngine {
         // from the box answers, the mirror's copy does not.
         if !mirrored, !own, MTFabricRules.isLiveAct(text) { MTFabric.shared.heard(from) }
         let sid = "mid:\(mid)"
-        // THE PERSON'S OWN LETTER FROM ANOTHER OF THEIR DEVICES (MTNodeWire.authorHolds, 11.10.2026, No.62): a word the same
+        // THE PERSON'S OWN LETTER FROM ANOTHER OF THEIR DEVICES (MTPipeKey.authorHolds, 11.10.2026, No.62): a word the same
         // words wrote is mine, whichever device wrote it and whatever road brought it -- never the correspondent's name, face,
         // banner or receipt. A call's signal keeps its own road: the call machine hears its sibling there («answered elsewhere»).
         if own, !text.hasPrefix(callSignalMark) {
@@ -1639,7 +1639,7 @@ final class MontanaDeliveryEngine {
         // red through the cargo check below. The ONE channel — the accelerator node (server model): the whole letter rides as an
         // E2E envelope inside the wake; node accepted (200) = handed over, the letter leaves the queue, the receiver's extension
         // stores it into the chat. Not 200 — retry within the letter's term.
-        guard let secret = MTPipeBook.secret(for: to) else {
+        guard let secret = MTPipeBook.key(for: to) else {
             MontanaLog.event("DELIVERY ✗ mid=\(m.prefix(8)) no pipe secret for \(to.prefix(10)) — dropped")
             a.remove(at: i); save(a)
             refuse(m, chat: chat, .noRoad)
@@ -1671,7 +1671,7 @@ final class MontanaDeliveryEngine {
                 let fct = MTPipeBook.first(for: to)
                 if let inv, let fct {
                     MontanaWakePush.wakeRdv(invite: inv, mid: m, text: text, ct: fct,
-                                            conf: MontanaFirstContact.firstConfirm(secret: secret, ct: fct)) { [weak self] code in
+                                            conf: secret.firstConfirm(ct: fct)) { [weak self] code in
                         // THE NODE'S WORD ON A FIRST LETTER REACHES THE QUEUE (07.10, T1 to a second account of the same phone): the
                         // doorbell boxes the letter under the card's key, and the node answers 200 the moment it is safe in the box --
                         // nineteen times in ten minutes the queue heard none of it. 200 is the node holding it: one checkmark, and

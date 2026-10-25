@@ -878,8 +878,8 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
                 if let picture {
                     mediaBubble(picture: picture, aspect: picture.size, isVideo: false, file: f)
                         // A PICTURE THE CACHE LET GO IS ASKED AGAIN (the author's word 03.10.2026 13:46 UTC: «photos on a black
-                        // ground sometimes -- fix it at the root»). T1 03.10: the photo landed whole at 16:40:56, the app left the
-                        // screen at 16:43:20 and every picture cache was emptied (MontanaCaches, caches=9); back at 16:45:30 the
+                        // ground sometimes -- fix it at the root»). T1 03.10: the photo landed whole at 13:40:56, the app left the
+                        // screen at 13:43:20 and every picture cache was emptied (MontanaCaches, caches=9); back at 13:45:30 the
                         // bubble was drawn again without its picture, and the ask below never ran again -- its key, the file and its
                         // presence, had not changed. The key now says whether the picture stands drawn: a bubble drawn without it
                         // asks again, whatever emptied the cache.
@@ -1125,7 +1125,7 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
         onPlayVoice(file)
         if let at = pendingPos { player.seek(to: at); pendingPos = nil }
     }
-    /// THE VOICE AS TEXT (the author's word 21.10.2026 12:15): the quote glyph beside the plates reads the voice on this phone and
+    /// THE VOICE AS TEXT (the author's word 21.10.2026 09:15 UTC): the quote glyph beside the plates reads the voice on this phone and
     /// lays its words under the capsule, as the system's own recordings do; a second touch folds them. MTVoiceTranscript owns
     /// the reading, the bubble only asks and shows.
     private func transcriptGlyph(_ file: String) -> some View {

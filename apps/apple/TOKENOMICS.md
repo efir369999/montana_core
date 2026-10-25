@@ -108,7 +108,7 @@ to how much is your hour now»). Section 6.4 computes what one Montana is in liv
 
 - 19.10.2026 12:3x UTC, as `Audit/COIN-TX-V3.md:137-139` quotes them: «this is the ceiling, an
   invariant, the constitution — nothing else can mint or speed it up, no music, VPN and so on: VPN on,
-  the app active, the person online — 1 second, 1 coin», and 16:4x: «bring everything to one owner of
+  the app active, the person online — 1 second, 1 coin», and 13:4x: «bring everything to one owner of
   the function 1 coin = 1 second, and that is all».
 - 21.10.2026 13:5x UTC, chain link 3897: «the rule in Rust for the node, and with us 1 coin = 1 second,
   no 13 billion for a coin any more».
@@ -881,13 +881,13 @@ this paper names the difference and decides nothing.
 1. **The genesis row of the global TimeChain.** Canon 4.2.0 on `feat/s3-stage1` carries
    `emission_schedule (0, 13 000 000 000)` (`Canon.md:4480`), and Montana Core 0.19.0 encodes and
    divides it (`attest.rs:279-301`). Canon 5.0.0 on `spec/mint-second-99` carries `window_seconds 60`
-   (`Canon.md:4741`) and Core 0.20.0 under it. The author's word of 21.10.2026 16:5x («no 13
-   billion») names the direction. The decision line 41 of the council (22.10.2026 15:53) names the price,
+   (`Canon.md:4741`) and Core 0.20.0 under it. The author's word of 21.10.2026 13:5x UTC («no 13
+   billion») names the direction. The decision line 41 of the council (22.10.2026 12:53 UTC) names the price,
    a new Genesis State Hash and a new genesis of the global TimeChain, and stands at `decide` without a
    `decided` row. This paper models both rules (sections 5.3-5.4).
 2. **What TCM names.** Article 12 of the constitution makes TCM the ticker of the Coin (one second).
    COIN-TON on `spec/coin-swap-ton-78` builds the jetton TCM with decimals 0, one unit a second. The
-   author's word of 19.10.2026 17:4x («1 Coin = 0.000000001 TCM = 1 s») and the client since build
+   author's word of 19.10.2026 14:4x UTC («1 Coin = 0.000000001 TCM = 1 s») and the client since build
    2250 (`MTWalletScreen.swift:156-159`: «coins, never TCM (a TCM is a billion of them)»;
    `MTWalletCore.swift:2751`, the ticker, and `:174`, `coinsPerMontana`) make TCM the billion-coin
    unit, the Montana of article 13. One name, two units.

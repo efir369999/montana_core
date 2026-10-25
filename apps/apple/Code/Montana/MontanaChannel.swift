@@ -2,7 +2,7 @@ import SwiftUI
 import PhotosUI
 
 /// THE CHANNEL IS BORN IN THREE STEPS (the author's words 05.10.2026 16:0x UTC: «3. Channel -- see the mechanics in the reference
-/// tree»; 19:1x «real delivery to a channel from the phone»): what a channel is, then its face, name and description, then the
+/// tree»; 16:1x «real delivery to a channel from the phone»): what a channel is, then its face, name and description, then the
 /// subscribers, each chosen by a tick. A channel is a group whose owner alone posts; its posts ride the pipe of each subscriber
 /// from this phone, so only a person this phone holds a pipe with can subscribe (MTGroupPickStep.reachable).
 struct MTChannelIntroStep: View {

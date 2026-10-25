@@ -894,9 +894,9 @@ extension MontanaArchive {
     /// This device's name under any label of the box -- what it took is marked by it, never by the person (24.10.2026): the same
     /// derivation as the pipe's sid, one per label, so the node links no two labels of one device.
     nonisolated static func deviceSid(_ cw: String) -> String { twinSid(cw) }
-    nonisolated static func twinListening() -> [String: Data] {
+    nonisolated static func twinListening() -> [String: MTPipeKey] {
         guard let s = twinSecret() else { return [:] }
-        return [twinPipe: s]
+        return [twinPipe: MTPipeKey(s)]
     }
     private static var twinDue = false
     /// A block was written: the other devices get it within half a minute, in one letter with whatever came beside it.
@@ -985,11 +985,11 @@ extension MontanaArchive {
         MontanaTrace.mark("twin_hist", "taken blocks=\(filed)")
     }
 
-    // ── THE TWIN MIRROR (the author's words 18.10.2026 07:3x-07:4x UTC: «on T1 the letters of 10:07 are not seen, on the Mac with the
+    // ── THE TWIN MIRROR (the author's words 18.10.2026 07:3x-07:4x UTC: «on T1 the letters of 07:07 are not seen, on the Mac with the
     // same person they are»; «on the Mac, in my own groups and channels, what I posted from the phone is not seen -- it does not
     // sync as the chats do»; «read on the phone -- read on every device, not hanging as a banner on the computer») ──
     // Measured on T1 18.10.2026 07:05Z (archive_gap): chat a:f91e4b held 53 rows against 63 in the archive, all 12 missing ones the
-    // correspondent's, 8 of them media, the newest at 10:04 -- letters the Mac took. Three causes, each read in the set: the node's
+    // correspondent's, 8 of them media, the newest at 07:04 -- letters the Mac took. Three causes, each read in the set: the node's
     // box gives a letter to whichever device of the seed takes it first, and that device's confirmation erases it for the rest
     // (/box-del, by name); the twin's blocks join only a conversation the device does not hold (restoreFromArchive); and a group's
     // word or a read mark of the seed's other device was applied to nobody (MontanaDeliveryEngine.landOwn). So every word a device
@@ -1076,8 +1076,8 @@ extension MontanaArchive {
         }
         MontanaTrace.mark("twin_mirror", "laid words=\(batch.count) left=\(left)")
     }
-    // ── THE PAST THE TWIN MISSED (the author's words 18.10.2026 07:3x UTC: «on T1 there is no media of yesterday 17:33 in the chat, on
-    // the Mac there is»; 12:1x «finish and close every item»): the mirror carries what lands from now on; what one device took before
+    // ── THE PAST THE TWIN MISSED (the author's words 18.10.2026 07:3x UTC: «on T1 there is no media of yesterday 14:33 in the chat, on
+    // the Mac there is»; 09:1x «finish and close every item»): the mirror carries what lands from now on; what one device took before
     // it stands in that device's archive, which the other files (twin_hist) and measures against its feed (archive_gap) but never
     // lays into a conversation it holds -- an archive row carries no letter's name, so no tombstone could be asked of it. So the
     // device that sees the gap ASKS the other by the archive's own key of each row (its second, its side, a hash of its words), the
@@ -1210,8 +1210,10 @@ extension MontanaArchive {
         // place sealed under the seed where it may live, and without it a restored chat could be
         // read but never answered (critic pass 06.09).
         let content: Data, form: String
-        if let sec = MTPipeBook.secret(for: convRef), MTPipeBook.reference(of: sec) == convRef {
-            content = Data("s:".utf8) + Data(sec.base64EncodedString().utf8); form = "s"
+        if let pipe = MTPipeBook.key(for: convRef), pipe.reference == convRef {
+            // the pipe's one owner writes the form the archive seals; the floor's head («f» in the marker) follows the
+            // secret's once, from the day the walk erased it (OZ1, decision 126) -- the last head decides at a restore
+            content = pipe.archiveHead; form = pipe.holdsOrigin ? "s" : "f"
         } else {
             content = Data("a:".utf8) + Data(convRef.utf8); form = "a"
         }
@@ -1364,7 +1366,7 @@ extension MontanaArchive {
             var ref: String? = nil
             var name: String? = nil
             var items: [RestoredItem] = []
-            var headSecret: Data? = nil
+            var headSecret: MTPipeKey? = nil
             var closedThere = false, closedOnce = false
             for sealed in readLog(folder: folder) {
                 for it in openBlock(sealed, hk: h, acct: a) {
@@ -1372,7 +1374,7 @@ extension MontanaArchive {
                         guard let s = String(data: it.content, encoding: .utf8) else { continue }
                         // COMPAT-LOCAL: the head forms s:/a:/n: live only in the sealed archive on the
                         // device, never on the wire; an older archive's bare address is read below.
-                        if s.hasPrefix("s:"), let sec = Data(base64Encoded: String(s.dropFirst(2))), sec.count == 32 {
+                        if let sec = MTPipeKey(archiveHead: s) {
                             // The secret re-establishes the pipe once the whole log is read: from there the device
                             // answers for the correspondence again, and the reference is its chat key.
                             headsS += 1
@@ -1401,8 +1403,8 @@ extension MontanaArchive {
             // and the other side holds the secret no more — a revived pipe would be a composer writing into nothing.
             if headSecret != nil, closedOnce { if closedThere { closedN += 1 } else { reopenedN += 1 } }
             if let sec = headSecret {
-                if closedThere { ref = MTPipeBook.reference(of: sec) }
-                else if let r = MTPipeBook.establish(secret: sec, seal: false) { ref = r }
+                if closedThere { ref = sec.reference }
+                else if let r = MTPipeBook.establish(pipe: sec, seal: false) { ref = r }
             }
             // No head, or none this device can use: the folder name is the keyed hash of the
             // address, so every correspondence the device still answers for names its own folder.

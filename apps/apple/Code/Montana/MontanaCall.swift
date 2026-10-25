@@ -831,7 +831,7 @@ final class MontanaCall: NSObject {
     private var iceRestarts = 0
     /// FRESH ASKS BEFORE THE FIRST CONNECT (29.09). The engine's «failed» is final for the pairs it holds, and a setup used
     /// to wait it out: T1 to a cellular phone, 09:38:37 UTC, «failed» at the fifteenth second with both phones holding the
-    /// other's candidates, and the call stood «connecting» until the far hand ended it; the same at 17:03 the day before.
+    /// other's candidates, and the call stood «connecting» until the far hand ended it; the same at 14:03 the day before.
     /// One ask per verdict: the first on every road with a fresh relay pass, the second on the relay alone with the TLS
     /// door first -- the road that survives a carrier NAT, a dead UDP and a filter on the ordinary ports -- and a third
     /// verdict ends the call by rule, named, so the person hears «no path» and not silence.
@@ -2862,7 +2862,7 @@ final class MontanaCall: NSObject {
                 return
             }
             // THE GRAVEYARD IS ASKED WHERE THE CALL IS BORN (12.10.2026, the author's words 09:4x UTC: «on Nana's iPhone 17 the call
-            // comes and drops ... at 11:01 and 12:34, and even on 2193 the hole did not close»). The graveyard was asked at the door
+            // comes and drops ... at 08:01 and 09:34, and even on 2193 the hole did not close»). The graveyard was asked at the door
             // alone (handleSignal), on the arriving thread, before the hop to this one: Marusya's lane batch of 09:34:42.437Z carried
             // copies of the offer beside the caller's end; a copy passed the door while the end still waited in this queue, the
             // end buried the seed at 42.449, and the copy was born after it at 43.327 -- a ring of a call nobody held, answered at
@@ -4552,7 +4552,7 @@ final class MontanaCall: NSObject {
             return
         }
         // Not yet: the person has not come back to the screen, or the store has not opened the peer's pipe.
-        guard UIApplication.shared.applicationState == .active, MTPipeBook.secret(for: h.peer) != nil else {
+        guard UIApplication.shared.applicationState == .active, MTPipeBook.holds(h.peer) else {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { self.rejoinHeldCall(attempt: attempt + 1) }
             return
         }

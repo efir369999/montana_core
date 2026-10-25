@@ -1,7 +1,7 @@
 //  MTGroupRoom.swift -- a group's live room: a voice or video chat of up to 13 people, and a stream.
 //
 //  THE AUTHOR'S WORDS 06.10.2026 UTC. 21:2x: "groups up to 130 people and audio and video calls in a group with up to 13 connected
-//  at once ... and add streaming so one can connect to stream rooms". 00:3x: "a tap on the phone in a group chooses the kind of call,
+//  at once ... and add streaming so one can connect to stream rooms". 21:3x: "a tap on the phone in a group chooses the kind of call,
 //  then whom of the group to invite by a link to the group call, not by the call itself; the link opens the way into the room;
 //  everyone has a picture of their own on the screen, even on audio; easy control of the groups and the calls, in our style, with
 //  the screen shown, and the control with the call's owner, who created it".
