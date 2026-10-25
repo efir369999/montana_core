@@ -1776,17 +1776,16 @@ struct ChatConversationView: View {
             MontanaMediaStore.hold(Array(after.subtracting(before)))
             MontanaMediaStore.release(Array(before.subtracting(after)))
         }
-        // FILES BY THE HANDFUL, IN THE ORDER CHOSEN (the author's word 23.10 20:5x): every file the page hands back
-        // leaves as its own letter, one after another as the page lists them.
+        // FILES BY THE HANDFUL, IN THE ORDER CHOSEN (the author's word 23.10 20:5x), AND THEY WAIT ABOVE THE FIELD WITH THEIR
+        // NUMBERS (the author's word 25.10.2026 17:40 UTC, council link 8089: «it adds only one file at a time»). This road never
+        // dropped a file the page handed back: the platform's Files page takes the one file a finger touches and closes -- several
+        // are chosen only in its own «Select» mode, and it numbers nothing -- and every pick left at once as letters of its own.
+        // Now what the page hands back stands in the tray beside the pictures (stageChosen), numbered in the page's order; the
+        // tray's «+» opens the page again for the next ones, the cross takes one out, and the arrow sends the tray in its order.
         .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
-            guard case .success(let urls) = result else { return }
-            for src in urls {
-                guard let (stored, original) = copyToDocs(from: src, original: src.lastPathComponent) else { continue }
-                store.append(chat.name, Message(text: "", isFromMe: true, time: nowHHMM(),
-                                                docFile: stored, docName: original,
-                                                deliveryStatus: .sending,
-                                                senderRef: nil))
-                sendGatedMedia(fileName: stored, kind: "doc", docName: original)
+            switch result {
+            case .success(let urls): stageChosen(urls)
+            case .failure(let e): MontanaTrace.mark("files_pick", "REFUSED -- \(e.localizedDescription)")
             }
         }
         .sheet(isPresented: $showSchedule) { scheduleSheet }
@@ -3265,11 +3264,34 @@ struct ChatConversationView: View {
         var cut: String? = nil         // its subject, lifted by the platform, on a transparent ground
         var asSticker: Bool
         var video: Bool = false
+        /// A FILE OF THE PLATFORM'S FILES PAGE (25.10.2026): the name the person's file carries; `photo` is its copy on our disk.
+        var docName: String? = nil
         var name: String { asSticker ? (cut ?? photo) : photo }
         var sticker: Bool { asSticker }
+        var isFile: Bool { docName != nil }
+        var orderKind: MTStagedOrder.Kind { isFile ? .file : (asSticker ? .sticker : .picture) }
         var id: String { photo }
     }
     @State private var pastedImages: [MTPasted] = []
+    /// FILES FROM THE PLATFORM'S PAGE INTO THE TRAY (the author's word 25.10.2026 17:40 UTC, council link 8089): copied one after
+    /// another in the page's order, off the screen's thread (a big file copied on it froze the field), and handed to the one array
+    /// every staging road lands in -- so a file is numbered, taken out and sent exactly as a picture is. The diary names what the
+    /// page handed back and what stood in the tray, so a phone's own log proves the count.
+    func stageChosen(_ urls: [URL]) {
+        let t0 = Date()
+        Task.detached(priority: .userInitiated) {
+            var made: [MTPasted] = []
+            for src in urls {
+                guard let (stored, original) = copyToDocs(from: src, original: src.lastPathComponent) else { continue }
+                made.append(MTPasted(photo: stored, asSticker: false, docName: original))
+            }
+            let done = made
+            await MainActor.run {
+                pastedImages.append(contentsOf: done)
+                MontanaTrace.mark("files_pick", "picked=\(urls.count) staged=\(done.count) tray=\(pastedImages.count) ms=\(Int(Date().timeIntervalSince(t0) * 1000))")
+            }
+        }
+    }
     func attachPasted(_ imgs: [UIImage]) {
         // THE ENCODE IS NOT THE SCREEN'S (18.09, the author's word: everything instant). The JPEG
         // re-encode and the outgoing shape of a big pasted photo used to run on the main thread,
@@ -3318,7 +3340,7 @@ struct ChatConversationView: View {
     var pastedPreview: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(pastedImages) { item in
+                ForEach(Array(pastedImages.enumerated()), id: \.element.id) { place, item in
                     let name = item.name
                     if let cut = item.cut {
                         // THE CHOICE IS A MINIATURE, NOT A WORD: the picture and its subject stand
@@ -3350,7 +3372,18 @@ struct ChatConversationView: View {
                         Group {
                             // ONE OWNER OF A STAGED THUMBNAIL (22.09, the sticker session's own): the
                             // plate of a letter draws a picture and a video alike.
-                            if let ui = MTLetterThumb.plate(file: name, isVideo: item.video) {
+                            if item.isFile {
+                                // A FILE IN THE TRAY (25.10.2026) wears its kind, its own name and its size, at the plate's size.
+                                VStack(spacing: 3) {
+                                    Image(systemName: "doc.fill").font(.system(size: 20)).foregroundColor(.white.opacity(0.9))
+                                    Text(verbatim: item.docName ?? "").font(.caption2).foregroundColor(.white)   // USER-DATA: the person's file name
+                                        .lineLimit(2).multilineTextAlignment(.center)
+                                    Text(verbatim: fileSizeString(name)).font(.system(size: 10)).foregroundColor(.white.opacity(0.6))
+                                }
+                                .padding(.horizontal, 8)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .background(Color(white: 0.2))
+                            } else if let ui = MTLetterThumb.plate(file: name, isVideo: item.video) {
                                 Image(uiImage: ui).resizable().aspectRatio(contentMode: item.sticker ? .fit : .fill)
                             } else {
                                 Color(white: 0.2)
@@ -3358,9 +3391,12 @@ struct ChatConversationView: View {
                         }
                         .frame(width: 116, height: 78)
                         .overlay { if item.video { Image(systemName: "play.circle.fill").font(.system(size: 22)).foregroundColor(.white.opacity(0.9)) } }
+                        .overlay(alignment: .topLeading) { stagedNumber(place) }
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .contentShape(RoundedRectangle(cornerRadius: 12))
-                        .onTapGesture { PhotoPresenter.present(name) }
+                        .onTapGesture {
+                            if let d = item.docName { ui.docPage = MTDocOpen(id: name, name: d) } else { PhotoPresenter.present(name) }
+                        }
                         // The cross is drawn small, as in his example, and taken on the platform's own
                         // least target: the circle is 22 points and the touch around it is 44 — the
                         // target grows INWARD from the corner (the critic 22.09: carried outward by an
@@ -3376,11 +3412,34 @@ struct ChatConversationView: View {
                         .buttonStyle(.plain)
                     }
                 }
+                // ONE MORE FILE (25.10.2026): the platform's page takes one file per touch outside its «Select» mode, so a tray
+                // that holds files opens the page again from here, and what it hands back stands after the last number.
+                if pastedImages.contains(where: \.isFile) {
+                    Button { showFileImporter = true } label: {
+                        Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundColor(.white)
+                            .frame(width: 78, height: 78)
+                            .background(Color(white: 0.2), in: RoundedRectangle(cornerRadius: 12))
+                            .contentShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Files"))
+                }
             }
             .padding(.vertical, 2)
             .padding(.horizontal, 16)
         }
         .padding(.vertical, 6)
+    }
+    /// THE PLACE A STAGED ITEM HOLDS (the author's word 25.10.2026 17:40 UTC, council link 8089): 1, 2, 3 in the order chosen,
+    /// the order the arrow sends them in. It is read off the item's place in the tray, so a cross closes the numbers up.
+    func stagedNumber(_ index: Int) -> some View {
+        Text(verbatim: String(MTStagedOrder.number(at: index)))   // USER-DATA: the place of the person's own pick, digits only
+            .font(.system(size: 12, weight: .bold)).monospacedDigit()
+            .foregroundColor(.black)
+            .padding(.horizontal, 5)
+            .frame(minWidth: 20, minHeight: 20)
+            .background(Color.white, in: Capsule())
+            .padding(5)
     }
     func sendPasted(caption: String) {
         let names = pastedImages
@@ -3392,9 +3451,19 @@ struct ChatConversationView: View {
         let quote = answered.map { ChatStore.listPreview($0) } ?? ""
         let quoteMid = answered?.msgId.map { MontanaStickerBook.bare($0) } ?? ""
         // Pictures pasted together are one group too (19.09) — a sticker never folds, so a paste
-        // that holds one stands on its own.
-        let slots: [MTMediaGroup.Slot?] = names.contains(where: \.sticker) ? Array(repeating: nil, count: names.count)
-                                                                            : MTMediaGroup.slots(names.count)
+        // that holds one stands on its own; a file between pictures ends their plate (MTStagedOrder.plates, 25.10).
+        var slots = [MTMediaGroup.Slot?](repeating: nil, count: names.count)
+        for run in MTStagedOrder.plates(names.map(\.orderKind)) {
+            for (j, s) in MTMediaGroup.slots(run.count).enumerated() { slots[run.lowerBound + j] = s }
+        }
+        // THE TRAY LEAVES IN ITS ORDER, ONE AFTER ANOTHER (the author's word 25.10.2026 17:40 UTC, council link 8089): every row
+        // is laid now, in the tray's order, so both feeds stand them by their birth; the network work of each waits in the
+        // conversation's one line (MTSendLine) until the one before it is over, so no file overtakes an earlier one on the wire.
+        // A group's slow mode reads the whole tray as one letter (MTGroup.slowRefusal).
+        let batch = Set(names.map(\.name))
+        let st = store, sender = MontanaMediaSender(store: store)
+        let peer = convKey, chatKey = chat.name
+        var lined = 0
         for (i, item) in names.enumerated() {
             let cap = i == 0 ? caption : ""   // the words ride with the first picture
             // A STICKER THAT LEAVES JOINS MY SET (22.09): the set fills itself from what the person
@@ -3402,7 +3471,6 @@ struct ChatConversationView: View {
             // never linked -- a letter's file may be swept without emptying the set.
             if item.sticker {
                 let file = item.name
-                let peer = convKey, chatKey = chat.name
                 let first = (i == 0 && !quote.isEmpty)
                 let letter = store.letterMidFor(chatKey, file: file)
                 Task { @MainActor in
@@ -3415,19 +3483,38 @@ struct ChatConversationView: View {
                                                     quote: first ? quote : "", quoteMid: first ? quoteMid : "")
                 }
             }
-            let docName = item.sticker ? MontanaCardPlate.stickerName : nil   // the sticker's name in the manifest (15.42)
+            // the sticker's name in the manifest (15.42); a file's own name (25.10)
+            let docName = item.docName ?? (item.sticker ? MontanaCardPlate.stickerName : nil)
+            let kind = item.isFile ? "doc" : (item.video ? "vid" : "img")
             let qt: String? = (i == 0 && !quote.isEmpty) ? quote : nil   // the plate rides with the first picture
-            var row = item.video
+            let reply: MID? = qt == nil ? nil : answered?.id
+            var row = item.isFile
+                ? Message(text: cap, isFromMe: true, time: nowHHMM(), replyText: qt, docFile: item.name,
+                          docName: docName, deliveryStatus: .sending, senderRef: nil, replyToId: reply)
+                : item.video
                 ? Message(text: cap, isFromMe: true, time: nowHHMM(), replyText: qt, videoFile: item.name,
-                          deliveryStatus: .sending, senderRef: nil, replyToId: qt == nil ? nil : answered?.id)
+                          deliveryStatus: .sending, senderRef: nil, replyToId: reply)
                 : Message(text: cap, isFromMe: true, time: nowHHMM(), replyText: qt, imageFile: item.name,
-                          docName: docName, deliveryStatus: .sending, senderRef: nil, replyToId: qt == nil ? nil : answered?.id)
+                          docName: docName, deliveryStatus: .sending, senderRef: nil, replyToId: reply)
             if let slot = slots[i] {
                 row.groupKey = slot.key; row.groupIndex = slot.index; row.groupCount = slot.count
             }
             store.append(chat.name, row)
-            sendGatedMedia(fileName: item.name, kind: item.video ? "vid" : "img", docName: docName, caption: cap)
+            if groupRefuses(fileName: item.name, kind: kind, docName: docName, caption: cap, batch: batch) { continue }
+            lined += 1
+            let file = item.name, place = i + 1, of = names.count
+            MTSendLine.shared.enqueue(chatKey) {
+                // A row taken off the feed before its turn (its cross, a deletion) is not sent after all.
+                guard (st.messages[chatKey] ?? []).contains(where: { r in r.isFromMe && [r.imageFile, r.videoFile, r.docFile].contains(file) }) else {
+                    MontanaTrace.mark("send_line", "turn=\(place)/\(of) kind=\(kind) skipped -- the row left before its turn")
+                    return
+                }
+                MontanaTrace.mark("send_line", "turn=\(place)/\(of) kind=\(kind) waiting=\(MTSendLine.shared.pending(chatKey))")
+                sender.sendMediaOverE2E(fileName: file, kind: kind, docName: docName, caption: cap, peer: peer, chatKey: chatKey)
+                await st.settled(file)
+            }
         }
+        MontanaTrace.mark("tray_send", "n=\(names.count) files=\(names.filter(\.isFile).count) lined=\(lined) plates=\(Set(slots.compactMap { $0?.key }).count)")
     }
 
     /// THE CARD IS SEEN BEFORE IT RIDES (the critic 22.09, the reference own panel above the field):
@@ -4348,15 +4435,20 @@ struct ChatConversationView: View {
     /// A MEDIA LETTER OF THIS CHAT, ASKED OF THE GROUP FIRST (G.5): a right the group took from its members, or slow mode's wait,
     /// takes the row just laid off this phone and says the reference's sentence; every other letter goes on by the one media road.
     func sendGatedMedia(fileName: String, kind: String, docName: String? = nil, caption: String = "") {
-        if chat.isGroup,
-           let why = MTGroup.shared.mediaRefusal(kind: kind, round: fileName.hasPrefix("vnote_"), name: docName ?? fileName, caption: caption,
-                                                 in: chat.name, store: store, except: fileName) {
-            let laid = (store.messages[chat.name] ?? []).filter { r in r.isFromMe && [r.imageFile, r.videoFile, r.audioFile, r.docFile].contains(fileName) }
-            store.deleteLocally(chat: chat.name, laid)
-            groupRefusal = why
-            return
-        }
+        if groupRefuses(fileName: fileName, kind: kind, docName: docName, caption: caption, batch: [fileName]) { return }
         sendMediaOverE2E(fileName: fileName, kind: kind, docName: docName, caption: caption)
+    }
+    /// The group's door for one row just laid (G.5): refused, the row leaves the feed again and the reference's sentence is said.
+    /// `batch` names every row laid with it -- a tray sent at once is one letter to slow mode (MTGroup.slowRefusal, 25.10.2026).
+    func groupRefuses(fileName: String, kind: String, docName: String?, caption: String, batch: Set<String>) -> Bool {
+        guard chat.isGroup,
+              let why = MTGroup.shared.mediaRefusal(kind: kind, round: fileName.hasPrefix("vnote_"), name: docName ?? fileName, caption: caption,
+                                                    in: chat.name, store: store, except: batch) else { return false }
+        let laid = (store.messages[chat.name] ?? []).filter { r in r.isFromMe && [r.imageFile, r.videoFile, r.audioFile, r.docFile].contains(fileName) }
+        store.deleteLocally(chat: chat.name, laid)
+        groupRefusal = why
+        MontanaTrace.mark("group_media_refused", "kind=\(kind) batch=\(batch.count)")
+        return true
     }
     // `peer`/`chatKey` name another conversation when a letter is forwarded; the open chat otherwise.
     /// THE ONE MEDIA ROAD lives in MontanaMediaSender (16.09): the chat and the share sheet's

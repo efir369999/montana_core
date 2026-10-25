@@ -1958,7 +1958,7 @@ struct MTBoardComposer: View {
                 }
             }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.audio, .item], allowsMultipleSelection: true) { result in
-                if case .success(let urls) = result { for u in urls { take(u) } }
+                if case .success(let urls) = result { take(urls) }
             }
             .onChange(of: picks) { _, items in
                 guard !items.isEmpty else { return }
@@ -2087,11 +2087,19 @@ struct MTBoardComposer: View {
 
     /// A FILE COMES INTO THE WALL'S DRAFTS FOLDER THE MOMENT IT IS PICKED (25.09), off the main thread: a picked file lived in
     /// the temporary folder, which the system empties between runs, and the page copied it there on the main thread.
-    private func take(_ u: URL) {
-        let ext = u.pathExtension, name = u.lastPathComponent, kind = MTPostMeasure.kind(ofExtension: ext)
+    /// THE PAGE'S ORDER IS THE POST'S ORDER (the author's word 25.10.2026 17:40 UTC, council link 8089: «the upload follows the order
+    /// of the files chosen»): the files are copied one after another by one hand, so a small file never lands before a big one
+    /// chosen ahead of it -- a hand of its own per file did exactly that. The diary says how many were picked and how many came.
+    private func take(_ urls: [URL]) {
+        let asked = urls.map { u in (u, u.pathExtension, u.lastPathComponent, MTPostMeasure.kind(ofExtension: u.pathExtension)) }
         Task.detached(priority: .userInitiated) {
-            guard let f = MTBoardDrafts.take(u, kind: kind, name: name, ext: ext, move: false) else { return }
-            await MainActor.run { add(f) }
+            var got = 0
+            for (u, ext, name, kind) in asked {
+                guard let f = MTBoardDrafts.take(u, kind: kind, name: name, ext: ext, move: false) else { continue }
+                got += 1
+                await MainActor.run { add(f) }
+            }
+            MontanaTrace.mark("post_files", "picked=\(asked.count) staged=\(got)")
         }
     }
 

@@ -6030,6 +6030,15 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         if let k = progressKey { uploadTasks[k] = t; Task { @MainActor in _ = await t.value; self.uploadTasks[k] = nil } }
     }
 
+    /// THE NETWORK WORK OF ONE FILE IS OVER (25.10.2026, for MTSendLine): its encode, then its upload, each read from its one
+    /// holder -- the encode registry and the table of living uploads -- and never guessed by a clock. A file with neither
+    /// (Saved Messages, a refusal, a send left to the drain) is over at once.
+    @MainActor
+    func settled(_ file: String) async {
+        if let encode = MTEncodeRegistry.shared.task(file: file) { await encode.value }
+        if let upload = uploadTasks[file] { await upload.value }
+    }
+
     // Mirror the chat list + base URL into the shared keychain so the extension
     // «Share» can show the chat picker and know the blob-storage address.
     // name = address to send to (convRef), title = display name.

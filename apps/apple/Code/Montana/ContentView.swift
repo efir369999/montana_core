@@ -3603,6 +3603,12 @@ final class MTEncodeRegistry {
     }
 }
 
+extension MTEncodeRegistry {
+    /// The living encode of a file, to wait on (ChatStore.settled, 25.10.2026): a reading of the registry, which stays the
+    /// encode's one holder -- it begins, adopts, ends and cancels nothing, so the road the registry keeps is unchanged.
+    func task(file: String) -> Task<Void, Never>? { lock.lock(); defer { lock.unlock() }; return live[file]?.task }
+}
+
 final class MTCompressResume {
     static let shared = MTCompressResume()
     private var pending: [String: () -> Void] = [:]
