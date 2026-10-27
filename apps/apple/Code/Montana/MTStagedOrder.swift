@@ -17,6 +17,17 @@ enum MTStagedOrder {
     /// The number a place wears: one more than its index, so taking one out closes the numbers up by construction.
     static func number(at index: Int) -> Int { index + 1 }
 
+    /// THE PERSON SETS THE ORDER (the author's words 27.10.2026 09:16 UTC, council links 9562-9563: «they are loaded into the message
+    /// field in the wrong order already and cannot be changed»): the platform's Files page hands its files back in its own order and
+    /// numbers nothing, so the tray is where the order is set. A plate carried from `from` stands at `to`; every other keeps its turn,
+    /// and the numbers follow by construction (number(at:)). A place outside the tray changes nothing.
+    static func moved<T>(_ items: [T], from: Int, to: Int) -> [T] {
+        guard items.indices.contains(from), items.indices.contains(to), from != to else { return items }
+        var a = items
+        a.insert(a.remove(at: from), at: to)
+        return a
+    }
+
     /// THE PLATES OF A TRAY (19.09 for pictures, 25.10 for files among them): pictures side by side fold into one plate; a file
     /// between them ends the run, so the feed stands pictures and files in the very order chosen and never pulls a plate across
     /// a file. A tray that holds a sticker folds nothing, as before (a sticker never folds). Only a run of two or more is a plate.

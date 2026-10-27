@@ -1960,6 +1960,7 @@ struct MTBoardComposer: View {
             .fileImporter(isPresented: $importing, allowedContentTypes: [.audio, .item], allowsMultipleSelection: true) { result in
                 if case .success(let urls) = result { take(urls) }
             }
+            .fileDialogDefaultDirectory(MTFilesFolder.last)   // where the last file was taken from (council link 9561)
             .onChange(of: picks) { _, items in
                 guard !items.isEmpty else { return }
                 Task { await load(items) }
@@ -2091,6 +2092,7 @@ struct MTBoardComposer: View {
     /// of the files chosen»): the files are copied one after another by one hand, so a small file never lands before a big one
     /// chosen ahead of it -- a hand of its own per file did exactly that. The diary says how many were picked and how many came.
     private func take(_ urls: [URL]) {
+        MTFilesFolder.remember(urls.last)
         let asked = urls.map { u in (u, u.pathExtension, u.lastPathComponent, MTPostMeasure.kind(ofExtension: u.pathExtension)) }
         Task.detached(priority: .userInitiated) {
             var got = 0

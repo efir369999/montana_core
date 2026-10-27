@@ -1788,6 +1788,8 @@ struct ChatConversationView: View {
             case .failure(let e): MontanaTrace.mark("files_pick", "REFUSED -- \(e.localizedDescription)")
             }
         }
+        // THE PAGE OPENS WHERE THE LAST FILE WAS TAKEN FROM (the author's word 27.10.2026 09:15 UTC, council link 9561).
+        .fileDialogDefaultDirectory(MTFilesFolder.last)
         .sheet(isPresented: $showSchedule) { scheduleSheet }
         // THE CHOOSING AS A PAGE (the author's word 23.09): the whole screen, our own glass, and the
         // field with its buttons covered by it — the arrow on the page gives the screen back.
@@ -3273,12 +3275,15 @@ struct ChatConversationView: View {
         var id: String { photo }
     }
     @State private var pastedImages: [MTPasted] = []
+    /// The plate the person carries over the tray now (MTTrayDrop, 27.10.2026); nil when none is held.
+    @State private var trayCarried: String? = nil
     /// FILES FROM THE PLATFORM'S PAGE INTO THE TRAY (the author's word 25.10.2026 17:40 UTC, council link 8089): copied one after
     /// another in the page's order, off the screen's thread (a big file copied on it froze the field), and handed to the one array
     /// every staging road lands in -- so a file is numbered, taken out and sent exactly as a picture is. The diary names what the
     /// page handed back and what stood in the tray, so a phone's own log proves the count.
     func stageChosen(_ urls: [URL]) {
         let t0 = Date()
+        MTFilesFolder.remember(urls.last)
         Task.detached(priority: .userInitiated) {
             var made: [MTPasted] = []
             for src in urls {
@@ -3411,6 +3416,14 @@ struct ChatConversationView: View {
                         }
                         .buttonStyle(.plain)
                     }
+                    // THE ORDER IS SET HERE (the author's words 27.10.2026 09:16 UTC, council links 9562-9563: «they are loaded into the
+                    // field in the wrong order and it cannot be changed»): a plate held and carried over another takes its place, the
+                    // numbers follow, and the arrow sends the tray in the order it stands (sendPasted, MTSendLine).
+                    .onDrag {
+                        trayCarried = item.id
+                        return NSItemProvider(object: item.id as NSString)
+                    }
+                    .onDrop(of: [.text], delegate: MTTrayDrop(target: item.id, items: $pastedImages, carried: $trayCarried))
                 }
                 // ONE MORE FILE (25.10.2026): the platform's page takes one file per touch outside its «Select» mode, so a tray
                 // that holds files opens the page again from here, and what it hands back stands after the last number.
@@ -5294,5 +5307,51 @@ struct MTBarRoundMark<Glyph: View>: View {
                 .overlay { if ringed { Circle().strokeBorder(MTMiniFace.playingRing, lineWidth: 1.5).frame(width: h, height: h) } }
                 .contentShape(Rectangle())
         }
+    }
+}
+
+
+/// A PLATE OF THE TRAY CARRIED TO ANOTHER PLACE (the author's words 27.10.2026 09:16 UTC, council links 9562-9563): the moment the held
+/// plate enters another, it takes that one's place by the tray's one rule (MTStagedOrder.moved); the drop only lets the plate go and
+/// writes the place it came to in the diary.
+struct MTTrayDrop: DropDelegate {
+    let target: String
+    @Binding var items: [ChatConversationView.MTPasted]
+    @Binding var carried: String?
+
+    func dropEntered(info: DropInfo) {
+        guard let c = carried, c != target,
+              let from = items.firstIndex(where: { $0.id == c }),
+              let to = items.firstIndex(where: { $0.id == target }) else { return }
+        withAnimation(.easeInOut(duration: 0.15)) { items = MTStagedOrder.moved(items, from: from, to: to) }
+    }
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+    func performDrop(info: DropInfo) -> Bool {
+        if let c = carried, let at = items.firstIndex(where: { $0.id == c }) {
+            MontanaTrace.mark("tray_move", "place=\(MTStagedOrder.number(at: at)) of=\(items.count)")
+        }
+        carried = nil
+        return true
+    }
+}
+
+/// THE FILES PAGE OPENS WHERE THE PERSON LAST TOOK A FILE FROM (the author's word 27.10.2026 09:15 UTC, council link 9561: «at the
+/// opening of the choice it must show the last page of the file system»): the folder of the last file chosen, sealed on this phone
+/// (MontanaLocalVault), is the platform page's first folder; a folder gone lets the page open where it would. Read once per run.
+enum MTFilesFolder {
+    private static let key = "filesPageFolder"
+    private static var held: URL?? = nil
+    static var last: URL? {
+        if let h = held { return h }
+        let p = MontanaLocalVault.getString(key) ?? ""
+        let u: URL? = p.isEmpty ? nil : URL(fileURLWithPath: p, isDirectory: true)
+        held = .some(u)
+        return u
+    }
+    static func remember(_ file: URL?) {
+        guard let file else { return }
+        let folder = file.deletingLastPathComponent()
+        held = .some(folder)
+        MontanaLocalVault.setString(key, folder.path)
     }
 }

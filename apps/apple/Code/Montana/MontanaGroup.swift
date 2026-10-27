@@ -2030,6 +2030,19 @@ final class MTGroup {
         guard ready() else { return true }   // an unread store says nothing is lost: the clock waits for the store
         return copies.contains { $0.value.own && $0.value.letter == letter && queued.contains($0.key) }
     }
+    /// A ROW OF MINE STANDS WHERE ITS COPIES SAY, ASKED AGAIN AT THE COLD SWEEP (the author's words 27.10.2026 09:15 UTC and 09:44 UTC,
+    /// council links 9561, 9597: after a relaunch a channel's files wore red and «retry» though they stood in the channel). A group's
+    /// media rides on its copies, under names of their own and never under the letter's (carry): the sweep asked the queue for the
+    /// letter's name, found none, and painted red a row whose copies were carried (T1, 2314: «TX stale -> failed chat=grp:...» at
+    /// every launch after «upload END group carried=1»). True when the row is the group's to answer -- a copy of mine names the letter,
+    /// or the store is not read yet; the row is moved by `follow`, the ladder's one door, as its receipts would move it.
+    @MainActor
+    func answersFor(_ letter: String, store: ChatStore) -> Bool {
+        guard ready() else { return true }   // an unread store says nothing is lost: the clock waits for the store
+        guard let c = copies.values.first(where: { $0.own && $0.letter == letter }) else { return false }
+        follow(c, store: store)
+        return true
+    }
 
     // -- arrival -------------------------------------------------------------------------------
 

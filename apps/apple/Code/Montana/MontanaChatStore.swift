@@ -1708,6 +1708,10 @@ class ChatStore: ObservableObject {
                 // A QUEUED INTENT IS NOT A CORPSE (18.09): the queue holds it and the drain will run it —
                 // the clock is honest on a phone that holds no node.
                 if let sid = m.msgId, MontanaDeliveryEngine.shared.queueHolds(mid: sid.hasPrefix("mid:") ? String(sid.dropFirst(4)) : sid) { continue }
+                // A GROUP'S ROW RIDES ON ITS COPIES (27.10.2026, council links 9561, 9597): never under the letter's own name, so the
+                // queue above never holds it; the group answers for the row and moves it as its copies stand (MTGroup.answersFor).
+                if MTGroup.isKey(chat), let sid = m.msgId,
+                   MTGroup.shared.answersFor(sid.hasPrefix("mid:") ? String(sid.dropFirst(4)) : sid, store: self) { continue }
                 if !coldStart {
                     let born = m.createdAt > 0 ? m.createdAt : 0
                     guard born > 0, born < edge else { continue }
@@ -6996,6 +7000,7 @@ enum SeedScope {
         MTInstallPrepare.offKey,   // the install road switched the tunnel off on this device (29.09): said on the page until it is raised
         MTVPNPay.tokenKey,   // this device's own access to the VPN of Montana's nodes (05.10.2026): one device's, never a copy's
         MTGroupRoom.bookKey,   // the group rooms this phone knows and their people's room keys (07.10.2026): live minutes, never a copy's
+        "filesPageFolder",   // the folder of the last file taken on this phone (MTFilesFolder, 27.10.2026): a path of this device's file system, never a copy's
         "pagesWall", "pagesWallRecent", "pagesWallBlur", MontanaWakePush.skewKey]
     /// What each node holds for this device's token -- the node's own word about this phone, whoever is seated on it: a person
     /// lifted into the seat finds the registration of the one before and registers what differs.
