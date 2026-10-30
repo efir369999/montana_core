@@ -62,7 +62,7 @@ int mt_verify(const uint8_t *pubkey, const uint8_t *msg, size_t msg_len, const u
    state and out_state: MT_COIN_STATE_LEN bytes; sent: the SEND the record's reference names,
    MT_COIN_SENT_LEN bytes, or NULL when the node holds none; settled: 1 when a RECV or a REFUND
    settled it. Returns MT_OK (out_v2_set 1 and out_v2_dec for a v2 record that spent), a refusal's
-   code 1..15 (mt_coin_refusal writes its word, no NUL, and returns its length) or MT_ERR_DECODE. */
+   code 1..17 (mt_coin_refusal writes its word, no NUL, and returns its length) or MT_ERR_DECODE. */
 #define MT_COIN_STATE_LEN 113
 #define MT_COIN_SENT_LEN 88
 int mt_coin_step(const uint8_t *state, const uint8_t *rec, size_t rec_len, uint64_t at, const uint8_t *sent, int settled,

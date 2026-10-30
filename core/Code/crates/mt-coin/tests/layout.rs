@@ -82,14 +82,15 @@ fn refusal_codes_count_from_one_in_order() {
         assert_eq!(Refusal::from_code(r.code()), Some(*r));
     }
     assert_eq!(Refusal::from_code(0), None);
-    assert_eq!(Refusal::from_code(16), None);
+    assert_eq!(Refusal::from_code(18), None);
     assert_eq!(Refusal::NotOnTheHead.code(), 1);
     assert_eq!(Refusal::Allowance.code(), 10);
     assert_eq!(Refusal::Settled.code(), 15);
+    assert_eq!(Refusal::NotYet.code(), 17);
     let mut words: Vec<&str> = Refusal::ALL.iter().map(|r| r.word()).collect();
     words.sort_unstable();
     words.dedup();
-    assert_eq!(words.len(), 15);
+    assert_eq!(words.len(), 17);
 }
 
 // Refuses a one-reference ledger that answers for any id, or reports settled for another SEND.

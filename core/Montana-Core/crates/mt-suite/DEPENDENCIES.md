@@ -28,8 +28,18 @@ checked argument rather than an absence of found defects. Both expose generation
 version number below one usually says an interface may move, and here it says exactly that and
 nothing about the proofs: what is verified is verified at that version. The pin is exact, the
 lock file travels with the tree, and the risk carried is the cost of an interface change at an
-upgrade — not a risk to what the code computes today, which the published vectors and a second
-implementation both hold to account.
+upgrade — not a risk to what the code computes today, which the published vectors and two
+other implementations hold to account.
+
+**What the proofs did not hold.** The changelog of `libcrux-ml-dsa` names two fixes in the
+verification of a signature in 0.0.8 (2026-03-19) — «Fix incorrect norm check of signer response
+during verification» (#1347), «Fix incorrect hint decoding» (#1348) — and two on AVX2 in 0.0.9
+(2026-05-13) — «Fix incorrect AVX2 use_hint implementation» (#1398), «Fully reduce iNTT inputs on
+AVX2» (#1395). A formally verified crate carried defects in the check of a signature until March
+2026, so what the extraction proves is narrower than the crate that ships. The pin `=0.0.10` is
+therefore held by the NIST ACVP vectors in `src/sign.rs` and `src/kem.rs`, by OpenSSL 3.6 and by
+liboqs in `tests/differential.rs`, and the admission below 1.0 against [C-6] is recorded as
+DEV-057 in `Code/docs/SPEC_DEVIATIONS.md` with the author's acknowledgment.
 
 **Migration.** A suite enters through a row of the suite table and a protocol version upgrade;
 the table is transcribed in `src/suite.rs` and read by the gate. Replacing an implementation

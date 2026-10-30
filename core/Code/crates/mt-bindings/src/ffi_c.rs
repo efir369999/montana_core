@@ -265,7 +265,7 @@ unsafe fn coin_state(state: *const u8) -> Option<mt_coin::KeyState> {
 /// node's ledger holds it (MT_COIN_SENT_LEN bytes), or null when it holds none; `settled` is 1 when
 /// a RECV or a REFUND has settled that SEND. Returns MT_OK with the new state in `out_state` and,
 /// for a v2 record that spent, its declared part in `out_v2_dec` with `out_v2_set` 1 (else 0); a
-/// refusal's code 1..=15 (its word: `mt_coin_refusal`); MT_ERR_DECODE for an unreadable record or
+/// refusal's code 1..=17 (its word: `mt_coin_refusal`); MT_ERR_DECODE for an unreadable record or
 /// state.
 #[no_mangle]
 #[allow(clippy::too_many_arguments)]

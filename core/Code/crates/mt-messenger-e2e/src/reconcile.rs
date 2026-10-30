@@ -162,7 +162,7 @@ pub fn select_for_sync(stored_sealed: &[Vec<u8>], from_block_seq: u64) -> Vec<Ve
             }
         })
         .collect();
-    selected.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+    selected.sort_by_key(|a| (a.0, a.1));
     selected.into_iter().map(|(_, _, s)| s).collect()
 }
 

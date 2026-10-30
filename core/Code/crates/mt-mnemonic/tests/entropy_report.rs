@@ -32,11 +32,7 @@ fn entropy_report() {
             "        most frequent:    {} of {} ({}%)",
             f.max_repeat,
             f.samples,
-            if f.samples > 0 {
-                100 * f.max_repeat / f.samples
-            } else {
-                100
-            }
+            (100 * f.max_repeat).checked_div(f.samples).unwrap_or(100)
         );
         println!("        liveness rule:    {}\n", f.alive_rule);
         if f.alive {

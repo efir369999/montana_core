@@ -1,4 +1,4 @@
-// The vectors of COIN-TX-V3 section 9 that the fold alone decides (V1, V3, V6, V8 to V12), the
+// The vectors of COIN-TX-V3 section 9 that the fold alone decides (V1, V3, V6, V8 to V15), the
 // genesis cap of section 3, and the layout of section 1 read back field by field. Each test names
 // the wrong implementation it refuses.
 
@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 const ZERO: [u8; 32] = [0; 32];
 const C: u64 = TX_SECOND_CUT;
 const D: u64 = TX_TIME_CUT;
+const E: u64 = TX_ONLINE_CUT;
 
 fn sha(b: &[u8]) -> [u8; 32] {
     Sha256::digest(b).into()
@@ -165,6 +166,14 @@ impl Key {
         });
         self.lay(r, at, &Book::default())
     }
+
+    fn burn(&mut self, amount: u64, dec: u64, at: u64) -> Result<Folded, Refusal> {
+        let r = self.record(Draft {
+            t0: dec,
+            ..Draft::new(6, amount)
+        });
+        self.lay(r, at, &Book::default())
+    }
 }
 
 #[test]
@@ -295,7 +304,7 @@ fn a_record_has_one_reading_only() {
         parse(&v2_bytes(1, ZERO, 1, 1)[..TX2_LEN - 1]),
         Err(ParseError::Length)
     );
-    for k in [0, 6, 255] {
+    for k in [0, 7, 255] {
         assert_eq!(
             parse(&Draft::new(k, 1).bytes()),
             Err(ParseError::Kind),
@@ -613,6 +622,136 @@ fn v12_the_chain_mints_the_keys_time() {
 }
 
 #[test]
+fn v13_a_mint_counts_the_present_seconds() {
+    let b = E - 1000;
+    let mut k = Key::new(19);
+    k.genesis(0, b).unwrap();
+    // The life credits up to the cut and no further: fold-6 would credit 1500 here and take 1001.
+    assert_eq!(k.send(1001, 0, E + 500), Err(Refusal::Overspend));
+    k.send(1000, 0, E + 500).unwrap();
+    assert_eq!((k.state.proven, k.state.minted), (0, 1000));
+    assert_eq!(
+        at_now(&k.state, E + 5000).proven,
+        0,
+        "the life mints nothing after the cut"
+    );
+    // Away from E to E + 500: a MINT over all of it counts its last 120 seconds alone. A fold without
+    // the present seconds takes 600 (1600 lived less 1000 minted).
+    assert_eq!(k.mint(101, b, E + 600, E + 620), Err(Refusal::Stale));
+    k.mint(100, b, E + 600, E + 620).unwrap();
+    // Present a minute later: every second of the interval counts.
+    assert_eq!(k.mint(61, E + 600, E + 660, E + 670), Err(Refusal::Stale));
+    k.mint(60, E + 600, E + 660, E + 670).unwrap();
+    assert_eq!(
+        (k.state.proven, k.state.minted, k.state.mint_end),
+        (160, 1160, E + 660)
+    );
+    // Present is measured back from the node's second, never from t1: a fold that measures from t1
+    // takes this one coin of an interval that ended three minutes before.
+    assert_eq!(k.mint(1, E + 660, E + 720, E + 900), Err(Refusal::Stale));
+    assert_eq!(fold(&k.chain, &Book::default()).unwrap(), k.state);
+}
+
+#[test]
+fn v14_a_burn_spends_and_names_no_one() {
+    let b = E - 1000;
+    let mut k = Key::new(20);
+    k.genesis(0, b).unwrap();
+    assert_eq!(k.burn(10, 0, E - 1), Err(Refusal::NotYet));
+    assert_eq!(k.burn(1001, 1, E + 10), Err(Refusal::Overspend));
+    assert_eq!(k.burn(400, 1, E + 10), Err(Refusal::Split));
+    k.burn(400, 0, E + 10).unwrap();
+    // A BURN folded as a MINT, or as nothing, leaves 1400 or 1000.
+    assert_eq!(
+        (k.state.proven, k.state.declared, k.state.minted),
+        (600, 0, 1000)
+    );
+    let burned = k.state.head;
+    let refund = k.record(Draft {
+        reference: burned,
+        ..Draft::new(4, 400)
+    });
+    assert_eq!(
+        step(&k.state, &refund, E + 10 + TX_DAY, &Book::default()),
+        Err(Refusal::NoSend)
+    );
+    assert_eq!(fold(&k.chain, &Book::default()).unwrap(), k.state);
+
+    let r = parse(
+        &Draft {
+            t0: 3,
+            ..Draft::new(6, 5)
+        }
+        .bytes(),
+    )
+    .expect("a BURN");
+    assert_eq!((r.kind, r.amount, r.dec, r.t1), (Kind::Burn, 5, 3, 0));
+    let stray = [
+        Draft {
+            pair: [1; 32],
+            ..Draft::new(6, 5)
+        },
+        Draft {
+            to: [1; 32],
+            ..Draft::new(6, 5)
+        },
+        Draft {
+            reference: [1; 32],
+            ..Draft::new(6, 5)
+        },
+        Draft {
+            t1: 1,
+            ..Draft::new(6, 5)
+        },
+    ];
+    for (i, d) in stray.iter().enumerate() {
+        assert_eq!(parse(&d.bytes()), Err(ParseError::Field), "burn draft {i}");
+    }
+    assert_eq!(parse(&Draft::new(6, 0).bytes()), Err(ParseError::Amount));
+    assert_eq!(
+        parse(
+            &Draft {
+                t0: 6,
+                ..Draft::new(6, 5)
+            }
+            .bytes()
+        ),
+        Err(ParseError::Amount)
+    );
+}
+
+#[test]
+fn v15_the_past_never_eats_the_present() {
+    // Key O minted by the doubling rule before the second's cut: 2567238 coins for 99999 seconds,
+    // above every second it lives until after TX_ONLINE_CUT.
+    let b = C - 100_000;
+    let mut o = Key::new(21);
+    o.genesis(0, b).unwrap();
+    let m = a2(99_999);
+    assert_eq!(m, 2_567_238);
+    o.mint(2_567_238, b, C - 1, C - 1).unwrap();
+    assert_eq!((o.state.proven, o.state.minted), (m, m));
+    // fold-7 answers m, m: its 359500 seconds of life lie below what it minted, so it credits none.
+    let now = at_now(&o.state, D + 300);
+    assert_eq!((now.proven, now.minted), (m + 300, m + 300));
+    o.send(1, 0, D + 300).unwrap();
+    assert_eq!((o.state.proven, o.state.minted), (m + 299, m + 300));
+    // From the last record, never again from the cut: a step that ignores last_at answers m + 799.
+    let now = at_now(&o.state, D + 500);
+    assert_eq!((now.proven, now.minted), (m + 499, m + 500));
+    // The life stops at TX_ONLINE_CUT, and a MINT counts its present seconds from it alone: fold-7
+    // refuses it «allowance», and a MINT without the cut's floor takes the 120 seconds of its interval.
+    assert_eq!(o.mint(61, E - 60, E + 60, E + 60), Err(Refusal::Stale));
+    o.mint(60, E - 60, E + 60, E + 60).unwrap();
+    let away = u128::from(E - D - 300);
+    assert_eq!(
+        (o.state.proven, o.state.minted, o.state.mint_end),
+        (m + 299 + away + 60, m + 300 + away + 60, E + 60)
+    );
+    assert_eq!(fold(&o.chain, &Book::default()).unwrap(), o.state);
+}
+
+#[test]
 fn a_record_stands_on_the_head_and_splits_as_named() {
     let b = TX_GENESIS_GATE - 10_000;
     let mut s = Key::new(16);
@@ -693,9 +832,11 @@ fn every_refusal_has_the_nodes_word() {
         (Refusal::Allowance, "allowance"),
         (Refusal::GenesisPast, "genesis past"),
         (Refusal::Settled, "settled"),
+        (Refusal::Stale, "stale"),
+        (Refusal::NotYet, "not yet"),
     ];
     for (r, w) in words {
         assert_eq!(r.word(), w);
     }
-    assert_eq!(TX_FOLD, "fold-6");
+    assert_eq!(TX_FOLD, "fold-8");
 }

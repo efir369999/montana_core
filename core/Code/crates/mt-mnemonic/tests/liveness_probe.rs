@@ -6,11 +6,7 @@ fn liveness_probe() {
     let facts = survey();
     let mut alive = 0;
     for f in &facts {
-        let share = if f.samples > 0 {
-            100 * f.max_repeat / f.samples
-        } else {
-            100
-        };
+        let share = (100 * f.max_repeat).checked_div(f.samples).unwrap_or(100);
         println!(
             "{:<24} measurements {:>4}  distinct {:>4}  most frequent {:>3}%  alive {}",
             f.name, f.samples, f.distinct_chunks, share, f.alive

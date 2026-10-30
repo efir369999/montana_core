@@ -263,7 +263,7 @@ fn words_and_the_fold_s_name() {
         MT_ERR_DECODE
     );
     assert_eq!(
-        unsafe { mt_coin_refusal(16, b.as_mut_ptr(), b.len()) },
+        unsafe { mt_coin_refusal(18, b.as_mut_ptr(), b.len()) },
         MT_ERR_DECODE
     );
     assert_eq!(
@@ -273,5 +273,5 @@ fn words_and_the_fold_s_name() {
     assert_eq!(word(1), "not on the head");
     let n = unsafe { mt_coin_fold(b.as_mut_ptr(), b.len()) };
     assert_eq!(&b[..n as usize], TX_FOLD.as_bytes());
-    assert_eq!(TX_FOLD, "fold-6");
+    assert_eq!(TX_FOLD, "fold-8");
 }

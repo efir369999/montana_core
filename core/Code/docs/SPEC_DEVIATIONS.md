@@ -1259,3 +1259,55 @@ its historical threshold and target changes at an epoch boundary need a separate
 review. The old empty-set/self-proposer bootstrap and authenticated fresh-node
 join remain unresolved. Local reward arithmetic can still panic on an internally
 inconsistent account/node table or an exhausted counter.
+
+---
+
+## DEV-057: ML-DSA-65 and ML-KEM-768 stand on libcrux below 1.0 in the consensus path
+
+**Locations:** `Montana-Core/Cargo.toml:32-33` (exact pins `=0.0.10`), behind
+`crates/mt-suite/src/sign.rs` and `crates/mt-suite/src/kem.rs` alone.
+**Rule deviated from:** [C-6] Production Audit Readiness: a release below 1.0 is
+not admitted in the consensus path.
+**Severity:** audit-readiness deviation. No defect is known in what the code
+computes at the pinned version.
+**Acknowledgment:** the author, 2026-10-23 10:0x UTC, «yes» to decision 57 of the
+constitution chain (record 64).
+
+No 1.0 of `libcrux-ml-dsa` or `libcrux-ml-kem` is published: the newest of both
+on crates.io is 0.0.11 (2026-10-07), read 2026-10-24. The rule cannot be met by
+any version of the implementation the suite stands on, so the admission is
+recorded here instead of being implied by a pin.
+
+What holds the pin to account, each in the tree and each run:
+
+1. **Formal verification.** Both crates are extracted from F\* proofs by the hax
+   toolchain (`crates/mt-suite/DEPENDENCIES.md`).
+2. **Published vectors.** NIST ACVP-Server, FIPS 204 keyGen and deterministic
+   sigGen (`src/sign.rs:145`, `:164`), FIPS 203 keyGen, encapsulation and
+   decapsulation (`src/kem.rs:154`, `:170`, `:186`); fixtures
+   `tests/fixtures/mldsa65_acvp.txt` and `tests/fixtures/mlkem768_acvp.txt`.
+3. **A second implementation, OpenSSL 3.6** (`tests/differential.rs:64`, `:119`,
+   `:206`, `:274`): one key and one signature from one seed, each side verifies the
+   other, one shared secret.
+4. **A third implementation, independent of both: liboqs 0.16.0** (commit
+   5a1a854b, built without OpenSSL; `tests/differential.rs:430`, `:496`): one key
+   and one secret from one seed, verification both ways, the doctored refused. The
+   test refuses to pass on a machine without the library (`:388-394`), so a green
+   run compared something.
+
+**The boundary of the proofs, stated rather than implied.** The changelog of
+`libcrux-ml-dsa` names, in 0.0.8 (2026-03-19), «Fix incorrect norm check of
+signer response during verification» (#1347) and «Fix incorrect hint decoding»
+(#1348), and in 0.0.9 (2026-05-13) «Fix incorrect AVX2 use_hint implementation»
+(#1398) and «Fully reduce iNTT inputs on AVX2» (#1395). Defects in the check of
+a signature lived in the formally verified crate until March 2026: what the
+extraction proves is narrower than the crate that ships. This is why the
+vectors and two other implementations stand beside the proofs and not behind
+them.
+
+**Closure path:** move to a 1.0 release of the same implementation, or to
+another implementation meeting [C-6], through `src/sign.rs` and `src/kem.rs`
+alone; the vectors and both differential tests are what would catch a
+replacement that computes anything else.
+**Closure cost:** none on this side; it waits on the upstream release.
+**Status:** open, acknowledged by the author.

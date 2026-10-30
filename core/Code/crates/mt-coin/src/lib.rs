@@ -17,10 +17,15 @@ pub const TX_SECOND_CUT: u64 = TX_V2_CUT;
 pub const TX_COIN_EPOCH: u64 = 1_788_210_000;
 pub const TX_GENESIS_GATE: u64 = 1_792_354_500;
 pub const TX_TIME_CUT: u64 = 1_792_702_800;
+// Minting is its own road from this second on (fold-7): the key's life stops minting by itself, and
+// a MINT counts only the seconds its key was present -- online, or behind its VPN -- the last
+// TX_MINT_FRESH seconds before the node takes it. A BURN is taken from the same second.
+pub const TX_ONLINE_CUT: u64 = 1_792_962_000;
+pub const TX_MINT_FRESH: u64 = 120;
 pub const TX_DAY: u64 = 86_400;
 pub const TX_MINT_MIN: u64 = 60;
 // A change of the fold's rules re-folds every chain at a node's next start, so the rules have a name.
-pub const TX_FOLD: &str = "fold-6";
+pub const TX_FOLD: &str = "fold-8";
 pub const TX_GENESIS_CAP: u128 = a2(TX_V2_CUT - TX_COIN_EPOCH);
 
 const TX_LIMIT: u128 = 13;
@@ -35,6 +40,7 @@ pub enum Kind {
     Mint,
     Refund,
     Genesis,
+    Burn,
 }
 
 impl Kind {
@@ -45,6 +51,7 @@ impl Kind {
             3 => Some(Kind::Mint),
             4 => Some(Kind::Refund),
             5 => Some(Kind::Genesis),
+            6 => Some(Kind::Burn),
             _ => None,
         }
     }
@@ -152,6 +159,8 @@ pub enum Refusal {
     NotYours,
     Early,
     Settled,
+    Stale,
+    NotYet,
 }
 
 impl Refusal {
@@ -173,11 +182,13 @@ impl Refusal {
             Refusal::NotYours => "not yours",
             Refusal::Early => "early",
             Refusal::Settled => "settled",
+            Refusal::Stale => "stale",
+            Refusal::NotYet => "not yet",
         }
     }
 
     // The declaration's order: a refusal crosses the C door as its place in it, counted from 1.
-    pub const ALL: [Refusal; 15] = [
+    pub const ALL: [Refusal; 17] = [
         Refusal::NotOnTheHead,
         Refusal::Overspend,
         Refusal::Split,
@@ -193,6 +204,8 @@ impl Refusal {
         Refusal::NotYours,
         Refusal::Early,
         Refusal::Settled,
+        Refusal::Stale,
+        Refusal::NotYet,
     ];
 
     pub fn code(self) -> u8 {
@@ -344,6 +357,7 @@ pub fn parse(rec: &[u8]) -> Result<Record, ParseError> {
                 Kind::Mint => (false, false, false, true, true),
                 Kind::Refund => (false, false, true, false, false),
                 Kind::Genesis => (false, false, false, false, false),
+                Kind::Burn => (false, false, false, true, false),
             };
             let stray = (!uses_pair && pair != ZERO)
                 || (!uses_to && to != ZERO)
@@ -355,7 +369,7 @@ pub fn parse(rec: &[u8]) -> Result<Record, ParseError> {
             if stray || unnamed {
                 return Err(ParseError::Field);
             }
-            let dec = if matches!(kind, Kind::Send | Kind::Recv) {
+            let dec = if matches!(kind, Kind::Send | Kind::Recv | Kind::Burn) {
                 t0
             } else {
                 0
@@ -415,16 +429,25 @@ pub fn allowance(lived: u64, at: u64) -> u128 {
     }
 }
 
-// The key's time (fold-6): the seconds a key has lived up to at, credited once -- the one place the
-// chain mints.
+// The key's time (fold-6): the seconds a key has lived up to at, credited once. From TX_ONLINE_CUT
+// (fold-7) the life credits nothing more: the seconds up to the cut stay credited, and every later
+// second is minted only by a MINT of a present key. Every second from TX_TIME_CUT is credited
+// (fold-8): a key that minted above its life before the cut keeps that past and still gets the
+// seconds since its last record -- the past never eats the present.
 pub fn time_step(s: &KeyState, at: u64) -> KeyState {
-    let lived = u128::from(at.saturating_sub(s.birth));
-    if at < TX_TIME_CUT || s.height == 0 || lived <= s.minted {
+    if at < TX_TIME_CUT || s.height == 0 {
+        return *s;
+    }
+    let end = at.min(TX_ONLINE_CUT);
+    let lived = u128::from(end.saturating_sub(s.birth));
+    let fresh = u128::from(end.saturating_sub(s.last_at.max(TX_TIME_CUT).max(s.birth)));
+    let credit = lived.saturating_sub(s.minted).max(fresh);
+    if credit == 0 {
         return *s;
     }
     KeyState {
-        proven: s.proven + lived - s.minted,
-        minted: lived,
+        proven: s.proven + credit,
+        minted: s.minted + credit,
         ..*s
     }
 }
@@ -502,16 +525,35 @@ pub fn step<L: Ledger>(s: &KeyState, r: &Record, at: u64, ledger: &L) -> Result<
             {
                 return Err(Refusal::Interval);
             }
-            if allowance(r.t1.saturating_sub(s.birth), at) < s.minted + a {
+            // Present seconds only (fold-7): a MINT counts what its interval holds of the last
+            // TX_MINT_FRESH seconds before the node took it, so the seconds of a key away from the
+            // network are never minted afterwards. Its seconds start at TX_ONLINE_CUT, the time step
+            // having credited every one before it, and the intervals never overlap (t0 at least
+            // mint_end), so one second mints one coin without the life's sum (fold-8): a key that
+            // minted above its life before TX_TIME_CUT mints its present seconds like any other.
+            if TX_ONLINE_CUT <= at {
+                let present = r.t1.saturating_sub(
+                    r.t0.max(at.saturating_sub(TX_MINT_FRESH))
+                        .max(TX_ONLINE_CUT),
+                );
+                if u128::from(present) < a {
+                    return Err(Refusal::Stale);
+                }
+            } else if allowance(r.t1.saturating_sub(s.birth), at) < s.minted + a {
                 return Err(Refusal::Allowance);
             }
             n.proven = s.proven + a;
             n.mint_end = r.t1;
             n.minted = s.minted + a;
         },
-        Kind::Send => {
+        Kind::Send | Kind::Burn => {
             // Proven is spent first, and what the SEND names as declared is exactly the rest, so
-            // its receiver inherits the same split.
+            // its receiver inherits the same split. A BURN spends the same way and names no one:
+            // its coins leave every chain, and no RECV or REFUND can name it (a ledger holds SENDs
+            // alone).
+            if r.kind == Kind::Burn && at < TX_ONLINE_CUT {
+                return Err(Refusal::NotYet);
+            }
             if s.proven + s.declared < a {
                 return Err(Refusal::Overspend);
             }
