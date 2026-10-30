@@ -5,8 +5,8 @@ Apple sources as Montana for iPhone and iPad: one source tree and one version. T
 the iOS application, 1.0 (N), and a Mac build N and an iPhone build N are the same commit.
 
 This repository is the reference copy of those sources and of the protocol core they link. Its folders `apps/apple` and
-`core` are staged by the build road at every build of the main line and are not edited by hand; [`RELEASES.md`](RELEASES.md) names, for every folder,
-the build, the source commit and the git tree of the folder.
+`core` are staged by the build road at every build of the main line and are not edited by hand;
+[`RELEASES.md`](RELEASES.md) names, for every folder, the build, the source commit and the git tree of the folder.
 
 The first release is planned for 31 October 2026, for review on the Metzdowd cryptography list.
 
